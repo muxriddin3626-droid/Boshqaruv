@@ -1,0 +1,22 @@
+{
+  "name": "remote-control-signaling-server",
+  "version": "1.0.0",
+  "description": "WebRTC signaling server + device pairing backend for remote phone control app",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.17.0",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "uuid": "^9.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Remote Agent</string>
+    <string name="accessibility_service_description">
+        Bu xizmat masofadan ulangan tasdiqlangan qurilmaga ekranni boshqarish
+        (tegish, surish, matn kiritish) imkonini beradi. Faqat siz shaxsan
+        tasdiqlagan seansларда ishlaydi va istalgan vaqtda Sozlamalardan
+        o'chirilishi mumkin.
+    </string>
+    <string name="capture_notification_title">Ekran uzatilmoqda</string>
+    <string name="capture_notification_text">Boshqa qurilma ekraningizni ko\'rmoqda. To\'xtatish uchun bosing.</string>
+</resources>
