@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Haydovchi — Joylashuv</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="center-page">
+  <div class="card" style="width: 360px;">
+    <h2>Haydovchi rejimi</h2>
+    <div class="msg" id="msg"></div>
+
+    <div id="pinStep">
+      <label for="pin">PIN kodingizni kiriting</label>
+      <input id="pin" inputmode="numeric" maxlength="4" placeholder="0000">
+      <button id="startBtn" style="width: 100%;">Kuzatishni boshlash</button>
+    </div>
+
+    <div id="trackingStep" style="display: none;">
+      <p id="welcome" style="font-size: 18px;"></p>
+      <p class="muted">Joylashuvingiz har 15 soniyada avtomatik yuborilmoqda. Ilovani ochiq qoldiring.</p>
+      <p class="muted" id="lastSent">Hali yuborilmagan.</p>
+      <button id="stopBtn" class="danger big-btn">To'xtatish</button>
+    </div>
+  </div>
+</div>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/driver.js"></script>
+</body>
+</html>
