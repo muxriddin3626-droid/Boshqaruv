@@ -66,10 +66,21 @@ async function refreshStatus() {
 }
 
 // ---------- Xodimlar ro'yxati ----------
+function populateHistoryEmployeeSelect(employees) {
+  const select = document.getElementById('historyEmployee');
+  const previous = select.value;
+  const drivers = employees.filter(e => e.role === 'haydovchi' && e.active);
+  select.innerHTML = drivers.length
+    ? drivers.map(e => `<option value="${e.id}">${e.name}</option>`).join('')
+    : '<option value="">Haydovchi yo\'q</option>';
+  if (drivers.some(e => e.id === previous)) select.value = previous;
+}
+
 async function refreshEmployees() {
   const wrap = document.getElementById('employeesTableWrap');
   try {
     const { employees } = await Api.getEmployees();
+    populateHistoryEmployeeSelect(employees);
     if (employees.length === 0) { wrap.innerHTML = '<p class="muted">Xodimlar hali qo\'shilmagan.</p>'; return; }
     wrap.innerHTML = `
       <table>
@@ -148,6 +159,73 @@ document.getElementById('addBtn').addEventListener('click', async () => {
     msg.textContent = e.message;
     msg.className = 'msg error';
   }
+});
+
+// ---------- Haydovchi yo'l tarixi ----------
+let historyMap = null;
+let historyLayer = null;
+
+function ensureHistoryMap() {
+  if (historyMap) return historyMap;
+  historyMap = L.map('historyMap');
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap',
+  }).addTo(historyMap);
+  return historyMap;
+}
+
+document.getElementById('historyDate').value = new Date().toISOString().slice(0, 10);
+
+document.getElementById('showHistoryBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('historyMsg');
+  msg.textContent = '';
+  msg.className = 'msg';
+
+  const employeeId = document.getElementById('historyEmployee').value;
+  const dateStr = document.getElementById('historyDate').value;
+  if (!employeeId) { msg.textContent = 'Haydovchini tanlang'; msg.className = 'msg error'; return; }
+
+  const params = { employeeId };
+  if (dateStr) {
+    const dayStart = new Date(`${dateStr}T00:00:00`).getTime();
+    params.from = dayStart;
+    params.to = dayStart + 24 * 60 * 60 * 1000 - 1;
+  }
+
+  try {
+    const { points } = await Api.getLocationHistory(params);
+    const wrap = document.getElementById('historyMap');
+    wrap.style.display = 'block';
+    const hmap = ensureHistoryMap();
+    setTimeout(() => hmap.invalidateSize(), 50);
+
+    if (historyLayer) { hmap.removeLayer(historyLayer); historyLayer = null; }
+
+    if (points.length === 0) {
+      msg.textContent = 'Bu sana uchun joylashuv topilmadi.';
+      return;
+    }
+
+    const latlngs = points.map(p => [p.lat, p.lng]);
+    historyLayer = L.layerGroup().addTo(hmap);
+    L.polyline(latlngs, { color: '#3b82f6' }).addTo(historyLayer);
+    L.marker(latlngs[0]).addTo(historyLayer).bindPopup(`Boshlanish — ${fmtTime(points[0].ts)}`);
+    L.marker(latlngs[latlngs.length - 1]).addTo(historyLayer)
+      .bindPopup(`Oxirgi nuqta — ${fmtTime(points[points.length - 1].ts)}`);
+    hmap.fitBounds(latlngs, { padding: [20, 20] });
+
+    msg.textContent = `${points.length} ta nuqta topildi.`;
+    msg.className = 'msg ok';
+  } catch (e) {
+    msg.textContent = e.message;
+    msg.className = 'msg error';
+  }
+});
+
+document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+  document.getElementById('historyMap').style.display = 'none';
+  document.getElementById('historyMsg').textContent = '';
+  if (historyLayer && historyMap) { historyMap.removeLayer(historyLayer); historyLayer = null; }
 });
 
 refreshStatus();

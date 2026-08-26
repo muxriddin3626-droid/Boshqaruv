@@ -20,6 +20,24 @@
   </div>
 
   <div class="card">
+    <h2>Haydovchi yo'l tarixi</h2>
+    <div class="msg" id="historyMsg"></div>
+    <div class="row">
+      <div>
+        <label for="historyEmployee">Haydovchi</label>
+        <select id="historyEmployee"></select>
+      </div>
+      <div>
+        <label for="historyDate">Sana</label>
+        <input id="historyDate" type="date">
+      </div>
+    </div>
+    <button id="showHistoryBtn">Yo'lni ko'rsatish</button>
+    <button id="clearHistoryBtn" class="ghost" style="margin-left: 8px;">Tozalash</button>
+    <div id="historyMap" style="height: 360px; border-radius: var(--radius); overflow: hidden; margin-top: 16px; display: none;"></div>
+  </div>
+
+  <div class="card">
     <h2>Joriy holat</h2>
     <div id="statusTableWrap">Yuklanmoqda…</div>
   </div>

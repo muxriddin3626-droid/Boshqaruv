@@ -31,7 +31,16 @@ db.exec(`
     updated_at INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS location_history (
+    id TEXT PRIMARY KEY,
+    employee_id TEXT NOT NULL REFERENCES employees(id),
+    lat REAL NOT NULL,
+    lng REAL NOT NULL,
+    ts INTEGER NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_attendance_employee ON attendance(employee_id, ts);
+  CREATE INDEX IF NOT EXISTS idx_location_history_employee ON location_history(employee_id, ts);
 `);
 
 module.exports = db;

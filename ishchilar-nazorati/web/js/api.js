@@ -55,4 +55,8 @@ const Api = {
   getLiveLocations() {
     return this.request('/location/live', { auth: true });
   },
+  getLocationHistory(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/location/history${qs ? `?${qs}` : ''}`, { auth: true });
+  },
 };
