@@ -14,6 +14,28 @@ function fmt(n) {
   return Number(n).toLocaleString('ru-RU').replace(/,/g, ' ');
 }
 
+// Telegram xabarlari 4096 belgidan uzun bo'lolmaydi - uzun matnni qatorlar
+// bo'yicha bo'laklarga bo'lib, ketma-ket yuboradi.
+const MAX_MESSAGE_LENGTH = 3500;
+
+async function sendLong(ctx, text) {
+  if (text.length <= MAX_MESSAGE_LENGTH) {
+    return ctx.reply(text);
+  }
+  const lines = text.split('\n');
+  let chunk = '';
+  for (const line of lines) {
+    const candidate = chunk ? `${chunk}\n${line}` : line;
+    if (candidate.length > MAX_MESSAGE_LENGTH) {
+      if (chunk) await ctx.reply(chunk);
+      chunk = line;
+    } else {
+      chunk = candidate;
+    }
+  }
+  if (chunk) await ctx.reply(chunk);
+}
+
 const ENTRY_RE = /^(.+?)\s+(\d+)\s*(ta|dona|kg|litr|l)?\.?$/i;
 
 function unitTotals(rows) {
@@ -113,23 +135,23 @@ bot.command('narx', async (ctx) => {
 
 bot.command('royxat', async (ctx) => {
   const rows = await db.periodSummary(ctx.chat.id);
-  ctx.reply(renderSummary("Joriy hisob (oxirgi yopilgandan beri)", rows));
+  sendLong(ctx, renderSummary("Joriy hisob (oxirgi yopilgandan beri)", rows));
 });
 
 bot.command('yopish', async (ctx) => {
   const rows = await db.closePeriod(ctx.chat.id);
   const report = renderSummary('Hisob yopildi. Yakuniy natija', rows);
-  ctx.reply(`${report}\n\nHisob 0 dan qayta boshlandi.`);
+  sendLong(ctx, `${report}\n\nHisob 0 dan qayta boshlandi.`);
 });
 
 bot.command('bugun', async (ctx) => {
   const rows = await db.todaySummary(ctx.chat.id);
-  ctx.reply(renderSummary('Bugungi hisobot', rows));
+  sendLong(ctx, renderSummary('Bugungi hisobot', rows));
 });
 
 bot.command('oy', async (ctx) => {
   const rows = await db.monthSummary(ctx.chat.id);
-  ctx.reply(renderSummary('Shu oylik hisobot', rows));
+  sendLong(ctx, renderSummary('Shu oylik hisobot', rows));
 });
 
 bot.command('tarix', async (ctx) => {
@@ -138,7 +160,7 @@ bot.command('tarix', async (ctx) => {
   const rows = await db.history(ctx.chat.id, name, 10);
   if (rows.length === 0) return ctx.reply(`"${name}" bo'yicha yozuv topilmadi.`);
   const lines = rows.map((r) => `• ${r.created_at} — ${fmt(r.qty)} ta`);
-  ctx.reply(`"${name}" tarixi (oxirgi ${rows.length} ta):\n\n${lines.join('\n')}`);
+  sendLong(ctx, `"${name}" tarixi (oxirgi ${rows.length} ta):\n\n${lines.join('\n')}`);
 });
 
 bot.command('bekor', async (ctx) => {
@@ -220,7 +242,12 @@ bot.on('text', async (ctx) => {
   if (unrecognized.length > 0) {
     reply += `\n\nTushunilmadi:\n${unrecognized.map((l) => `• ${l}`).join('\n')}`;
   }
-  ctx.reply(reply);
+  await sendLong(ctx, reply);
+});
+
+bot.catch((err, ctx) => {
+  console.error(`Bot xatoligi (${ctx.updateType}):`, err);
+  ctx.reply("Xatolik yuz berdi. Ma'lumotlaringiz saqlangan bo'lishi mumkin, /royxat orqali tekshiring.").catch(() => {});
 });
 
 const PORT = process.env.PORT || 3000;
