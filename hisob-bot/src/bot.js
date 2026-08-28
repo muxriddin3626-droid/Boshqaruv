@@ -79,12 +79,19 @@ const MENU_LABELS = {
   OY: '📆 Oy',
   YOPISH: '🔒 Yopish',
   BEKOR: '↩️ Bekor',
+  TARIX: '🕘 Tarix',
+  QOSHISH: "➕ Qo'shish",
+  NARX: '💰 Narx',
+  OCHIR: "🗑 O'chirish",
+  TOZALASH: '🧹 Tozalash',
 };
 
 const mainMenu = Markup.keyboard([
   [MENU_LABELS.ROYXAT, MENU_LABELS.BUGUN],
   [MENU_LABELS.OY, MENU_LABELS.YOPISH],
-  [MENU_LABELS.BEKOR],
+  [MENU_LABELS.BEKOR, MENU_LABELS.TARIX],
+  [MENU_LABELS.QOSHISH, MENU_LABELS.NARX],
+  [MENU_LABELS.OCHIR, MENU_LABELS.TOZALASH],
 ]).resize();
 
 bot.start((ctx) => {
@@ -103,9 +110,10 @@ bot.start((ctx) => {
       '  Alpina 30 ta',
       '',
       "Pastdagi tugmalar orqali tezkor hisobotlarni ko'rasiz - yuqoriga aylanib",
-      "buyruq yozib yurish shart emas.",
+      "buyruq yozib yurish shart emas. Qo'shish/Narx/Tarix/O'chirish tugmalari",
+      "esa qanday yozish kerakligini ko'rsatadi.",
       '',
-      "Boshqa buyruqlar:",
+      "Buyruq sifatida ham yozsangiz bo'ladi:",
       '/qoshish Megamir Finish [narx] — mahsulotni ro\'yxatga qo\'shish (chiqim yozmasdan)',
       '/narx Megamir Finish 45000 — mahsulotga narx belgilash',
       '/tarix Megamir Finish — oxirgi yozuvlar',
@@ -116,8 +124,8 @@ bot.start((ctx) => {
   );
 });
 
-bot.command('qoshish', async (ctx) => {
-  const text = ctx.message.text.replace(/^\/qoshish(@\w+)?\s*/i, '').trim();
+async function handleQoshish(ctx, argText) {
+  const text = (argText || '').trim();
   if (!text) {
     return ctx.reply(
       "Foydalanish: /qoshish Megamir Finish [narx]\nMasalan: /qoshish Megamir Finish 45000"
@@ -135,19 +143,22 @@ bot.command('qoshish', async (ctx) => {
     reply += ` Narxi: ${fmt(price)} so'm.`;
   }
   ctx.reply(reply);
-});
+}
 
-bot.command('narx', async (ctx) => {
-  const text = ctx.message.text.replace(/^\/narx(@\w+)?\s*/i, '').trim();
+async function handleNarx(ctx, argText) {
+  const text = (argText || '').trim();
   const match = text.match(/^(.+?)\s+(\d+)$/);
   if (!match) {
-    return ctx.reply("Foydalanish: /narx Megamir Finish 45000");
+    return ctx.reply('Foydalanish: /narx Megamir Finish 45000');
   }
   const [, name, priceStr] = match;
   const price = parseInt(priceStr, 10);
   await db.setPrice(ctx.chat.id, name.trim(), price);
   ctx.reply(`"${name.trim()}" narxi ${fmt(price)} so'm qilib belgilandi.`);
-});
+}
+
+bot.command('qoshish', (ctx) => handleQoshish(ctx, ctx.message.text.replace(/^\/qoshish(@\w+)?\s*/i, '')));
+bot.command('narx', (ctx) => handleNarx(ctx, ctx.message.text.replace(/^\/narx(@\w+)?\s*/i, '')));
 
 async function handleRoyxat(ctx) {
   const rows = await db.periodSummary(ctx.chat.id);
@@ -182,24 +193,24 @@ bot.command('bugun', handleBugun);
 bot.command('oy', handleOy);
 bot.command('bekor', handleBekor);
 
-bot.command('tarix', async (ctx) => {
-  const name = ctx.message.text.replace(/^\/tarix(@\w+)?\s*/i, '').trim();
+async function handleTarix(ctx, argText) {
+  const name = (argText || '').trim();
   if (!name) return ctx.reply('Foydalanish: /tarix Megamir Finish');
   const rows = await db.history(ctx.chat.id, name, 10);
   if (rows.length === 0) return ctx.reply(`"${name}" bo'yicha yozuv topilmadi.`);
   const lines = rows.map((r) => `• ${r.created_at} — ${fmt(r.qty)} ta`);
   sendLong(ctx, `"${name}" tarixi (oxirgi ${rows.length} ta):\n\n${lines.join('\n')}`);
-});
+}
 
-bot.command('ochir', async (ctx) => {
-  const name = ctx.message.text.replace(/^\/ochir(@\w+)?\s*/i, '').trim();
-  if (!name) return ctx.reply("Foydalanish: /ochir Megamir Finish");
+async function handleOchir(ctx, argText) {
+  const name = (argText || '').trim();
+  if (!name) return ctx.reply('Foydalanish: /ochir Megamir Finish');
   const ok = await db.deleteProduct(ctx.chat.id, name);
   ctx.reply(ok ? `"${name}" o'chirildi.` : `"${name}" topilmadi.`);
-});
+}
 
-bot.command('tozalash', async (ctx) => {
-  const confirm = ctx.message.text.replace(/^\/tozalash(@\w+)?\s*/i, '').trim();
+async function handleTozalash(ctx, argText) {
+  const confirm = (argText || '').trim();
   if (confirm.toUpperCase() !== 'TASDIQLAYMAN') {
     return ctx.reply(
       "DIQQAT: bu barcha mahsulotlar, miqdorlar va tarixni BUTUNLAY o'chiradi. Qaytarib bo'lmaydi!\n\n" +
@@ -208,7 +219,11 @@ bot.command('tozalash', async (ctx) => {
   }
   await db.wipeAll(ctx.chat.id);
   ctx.reply("Hammasi o'chirildi. Hisob butunlay 0 dan boshlandi.");
-});
+}
+
+bot.command('tarix', (ctx) => handleTarix(ctx, ctx.message.text.replace(/^\/tarix(@\w+)?\s*/i, '')));
+bot.command('ochir', (ctx) => handleOchir(ctx, ctx.message.text.replace(/^\/ochir(@\w+)?\s*/i, '')));
+bot.command('tozalash', (ctx) => handleTozalash(ctx, ctx.message.text.replace(/^\/tozalash(@\w+)?\s*/i, '')));
 
 const MENU_HANDLERS = {
   [MENU_LABELS.ROYXAT]: handleRoyxat,
@@ -216,6 +231,11 @@ const MENU_HANDLERS = {
   [MENU_LABELS.OY]: handleOy,
   [MENU_LABELS.YOPISH]: handleYopish,
   [MENU_LABELS.BEKOR]: handleBekor,
+  [MENU_LABELS.TARIX]: (ctx) => handleTarix(ctx, ''),
+  [MENU_LABELS.QOSHISH]: (ctx) => handleQoshish(ctx, ''),
+  [MENU_LABELS.NARX]: (ctx) => handleNarx(ctx, ''),
+  [MENU_LABELS.OCHIR]: (ctx) => handleOchir(ctx, ''),
+  [MENU_LABELS.TOZALASH]: (ctx) => handleTozalash(ctx, ''),
 };
 
 bot.on('text', async (ctx) => {
