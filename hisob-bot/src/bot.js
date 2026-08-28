@@ -45,12 +45,13 @@ bot.start((ctx) => {
       '',
       "Buyruqlar:",
       '/narx Megamir Finish 45000 — mahsulotga narx belgilash',
-      "/royxat — barcha mahsulotlar bo'yicha umumiy hisob",
+      "/royxat — joriy hisob (oxirgi yopilgandan beri)",
       '/bugun — bugungi kunlik hisobot',
       '/oy — shu oylik hisobot',
       '/tarix Megamir Finish — oxirgi yozuvlar',
       '/bekor — oxirgi yozuvni bekor qilish',
       '/ochir Megamir Finish — mahsulotni butunlay o‘chirish',
+      "/yopish — joriy hisobni yakunlab, hisobni 0 dan qayta boshlash",
     ].join('\n')
   );
 });
@@ -68,8 +69,14 @@ bot.command('narx', (ctx) => {
 });
 
 bot.command('royxat', (ctx) => {
-  const rows = db.allTimeSummary(ctx.chat.id);
-  ctx.reply(renderSummary("Umumiy hisob (barcha davr)", rows));
+  const rows = db.periodSummary(ctx.chat.id);
+  ctx.reply(renderSummary("Joriy hisob (oxirgi yopilgandan beri)", rows));
+});
+
+bot.command('yopish', (ctx) => {
+  const rows = db.closePeriod(ctx.chat.id);
+  const report = renderSummary('Hisob yopildi. Yakuniy natija', rows);
+  ctx.reply(`${report}\n\nHisob 0 dan qayta boshlandi.`);
 });
 
 bot.command('bugun', (ctx) => {
@@ -125,7 +132,7 @@ bot.on('text', (ctx) => {
   }
   db.addTransaction(ctx.chat.id, product.id, qty);
 
-  const rows = db.allTimeSummary(ctx.chat.id);
+  const rows = db.periodSummary(ctx.chat.id);
   const row = rows.find((r) => r.name.toLowerCase() === name.toLowerCase());
   const total = row ? row.total_qty : qty;
 

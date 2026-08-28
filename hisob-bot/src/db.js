@@ -21,7 +21,13 @@ db.exec(`
     chat_id INTEGER NOT NULL,
     product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     qty INTEGER NOT NULL,
+    period INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS chat_meta (
+    chat_id INTEGER PRIMARY KEY,
+    current_period INTEGER NOT NULL DEFAULT 1
   );
 `);
 
@@ -46,10 +52,20 @@ function setPrice(chatId, name, price) {
   return findProduct(chatId, name);
 }
 
+function ensureChat(chatId) {
+  db.prepare('INSERT OR IGNORE INTO chat_meta (chat_id) VALUES (?)').run(chatId);
+}
+
+function getCurrentPeriod(chatId) {
+  ensureChat(chatId);
+  return db.prepare('SELECT current_period FROM chat_meta WHERE chat_id = ?').get(chatId).current_period;
+}
+
 function addTransaction(chatId, productId, qty) {
+  const period = getCurrentPeriod(chatId);
   return db
-    .prepare('INSERT INTO transactions (chat_id, product_id, qty) VALUES (?, ?, ?)')
-    .run(chatId, productId, qty);
+    .prepare('INSERT INTO transactions (chat_id, product_id, qty, period) VALUES (?, ?, ?, ?)')
+    .run(chatId, productId, qty, period);
 }
 
 function deleteLastTransaction(chatId) {
@@ -99,6 +115,32 @@ function allTimeSummary(chatId) {
   return summaryForPeriod(chatId, '');
 }
 
+// Hisob "yopilgandan" beri (joriy davr) to'plangan miqdorlar.
+function periodSummary(chatId) {
+  const period = getCurrentPeriod(chatId);
+  return db
+    .prepare(
+      `SELECT p.name AS name, p.unit AS unit, p.price AS price,
+              COALESCE(SUM(t.qty), 0) AS total_qty
+       FROM products p
+       LEFT JOIN transactions t
+         ON t.product_id = p.id AND t.chat_id = p.chat_id AND t.period = ?
+       WHERE p.chat_id = ?
+       GROUP BY p.id
+       ORDER BY p.name`
+    )
+    .all(period, chatId);
+}
+
+// Joriy davrni yakunlaydi: hozirgi hisobni qaytaradi va keyingi yozuvlar 0 dan
+// boshlanishi uchun yangi davrga o'tadi (eski yozuvlar tarixda saqlanib qoladi).
+function closePeriod(chatId) {
+  const summary = periodSummary(chatId);
+  ensureChat(chatId);
+  db.prepare('UPDATE chat_meta SET current_period = current_period + 1 WHERE chat_id = ?').run(chatId);
+  return summary;
+}
+
 function history(chatId, name, limit = 10) {
   const product = findProduct(chatId, name);
   if (!product) return [];
@@ -119,5 +161,7 @@ module.exports = {
   todaySummary,
   monthSummary,
   allTimeSummary,
+  periodSummary,
+  closePeriod,
   history,
 };
