@@ -86,10 +86,6 @@ const MENU_LABELS = {
   TOZALASH: '🧹 Tozalash',
 };
 
-// Chatda hozir "kutilayotgan" amal bo'lsa (masalan mahsulot tanlangan, endi
-// sondan javob kutilayotgan bo'lsa), shu yerda vaqtincha saqlanadi.
-const pendingActions = new Map();
-
 function productsKeyboard(products, prefix) {
   const buttons = products.map((p) => Markup.button.callback(p.name, `${prefix}:${p.id}`));
   const rows = [];
@@ -184,7 +180,7 @@ bot.action(/^priceprod:(\d+)$/, async (ctx) => {
   const product = products.find((p) => p.id === productId);
   await ctx.answerCbQuery();
   if (!product) return ctx.reply('Mahsulot topilmadi.');
-  pendingActions.set(ctx.chat.id, { type: 'set_price', productId: product.id, productName: product.name });
+  await db.setPendingAction(ctx.chat.id, 'set_price', product.id, product.name);
   ctx.reply(`"${product.name}" uchun yangi narxni kiriting (so'mda), masalan: 45000`);
 });
 
@@ -263,7 +259,7 @@ bot.action(/^delprod:(\d+)$/, async (ctx) => {
   const product = products.find((p) => p.id === productId);
   await ctx.answerCbQuery();
   if (!product) return ctx.reply('Mahsulot topilmadi.');
-  pendingActions.set(ctx.chat.id, { type: 'delete_qty', productId: product.id, productName: product.name });
+  await db.setPendingAction(ctx.chat.id, 'delete_qty', product.id, product.name);
   ctx.reply(
     `"${product.name}" dan nechtasini ayirmoqchisiz? Son yozing (masalan: 10), yoki mahsulotni butunlay o'chirish uchun "hammasi" deb yozing.`
   );
@@ -286,42 +282,41 @@ bot.on('text', async (ctx) => {
   const text = ctx.message.text.trim();
   if (text.startsWith('/')) return;
 
-  const pending = pendingActions.get(ctx.chat.id);
+  const pending = await db.getPendingAction(ctx.chat.id);
   if (pending && !MENU_HANDLERS[text]) {
+    const productName = pending.product_name;
     if (pending.type === 'delete_qty') {
       if (text.toLowerCase() === 'hammasi') {
-        pendingActions.delete(ctx.chat.id);
-        const ok = await db.deleteProduct(ctx.chat.id, pending.productName);
-        return ctx.reply(
-          ok ? `"${pending.productName}" butunlay o'chirildi.` : `"${pending.productName}" topilmadi.`
-        );
+        await db.clearPendingAction(ctx.chat.id);
+        const ok = await db.deleteProduct(ctx.chat.id, productName);
+        return ctx.reply(ok ? `"${productName}" butunlay o'chirildi.` : `"${productName}" topilmadi.`);
       }
       if (!/^\d+$/.test(text)) {
         return ctx.reply(
           'Iltimos, faqat son yozing (masalan: 10), yoki butunlay o\'chirish uchun "hammasi" deb yozing.'
         );
       }
-      pendingActions.delete(ctx.chat.id);
+      await db.clearPendingAction(ctx.chat.id);
       const qty = parseInt(text, 10);
-      await db.addTransaction(ctx.chat.id, pending.productId, -qty);
+      await db.addTransaction(ctx.chat.id, pending.product_id, -qty);
       const rows = await db.periodSummary(ctx.chat.id);
-      const row = rows.find((r) => r.name.toLowerCase() === pending.productName.toLowerCase());
+      const row = rows.find((r) => r.name.toLowerCase() === productName.toLowerCase());
       const total = row ? row.total_qty : 0;
       return ctx.reply(
-        `"${pending.productName}" dan ${fmt(qty)} ${row ? row.unit : 'ta'} ayirildi. Joriy jami: ${fmt(total)} ${row ? row.unit : 'ta'}.`
+        `"${productName}" dan ${fmt(qty)} ${row ? row.unit : 'ta'} ayirildi. Joriy jami: ${fmt(total)} ${row ? row.unit : 'ta'}.`
       );
     }
     if (pending.type === 'set_price') {
       if (!/^\d+$/.test(text)) {
         return ctx.reply("Iltimos, faqat son yozing (masalan: 45000).");
       }
-      pendingActions.delete(ctx.chat.id);
+      await db.clearPendingAction(ctx.chat.id);
       const price = parseInt(text, 10);
-      await db.setPrice(ctx.chat.id, pending.productName, price);
-      return ctx.reply(`"${pending.productName}" narxi ${fmt(price)} so'm qilib belgilandi.`);
+      await db.setPrice(ctx.chat.id, productName, price);
+      return ctx.reply(`"${productName}" narxi ${fmt(price)} so'm qilib belgilandi.`);
     }
   } else if (pending) {
-    pendingActions.delete(ctx.chat.id);
+    await db.clearPendingAction(ctx.chat.id);
   }
 
   const menuHandler = MENU_HANDLERS[text];
