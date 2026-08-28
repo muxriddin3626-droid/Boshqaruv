@@ -36,7 +36,9 @@ async function sendLong(ctx, text) {
   if (chunk) await ctx.reply(chunk);
 }
 
-const ENTRY_RE = /^(.+?)\s+(\d+)\s*(ta|dona|kg|litr|l)?\.?$/i;
+// Nomdan keyin son, so'ng ixtiyoriy birlik (har qanday so'z - ta, dona, kg,
+// yoki hatto "t" kabi qisqargan/xato yozilgan shakl ham qabul qilinadi).
+const ENTRY_RE = /^(.+?)\s+(\d+)\s*([a-zA-Z']*)\.?$/;
 
 function unitTotals(rows) {
   const totals = {};
