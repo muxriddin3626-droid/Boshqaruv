@@ -163,6 +163,12 @@ bot.on('text', async (ctx) => {
     .map((l) => l.trim())
     .filter(Boolean);
 
+  const beforeRows = await db.periodSummary(ctx.chat.id);
+  const runningTotals = {};
+  for (const r of beforeRows) {
+    runningTotals[r.name.toLowerCase()] = r.total_qty;
+  }
+
   const recorded = [];
   const unrecognized = [];
 
@@ -181,7 +187,11 @@ bot.on('text', async (ctx) => {
       await db.updateProductUnit(product.id, unit);
     }
     await db.addTransaction(ctx.chat.id, product.id, qty);
-    recorded.push({ name, qty, unit });
+
+    const key = name.toLowerCase();
+    const total = (runningTotals[key] || 0) + qty;
+    runningTotals[key] = total;
+    recorded.push({ name, qty, unit, total });
   }
 
   if (recorded.length === 0) {
@@ -192,12 +202,15 @@ bot.on('text', async (ctx) => {
   }
 
   const rows = await db.periodSummary(ctx.chat.id);
-  const entryLines = recorded.map(({ name, qty, unit }) => {
-    const row = rows.find((r) => r.name.toLowerCase() === name.toLowerCase());
-    const total = row ? row.total_qty : qty;
+  const priceByName = {};
+  for (const r of rows) {
+    priceByName[r.name.toLowerCase()] = r.price;
+  }
+  const entryLines = recorded.map(({ name, qty, unit, total }) => {
     let line = `• ${name}: +${fmt(qty)} ${unit} (jami: ${fmt(total)} ${unit})`;
-    if (row && row.price) {
-      line += ` — ${fmt(row.total_qty * row.price)} so'm`;
+    const price = priceByName[name.toLowerCase()];
+    if (price) {
+      line += ` — ${fmt(total * price)} so'm`;
     }
     return line;
   });
