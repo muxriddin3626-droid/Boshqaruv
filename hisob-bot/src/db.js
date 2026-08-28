@@ -42,6 +42,13 @@ const ready = (async () => {
       product_name TEXT
     )
   `);
+  // Eski (allaqachon yaratilgan) bazalarda "type" ustuni bo'lmasligi mumkin -
+  // shuning uchun xatolikni e'tiborsiz qoldirib qo'shishga harakat qilamiz.
+  try {
+    await client.execute(`ALTER TABLE transactions ADD COLUMN type TEXT NOT NULL DEFAULT 'chiqim'`);
+  } catch (e) {
+    // ustun allaqachon mavjud bo'lsa, shu yerga tushadi - muammo emas.
+  }
 })();
 
 async function findProduct(chatId, name) {
@@ -85,11 +92,11 @@ async function getCurrentPeriod(chatId) {
   return res.rows[0].current_period;
 }
 
-async function addTransaction(chatId, productId, qty) {
+async function addTransaction(chatId, productId, qty, type = 'chiqim') {
   const period = await getCurrentPeriod(chatId);
   return client.execute({
-    sql: 'INSERT INTO transactions (chat_id, product_id, qty, period) VALUES (?, ?, ?, ?)',
-    args: [chatId, productId, qty, period],
+    sql: 'INSERT INTO transactions (chat_id, product_id, qty, period, type) VALUES (?, ?, ?, ?, ?)',
+    args: [chatId, productId, qty, period, type],
   });
 }
 
@@ -150,13 +157,15 @@ async function wipeAll(chatId) {
   await client.execute({ sql: 'DELETE FROM pending_actions WHERE chat_id = ?', args: [chatId] });
 }
 
+// Faqat "chiqim" turidagi yozuvlarni hisoblaydi (kirim/ombor to'ldirish
+// alohida - bu funksiyalarga ta'sir qilmaydi).
 async function summaryForPeriod(chatId, sinceSql) {
   const res = await client.execute({
     sql: `SELECT p.name AS name, p.unit AS unit, p.price AS price,
                  COALESCE(SUM(t.qty), 0) AS total_qty
           FROM products p
           LEFT JOIN transactions t
-            ON t.product_id = p.id AND t.chat_id = p.chat_id ${sinceSql}
+            ON t.product_id = p.id AND t.chat_id = p.chat_id AND t.type = 'chiqim' ${sinceSql}
           WHERE p.chat_id = ?
           GROUP BY p.id
           ORDER BY p.name`,
@@ -169,6 +178,10 @@ async function todaySummary(chatId) {
   return summaryForPeriod(chatId, "AND date(t.created_at) = date('now')");
 }
 
+async function yesterdaySummary(chatId) {
+  return summaryForPeriod(chatId, "AND date(t.created_at) = date('now', '-1 day')");
+}
+
 async function monthSummary(chatId) {
   return summaryForPeriod(chatId, "AND strftime('%Y-%m', t.created_at) = strftime('%Y-%m', 'now')");
 }
@@ -177,7 +190,7 @@ async function allTimeSummary(chatId) {
   return summaryForPeriod(chatId, '');
 }
 
-// Hisob "yopilgandan" beri (joriy davr) to'plangan miqdorlar.
+// Hisob "yopilgandan" beri (joriy davr) to'plangan chiqim miqdorlari.
 async function periodSummary(chatId) {
   const period = await getCurrentPeriod(chatId);
   const res = await client.execute({
@@ -185,13 +198,38 @@ async function periodSummary(chatId) {
                  COALESCE(SUM(t.qty), 0) AS total_qty
           FROM products p
           LEFT JOIN transactions t
-            ON t.product_id = p.id AND t.chat_id = p.chat_id AND t.period = ?
+            ON t.product_id = p.id AND t.chat_id = p.chat_id AND t.period = ? AND t.type = 'chiqim'
           WHERE p.chat_id = ?
           GROUP BY p.id
           ORDER BY p.name`,
     args: [period, chatId],
   });
   return res.rows;
+}
+
+// Ombordagi qoldiq: barcha vaqtdagi kirim minus barcha vaqtdagi chiqim.
+// Bu "/yopish" bilan reset bo'lmaydi - qoldiq har doim haqiqiy fizik holatni
+// ko'rsatadi.
+async function stockSummary(chatId) {
+  const res = await client.execute({
+    sql: `SELECT p.name AS name, p.unit AS unit, p.price AS price,
+                 COALESCE(SUM(CASE WHEN t.type = 'kirim' THEN t.qty ELSE 0 END), 0) AS total_in,
+                 COALESCE(SUM(CASE WHEN t.type = 'chiqim' THEN t.qty ELSE 0 END), 0) AS total_out
+          FROM products p
+          LEFT JOIN transactions t ON t.product_id = p.id AND t.chat_id = p.chat_id
+          WHERE p.chat_id = ?
+          GROUP BY p.id
+          ORDER BY p.name`,
+    args: [chatId],
+  });
+  return res.rows.map((r) => ({ ...r, qoldiq: r.total_in - r.total_out }));
+}
+
+// Kamida bitta mahsulot ro'yxatga qo'shilgan barcha chatlar - kunlik
+// avtomatik hisobotni kimlarga yuborish kerakligini aniqlash uchun.
+async function listActiveChats() {
+  const res = await client.execute('SELECT DISTINCT chat_id FROM products');
+  return res.rows.map((r) => r.chat_id);
 }
 
 // Joriy davrni yakunlaydi: hozirgi hisobni qaytaradi va keyingi yozuvlar 0 dan
@@ -227,9 +265,12 @@ module.exports = {
   listProducts,
   deleteProduct,
   todaySummary,
+  yesterdaySummary,
   monthSummary,
   allTimeSummary,
   periodSummary,
+  stockSummary,
+  listActiveChats,
   closePeriod,
   history,
   wipeAll,
