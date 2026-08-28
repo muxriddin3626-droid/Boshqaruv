@@ -58,7 +58,14 @@ bot.start((ctx) => {
       '  Megamir Finish 100 ta',
       '  Megamir Satin 50',
       '',
+      "Bir nechta mahsulotni birdan kiritish uchun har birini alohida qatorga",
+      "yozib, bittalik xabar qilib yuborishingiz mumkin:",
+      '  Megamir Finish 100 ta',
+      '  Megamir Satin 50 ta',
+      '  Alpina 30 ta',
+      '',
       "Buyruqlar:",
+      '/qoshish Megamir Finish [narx] — mahsulotni ro\'yxatga qo\'shish (chiqim yozmasdan)',
       '/narx Megamir Finish 45000 — mahsulotga narx belgilash',
       "/royxat — joriy hisob (oxirgi yopilgandan beri)",
       '/bugun — bugungi kunlik hisobot',
@@ -69,6 +76,27 @@ bot.start((ctx) => {
       "/yopish — joriy hisobni yakunlab, hisobni 0 dan qayta boshlash",
     ].join('\n')
   );
+});
+
+bot.command('qoshish', (ctx) => {
+  const text = ctx.message.text.replace(/^\/qoshish(@\w+)?\s*/i, '').trim();
+  if (!text) {
+    return ctx.reply(
+      "Foydalanish: /qoshish Megamir Finish [narx]\nMasalan: /qoshish Megamir Finish 45000"
+    );
+  }
+  const match = text.match(/^(.+?)(?:\s+(\d+))?$/);
+  const name = match[1].trim();
+  const priceStr = match[2];
+
+  db.getOrCreateProduct(ctx.chat.id, name);
+  let reply = `"${name}" mahsulotlar ro'yxatiga qo'shildi.`;
+  if (priceStr) {
+    const price = parseInt(priceStr, 10);
+    db.setPrice(ctx.chat.id, name, price);
+    reply += ` Narxi: ${fmt(price)} so'm.`;
+  }
+  ctx.reply(reply);
 });
 
 bot.command('narx', (ctx) => {
@@ -130,32 +158,55 @@ bot.on('text', (ctx) => {
   const text = ctx.message.text.trim();
   if (text.startsWith('/')) return;
 
-  const match = text.match(ENTRY_RE);
-  if (!match) {
+  const lines = text
+    .split(/[\n;]+/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const recorded = [];
+  const unrecognized = [];
+
+  for (const line of lines) {
+    const match = line.match(ENTRY_RE);
+    if (!match) {
+      unrecognized.push(line);
+      continue;
+    }
+    const name = match[1].trim();
+    const qty = parseInt(match[2], 10);
+    const unit = (match[3] || 'ta').toLowerCase();
+
+    const product = db.getOrCreateProduct(ctx.chat.id, name);
+    if (product.unit !== unit) {
+      db.db.prepare('UPDATE products SET unit = ? WHERE id = ?').run(unit, product.id);
+    }
+    db.addTransaction(ctx.chat.id, product.id, qty);
+    recorded.push({ name, qty, unit });
+  }
+
+  if (recorded.length === 0) {
     return ctx.reply(
-      "Tushunmadim. Masalan shunday yozing: \"Megamir Finish 100 ta\". Buyruqlar ro'yxati uchun /start ni bosing."
+      "Tushunmadim. Masalan shunday yozing: \"Megamir Finish 100 ta\".\n" +
+        "Bir nechta mahsulotni birdan kiritish uchun har birini alohida qatorga yozib yuborishingiz mumkin. Buyruqlar ro'yxati uchun /start ni bosing."
     );
   }
 
-  const name = match[1].trim();
-  const qty = parseInt(match[2], 10);
-  const unit = (match[3] || 'ta').toLowerCase();
-
-  const product = db.getOrCreateProduct(ctx.chat.id, name);
-  if (product.unit !== unit) {
-    db.db.prepare('UPDATE products SET unit = ? WHERE id = ?').run(unit, product.id);
-  }
-  db.addTransaction(ctx.chat.id, product.id, qty);
-
   const rows = db.periodSummary(ctx.chat.id);
-  const row = rows.find((r) => r.name.toLowerCase() === name.toLowerCase());
-  const total = row ? row.total_qty : qty;
+  const entryLines = recorded.map(({ name, qty, unit }) => {
+    const row = rows.find((r) => r.name.toLowerCase() === name.toLowerCase());
+    const total = row ? row.total_qty : qty;
+    let line = `• ${name}: +${fmt(qty)} ${unit} (jami: ${fmt(total)} ${unit})`;
+    if (row && row.price) {
+      line += ` — ${fmt(row.total_qty * row.price)} so'm`;
+    }
+    return line;
+  });
 
-  let reply = `Qayd etildi: ${name} — ${fmt(qty)} ${unit}\nJami (${name}): ${fmt(total)} ${unit}`;
-  if (row && row.price) {
-    reply += `\nJami summa (${name}): ${fmt(row.total_qty * row.price)} so'm`;
+  let reply = `Qayd etildi:\n${entryLines.join('\n')}`;
+  reply += `\n\nUmumiy (barcha mahsulotlar): ${formatUnitTotals(rows)}`;
+  if (unrecognized.length > 0) {
+    reply += `\n\nTushunilmadi:\n${unrecognized.map((l) => `• ${l}`).join('\n')}`;
   }
-  reply += `\nUmumiy (barcha mahsulotlar): ${formatUnitTotals(rows)}`;
   ctx.reply(reply);
 });
 

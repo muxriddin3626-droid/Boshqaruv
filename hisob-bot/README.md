@@ -31,8 +31,24 @@ Megamir Satin 50
 Bot avtomatik ravishda mahsulotni yaratadi (agar mavjud bo'lmasa) va chiqim sifatida
 qayd etadi, so'ng shu mahsulot bo'yicha jami sonini qaytaradi.
 
+Bir nechta mahsulotni (masalan, avval chiqargan mahsulotlaringizni) birdan kiritish
+uchun har birini alohida qatorga yozib, hammasini bitta xabar qilib yuborishingiz
+mumkin:
+
+```
+Megamir Finish 100 ta
+Megamir Satin 100 ta
+Alpina 30 ta
+```
+
+Bot har bir qatorni alohida hisoblab, oxirida barcha mahsulotlar bo'yicha umumiy
+yig'indini ko'rsatadi. Qatorlardan biri tushunarsiz bo'lsa, faqat o'sha qator
+"Tushunilmadi" deb ko'rsatiladi, qolganlari baribir qayd etiladi.
+
 ### Buyruqlar
 
+- `/qoshish Megamir Finish [narx]` — mahsulotni ro'yxatga qo'shish, chiqim
+  yozmasdan (masalan, mahsulotlar ro'yxatini oldindan tayyorlab qo'yish uchun)
 - `/narx Megamir Finish 45000` — mahsulotga narx belgilash (ixtiyoriy, summani hisoblash uchun)
 - `/royxat` — joriy hisob (oxirgi `/yopish` dan beri to'plangan miqdorlar)
 - `/bugun` — bugungi kunlik hisobot
