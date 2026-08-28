@@ -1,9 +1,11 @@
 # Hisob-kitob boti
 
 Sotilgan/chiqarilgan mahsulotlarni (masalan, Megamir Finish, Megamir Satin) hisoblab
-boradigan oddiy Telegram bot. Ma'lumotlar SQLite faylida saqlanadi.
+boradigan oddiy Telegram bot. Ma'lumotlar SQLite'ga mos `@libsql/client` orqali
+saqlanadi — lokal faylga (test uchun) yoki Turso'ning bepul bulutli bazasiga
+(doimiy saqlash uchun) ulanish mumkin.
 
-## O'rnatish
+## Lokal ishga tushirish (test uchun)
 
 ```bash
 cd hisob-bot
@@ -11,13 +13,54 @@ npm install
 cp .env.example .env
 ```
 
-`.env` faylida `BOT_TOKEN` ni @BotFather dan olingan tokenga almashtiring.
-
-## Ishga tushirish
+`.env` faylida `BOT_TOKEN` ni @BotFather dan olingan tokenga almashtiring, so'ng:
 
 ```bash
 npm start
 ```
+
+Bu holatda ma'lumotlar `./hisob.db` fayliga saqlanadi (`WEBHOOK_DOMAIN`/
+`RENDER_EXTERNAL_URL` bo'lmasa, bot oddiy polling rejimida ishlaydi).
+
+## Bepul, doimiy ishlaydigan qilib joylashtirish (Turso + Render)
+
+Bitta kompyuterda doim ochiq turmasdan, botni 7/24 ishlashi uchun quyidagicha
+qilamiz: ma'lumotlar Turso'da (bepul, doimiy), bot esa Render'da (bepul,
+webhook rejimida) ishlaydi.
+
+### 1. Turso'da bepul baza yaratish
+
+1. https://turso.tech saytida ro'yxatdan o'ting (GitHub orqali kirish mumkin).
+2. Turso CLI o'rnatib, kirish:
+   ```bash
+   curl -sSfL https://get.tur.so/install.sh | bash
+   turso auth login
+   ```
+3. Baza yaratish va ma'lumotlarni olish:
+   ```bash
+   turso db create hisob-bot
+   turso db show hisob-bot --url
+   turso db tokens create hisob-bot
+   ```
+   Birinchi buyruq `TURSO_DATABASE_URL` (`libsql://...` ko'rinishida), ikkinchisi
+   `TURSO_AUTH_TOKEN` qiymatini beradi.
+
+### 2. Render'da deploy qilish
+
+1. Ushbu repo GitHub'da bo'lishi kerak (allaqachon shunday).
+2. https://render.com da ro'yxatdan o'ting, "New +" → "Blueprint" ni tanlang va
+   shu repo'ni ulang (repo ildizidagi `hisob-bot/render.yaml` topiladi).
+3. Render so'raganda quyidagi environment variable'larni kiriting:
+   - `BOT_TOKEN` — @BotFather'dan olingan token
+   - `TURSO_DATABASE_URL` — yuqoridagi 1-qadamdan
+   - `TURSO_AUTH_TOKEN` — yuqoridagi 1-qadamdan
+4. Deploy tugagach, Render xizmatga avtomatik ravishda `RENDER_EXTERNAL_URL`
+   beradi — bot buni ko'rib, avtomatik webhook rejimiga o'tadi, qo'shimcha
+   sozlash shart emas.
+
+Shu bilan bot doimiy ishlaydi va ma'lumotlar Turso'da xavfsiz saqlanadi —
+Render xizmati qayta ishga tushsa ham (masalan uzoq turgandan keyin
+"uyg'onganda") hisobingiz yo'qolmaydi.
 
 ## Foydalanish
 

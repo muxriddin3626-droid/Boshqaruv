@@ -78,7 +78,7 @@ bot.start((ctx) => {
   );
 });
 
-bot.command('qoshish', (ctx) => {
+bot.command('qoshish', async (ctx) => {
   const text = ctx.message.text.replace(/^\/qoshish(@\w+)?\s*/i, '').trim();
   if (!text) {
     return ctx.reply(
@@ -89,17 +89,17 @@ bot.command('qoshish', (ctx) => {
   const name = match[1].trim();
   const priceStr = match[2];
 
-  db.getOrCreateProduct(ctx.chat.id, name);
+  await db.getOrCreateProduct(ctx.chat.id, name);
   let reply = `"${name}" mahsulotlar ro'yxatiga qo'shildi.`;
   if (priceStr) {
     const price = parseInt(priceStr, 10);
-    db.setPrice(ctx.chat.id, name, price);
+    await db.setPrice(ctx.chat.id, name, price);
     reply += ` Narxi: ${fmt(price)} so'm.`;
   }
   ctx.reply(reply);
 });
 
-bot.command('narx', (ctx) => {
+bot.command('narx', async (ctx) => {
   const text = ctx.message.text.replace(/^\/narx(@\w+)?\s*/i, '').trim();
   const match = text.match(/^(.+?)\s+(\d+)$/);
   if (!match) {
@@ -107,54 +107,54 @@ bot.command('narx', (ctx) => {
   }
   const [, name, priceStr] = match;
   const price = parseInt(priceStr, 10);
-  db.setPrice(ctx.chat.id, name.trim(), price);
+  await db.setPrice(ctx.chat.id, name.trim(), price);
   ctx.reply(`"${name.trim()}" narxi ${fmt(price)} so'm qilib belgilandi.`);
 });
 
-bot.command('royxat', (ctx) => {
-  const rows = db.periodSummary(ctx.chat.id);
+bot.command('royxat', async (ctx) => {
+  const rows = await db.periodSummary(ctx.chat.id);
   ctx.reply(renderSummary("Joriy hisob (oxirgi yopilgandan beri)", rows));
 });
 
-bot.command('yopish', (ctx) => {
-  const rows = db.closePeriod(ctx.chat.id);
+bot.command('yopish', async (ctx) => {
+  const rows = await db.closePeriod(ctx.chat.id);
   const report = renderSummary('Hisob yopildi. Yakuniy natija', rows);
   ctx.reply(`${report}\n\nHisob 0 dan qayta boshlandi.`);
 });
 
-bot.command('bugun', (ctx) => {
-  const rows = db.todaySummary(ctx.chat.id);
+bot.command('bugun', async (ctx) => {
+  const rows = await db.todaySummary(ctx.chat.id);
   ctx.reply(renderSummary('Bugungi hisobot', rows));
 });
 
-bot.command('oy', (ctx) => {
-  const rows = db.monthSummary(ctx.chat.id);
+bot.command('oy', async (ctx) => {
+  const rows = await db.monthSummary(ctx.chat.id);
   ctx.reply(renderSummary('Shu oylik hisobot', rows));
 });
 
-bot.command('tarix', (ctx) => {
+bot.command('tarix', async (ctx) => {
   const name = ctx.message.text.replace(/^\/tarix(@\w+)?\s*/i, '').trim();
   if (!name) return ctx.reply('Foydalanish: /tarix Megamir Finish');
-  const rows = db.history(ctx.chat.id, name, 10);
+  const rows = await db.history(ctx.chat.id, name, 10);
   if (rows.length === 0) return ctx.reply(`"${name}" bo'yicha yozuv topilmadi.`);
   const lines = rows.map((r) => `• ${r.created_at} — ${fmt(r.qty)} ta`);
   ctx.reply(`"${name}" tarixi (oxirgi ${rows.length} ta):\n\n${lines.join('\n')}`);
 });
 
-bot.command('bekor', (ctx) => {
-  const last = db.deleteLastTransaction(ctx.chat.id);
+bot.command('bekor', async (ctx) => {
+  const last = await db.deleteLastTransaction(ctx.chat.id);
   if (!last) return ctx.reply("Bekor qilinadigan yozuv topilmadi.");
   ctx.reply(`Oxirgi yozuv bekor qilindi: ${fmt(last.qty)} ta.`);
 });
 
-bot.command('ochir', (ctx) => {
+bot.command('ochir', async (ctx) => {
   const name = ctx.message.text.replace(/^\/ochir(@\w+)?\s*/i, '').trim();
   if (!name) return ctx.reply("Foydalanish: /ochir Megamir Finish");
-  const ok = db.deleteProduct(ctx.chat.id, name);
+  const ok = await db.deleteProduct(ctx.chat.id, name);
   ctx.reply(ok ? `"${name}" o'chirildi.` : `"${name}" topilmadi.`);
 });
 
-bot.on('text', (ctx) => {
+bot.on('text', async (ctx) => {
   const text = ctx.message.text.trim();
   if (text.startsWith('/')) return;
 
@@ -176,11 +176,11 @@ bot.on('text', (ctx) => {
     const qty = parseInt(match[2], 10);
     const unit = (match[3] || 'ta').toLowerCase();
 
-    const product = db.getOrCreateProduct(ctx.chat.id, name);
+    const product = await db.getOrCreateProduct(ctx.chat.id, name);
     if (product.unit !== unit) {
-      db.db.prepare('UPDATE products SET unit = ? WHERE id = ?').run(unit, product.id);
+      await db.updateProductUnit(product.id, unit);
     }
-    db.addTransaction(ctx.chat.id, product.id, qty);
+    await db.addTransaction(ctx.chat.id, product.id, qty);
     recorded.push({ name, qty, unit });
   }
 
@@ -191,7 +191,7 @@ bot.on('text', (ctx) => {
     );
   }
 
-  const rows = db.periodSummary(ctx.chat.id);
+  const rows = await db.periodSummary(ctx.chat.id);
   const entryLines = recorded.map(({ name, qty, unit }) => {
     const row = rows.find((r) => r.name.toLowerCase() === name.toLowerCase());
     const total = row ? row.total_qty : qty;
@@ -210,8 +210,20 @@ bot.on('text', (ctx) => {
   ctx.reply(reply);
 });
 
-bot.launch();
-console.log('Bot ishga tushdi.');
+const PORT = process.env.PORT || 3000;
+const domain = process.env.WEBHOOK_DOMAIN || process.env.RENDER_EXTERNAL_URL;
+
+(async () => {
+  await db.ready;
+
+  if (domain) {
+    await bot.launch({ webhook: { domain, port: PORT } });
+    console.log(`Bot webhook rejimida ishga tushdi: ${domain}`);
+  } else {
+    await bot.launch();
+    console.log('Bot polling rejimida ishga tushdi.');
+  }
+})();
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
