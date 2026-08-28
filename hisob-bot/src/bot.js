@@ -240,7 +240,9 @@ bot.on('text', async (ctx) => {
   let reply = `Qayd etildi:\n${entryLines.join('\n')}`;
   reply += `\n\nUmumiy (barcha mahsulotlar): ${formatUnitTotals(rows)}`;
   if (unrecognized.length > 0) {
-    reply += `\n\nTushunilmadi:\n${unrecognized.map((l) => `• ${l}`).join('\n')}`;
+    reply += `\n\nTushunilmadi (bular saqlanmadi):\n${unrecognized.map((l) => `• ${l}`).join('\n')}`;
+    reply +=
+      "\n\nSabab: har bir qator nomdan keyin miqdor (son) bilan tugashi kerak, masalan \"... 100 ta\". Shu qatorlarni to'g'rilab, qaytadan yuboring.";
   }
   await sendLong(ctx, reply);
 });
