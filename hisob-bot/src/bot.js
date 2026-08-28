@@ -16,6 +16,20 @@ function fmt(n) {
 
 const ENTRY_RE = /^(.+?)\s+(\d+)\s*(ta|dona|kg|litr|l)?\.?$/i;
 
+function unitTotals(rows) {
+  const totals = {};
+  for (const r of rows) {
+    totals[r.unit] = (totals[r.unit] || 0) + r.total_qty;
+  }
+  return totals;
+}
+
+function formatUnitTotals(rows) {
+  return Object.entries(unitTotals(rows))
+    .map(([unit, qty]) => `${fmt(qty)} ${unit}`)
+    .join(', ');
+}
+
 function renderSummary(title, rows) {
   if (rows.length === 0) {
     return `${title}\n\nHozircha mahsulotlar yo'q.`;
@@ -28,8 +42,9 @@ function renderSummary(title, rows) {
     return `• ${r.name}: ${fmt(r.total_qty)} ${r.unit}${sumPart}`;
   });
   let text = `${title}\n\n${lines.join('\n')}`;
+  text += `\n\nUmumiy: ${formatUnitTotals(rows)}`;
   if (totalSum > 0) {
-    text += `\n\nJami summa: ${fmt(totalSum)} so'm`;
+    text += `\nJami summa: ${fmt(totalSum)} so'm`;
   }
   return text;
 }
@@ -136,10 +151,11 @@ bot.on('text', (ctx) => {
   const row = rows.find((r) => r.name.toLowerCase() === name.toLowerCase());
   const total = row ? row.total_qty : qty;
 
-  let reply = `Qayd etildi: ${name} — ${fmt(qty)} ${unit}\nJami: ${fmt(total)} ${unit}`;
+  let reply = `Qayd etildi: ${name} — ${fmt(qty)} ${unit}\nJami (${name}): ${fmt(total)} ${unit}`;
   if (row && row.price) {
-    reply += `\nJami summa: ${fmt(row.total_qty * row.price)} so'm`;
+    reply += `\nJami summa (${name}): ${fmt(row.total_qty * row.price)} so'm`;
   }
+  reply += `\nUmumiy (barcha mahsulotlar): ${formatUnitTotals(rows)}`;
   ctx.reply(reply);
 });
 
