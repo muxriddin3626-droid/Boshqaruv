@@ -86,6 +86,19 @@ const MENU_LABELS = {
   TOZALASH: '🧹 Tozalash',
 };
 
+// Chatda hozir "kutilayotgan" amal bo'lsa (masalan mahsulot tanlangan, endi
+// sondan javob kutilayotgan bo'lsa), shu yerda vaqtincha saqlanadi.
+const pendingActions = new Map();
+
+function productsKeyboard(products, prefix) {
+  const buttons = products.map((p) => Markup.button.callback(p.name, `${prefix}:${p.id}`));
+  const rows = [];
+  for (let i = 0; i < buttons.length; i += 2) {
+    rows.push(buttons.slice(i, i + 2));
+  }
+  return Markup.inlineKeyboard(rows);
+}
+
 const mainMenu = Markup.keyboard([
   [MENU_LABELS.ROYXAT, MENU_LABELS.BUGUN],
   [MENU_LABELS.OY, MENU_LABELS.YOPISH],
@@ -147,6 +160,11 @@ async function handleQoshish(ctx, argText) {
 
 async function handleNarx(ctx, argText) {
   const text = (argText || '').trim();
+  if (!text) {
+    const products = await db.listProducts(ctx.chat.id);
+    if (products.length === 0) return ctx.reply("Hozircha mahsulotlar yo'q.");
+    return ctx.reply("Qaysi mahsulotga narx belgilamoqchisiz?", productsKeyboard(products, 'priceprod'));
+  }
   const match = text.match(/^(.+?)\s+(\d+)$/);
   if (!match) {
     return ctx.reply('Foydalanish: /narx Megamir Finish 45000');
@@ -159,6 +177,16 @@ async function handleNarx(ctx, argText) {
 
 bot.command('qoshish', (ctx) => handleQoshish(ctx, ctx.message.text.replace(/^\/qoshish(@\w+)?\s*/i, '')));
 bot.command('narx', (ctx) => handleNarx(ctx, ctx.message.text.replace(/^\/narx(@\w+)?\s*/i, '')));
+
+bot.action(/^priceprod:(\d+)$/, async (ctx) => {
+  const productId = parseInt(ctx.match[1], 10);
+  const products = await db.listProducts(ctx.chat.id);
+  const product = products.find((p) => p.id === productId);
+  await ctx.answerCbQuery();
+  if (!product) return ctx.reply('Mahsulot topilmadi.');
+  pendingActions.set(ctx.chat.id, { type: 'set_price', productId: product.id, productName: product.name });
+  ctx.reply(`"${product.name}" uchun yangi narxni kiriting (so'mda), masalan: 45000`);
+});
 
 async function handleRoyxat(ctx) {
   const rows = await db.periodSummary(ctx.chat.id);
@@ -204,7 +232,11 @@ async function handleTarix(ctx, argText) {
 
 async function handleOchir(ctx, argText) {
   const name = (argText || '').trim();
-  if (!name) return ctx.reply('Foydalanish: /ochir Megamir Finish');
+  if (!name) {
+    const products = await db.listProducts(ctx.chat.id);
+    if (products.length === 0) return ctx.reply("Hozircha mahsulotlar yo'q.");
+    return ctx.reply("Qaysi mahsulotni o'chirmoqchisiz?", productsKeyboard(products, 'delprod'));
+  }
   const ok = await db.deleteProduct(ctx.chat.id, name);
   ctx.reply(ok ? `"${name}" o'chirildi.` : `"${name}" topilmadi.`);
 }
@@ -225,6 +257,18 @@ bot.command('tarix', (ctx) => handleTarix(ctx, ctx.message.text.replace(/^\/tari
 bot.command('ochir', (ctx) => handleOchir(ctx, ctx.message.text.replace(/^\/ochir(@\w+)?\s*/i, '')));
 bot.command('tozalash', (ctx) => handleTozalash(ctx, ctx.message.text.replace(/^\/tozalash(@\w+)?\s*/i, '')));
 
+bot.action(/^delprod:(\d+)$/, async (ctx) => {
+  const productId = parseInt(ctx.match[1], 10);
+  const products = await db.listProducts(ctx.chat.id);
+  const product = products.find((p) => p.id === productId);
+  await ctx.answerCbQuery();
+  if (!product) return ctx.reply('Mahsulot topilmadi.');
+  pendingActions.set(ctx.chat.id, { type: 'delete_qty', productId: product.id, productName: product.name });
+  ctx.reply(
+    `"${product.name}" dan nechtasini ayirmoqchisiz? Son yozing (masalan: 10), yoki mahsulotni butunlay o'chirish uchun "hammasi" deb yozing.`
+  );
+});
+
 const MENU_HANDLERS = {
   [MENU_LABELS.ROYXAT]: handleRoyxat,
   [MENU_LABELS.BUGUN]: handleBugun,
@@ -241,6 +285,44 @@ const MENU_HANDLERS = {
 bot.on('text', async (ctx) => {
   const text = ctx.message.text.trim();
   if (text.startsWith('/')) return;
+
+  const pending = pendingActions.get(ctx.chat.id);
+  if (pending && !MENU_HANDLERS[text]) {
+    if (pending.type === 'delete_qty') {
+      if (text.toLowerCase() === 'hammasi') {
+        pendingActions.delete(ctx.chat.id);
+        const ok = await db.deleteProduct(ctx.chat.id, pending.productName);
+        return ctx.reply(
+          ok ? `"${pending.productName}" butunlay o'chirildi.` : `"${pending.productName}" topilmadi.`
+        );
+      }
+      if (!/^\d+$/.test(text)) {
+        return ctx.reply(
+          'Iltimos, faqat son yozing (masalan: 10), yoki butunlay o\'chirish uchun "hammasi" deb yozing.'
+        );
+      }
+      pendingActions.delete(ctx.chat.id);
+      const qty = parseInt(text, 10);
+      await db.addTransaction(ctx.chat.id, pending.productId, -qty);
+      const rows = await db.periodSummary(ctx.chat.id);
+      const row = rows.find((r) => r.name.toLowerCase() === pending.productName.toLowerCase());
+      const total = row ? row.total_qty : 0;
+      return ctx.reply(
+        `"${pending.productName}" dan ${fmt(qty)} ${row ? row.unit : 'ta'} ayirildi. Joriy jami: ${fmt(total)} ${row ? row.unit : 'ta'}.`
+      );
+    }
+    if (pending.type === 'set_price') {
+      if (!/^\d+$/.test(text)) {
+        return ctx.reply("Iltimos, faqat son yozing (masalan: 45000).");
+      }
+      pendingActions.delete(ctx.chat.id);
+      const price = parseInt(text, 10);
+      await db.setPrice(ctx.chat.id, pending.productName, price);
+      return ctx.reply(`"${pending.productName}" narxi ${fmt(price)} so'm qilib belgilandi.`);
+    }
+  } else if (pending) {
+    pendingActions.delete(ctx.chat.id);
+  }
 
   const menuHandler = MENU_HANDLERS[text];
   if (menuHandler) {
