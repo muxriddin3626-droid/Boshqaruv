@@ -98,6 +98,7 @@ bot.start((ctx) => {
       '/bekor — oxirgi yozuvni bekor qilish',
       '/ochir Megamir Finish — mahsulotni butunlay o‘chirish',
       "/yopish — joriy hisobni yakunlab, hisobni 0 dan qayta boshlash",
+      '/tozalash — barcha mahsulot va tarixni butunlay o\'chirib, 0 dan boshlash',
     ].join('\n')
   );
 });
@@ -176,6 +177,18 @@ bot.command('ochir', async (ctx) => {
   if (!name) return ctx.reply("Foydalanish: /ochir Megamir Finish");
   const ok = await db.deleteProduct(ctx.chat.id, name);
   ctx.reply(ok ? `"${name}" o'chirildi.` : `"${name}" topilmadi.`);
+});
+
+bot.command('tozalash', async (ctx) => {
+  const confirm = ctx.message.text.replace(/^\/tozalash(@\w+)?\s*/i, '').trim();
+  if (confirm.toUpperCase() !== 'TASDIQLAYMAN') {
+    return ctx.reply(
+      "DIQQAT: bu barcha mahsulotlar, miqdorlar va tarixni BUTUNLAY o'chiradi. Qaytarib bo'lmaydi!\n\n" +
+        "Rostdan ham hammasini o'chirib, 0 dan boshlamoqchi bo'lsangiz, aynan shuni yozing:\n/tozalash TASDIQLAYMAN"
+    );
+  }
+  await db.wipeAll(ctx.chat.id);
+  ctx.reply("Hammasi o'chirildi. Hisob butunlay 0 dan boshlandi.");
 });
 
 bot.on('text', async (ctx) => {

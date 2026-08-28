@@ -111,6 +111,13 @@ async function deleteProduct(chatId, name) {
   return true;
 }
 
+// Shu chat uchun barcha mahsulot, tarix va hisobni butunlay o'chiradi (qaytarib bo'lmaydi).
+async function wipeAll(chatId) {
+  await client.execute({ sql: 'DELETE FROM transactions WHERE chat_id = ?', args: [chatId] });
+  await client.execute({ sql: 'DELETE FROM products WHERE chat_id = ?', args: [chatId] });
+  await client.execute({ sql: 'DELETE FROM chat_meta WHERE chat_id = ?', args: [chatId] });
+}
+
 async function summaryForPeriod(chatId, sinceSql) {
   const res = await client.execute({
     sql: `SELECT p.name AS name, p.unit AS unit, p.price AS price,
@@ -193,4 +200,5 @@ module.exports = {
   periodSummary,
   closePeriod,
   history,
+  wipeAll,
 };
