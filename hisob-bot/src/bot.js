@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Telegraf } = require('telegraf');
+const { Telegraf, Markup } = require('telegraf');
 const db = require('./db');
 
 const token = process.env.BOT_TOKEN;
@@ -73,6 +73,20 @@ function renderSummary(title, rows) {
   return text;
 }
 
+const MENU_LABELS = {
+  ROYXAT: "📋 Ro'yxat",
+  BUGUN: '📅 Bugun',
+  OY: '📆 Oy',
+  YOPISH: '🔒 Yopish',
+  BEKOR: '↩️ Bekor',
+};
+
+const mainMenu = Markup.keyboard([
+  [MENU_LABELS.ROYXAT, MENU_LABELS.BUGUN],
+  [MENU_LABELS.OY, MENU_LABELS.YOPISH],
+  [MENU_LABELS.BEKOR],
+]).resize();
+
 bot.start((ctx) => {
   ctx.reply(
     [
@@ -88,18 +102,17 @@ bot.start((ctx) => {
       '  Megamir Satin 50 ta',
       '  Alpina 30 ta',
       '',
-      "Buyruqlar:",
+      "Pastdagi tugmalar orqali tezkor hisobotlarni ko'rasiz - yuqoriga aylanib",
+      "buyruq yozib yurish shart emas.",
+      '',
+      "Boshqa buyruqlar:",
       '/qoshish Megamir Finish [narx] — mahsulotni ro\'yxatga qo\'shish (chiqim yozmasdan)',
       '/narx Megamir Finish 45000 — mahsulotga narx belgilash',
-      "/royxat — joriy hisob (oxirgi yopilgandan beri)",
-      '/bugun — bugungi kunlik hisobot',
-      '/oy — shu oylik hisobot',
       '/tarix Megamir Finish — oxirgi yozuvlar',
-      '/bekor — oxirgi yozuvni bekor qilish',
       '/ochir Megamir Finish — mahsulotni butunlay o‘chirish',
-      "/yopish — joriy hisobni yakunlab, hisobni 0 dan qayta boshlash",
       '/tozalash — barcha mahsulot va tarixni butunlay o\'chirib, 0 dan boshlash',
-    ].join('\n')
+    ].join('\n'),
+    mainMenu
   );
 });
 
@@ -136,26 +149,38 @@ bot.command('narx', async (ctx) => {
   ctx.reply(`"${name.trim()}" narxi ${fmt(price)} so'm qilib belgilandi.`);
 });
 
-bot.command('royxat', async (ctx) => {
+async function handleRoyxat(ctx) {
   const rows = await db.periodSummary(ctx.chat.id);
-  sendLong(ctx, renderSummary("Joriy hisob (oxirgi yopilgandan beri)", rows));
-});
+  await sendLong(ctx, renderSummary("Joriy hisob (oxirgi yopilgandan beri)", rows));
+}
 
-bot.command('yopish', async (ctx) => {
+async function handleYopish(ctx) {
   const rows = await db.closePeriod(ctx.chat.id);
   const report = renderSummary('Hisob yopildi. Yakuniy natija', rows);
-  sendLong(ctx, `${report}\n\nHisob 0 dan qayta boshlandi.`);
-});
+  await sendLong(ctx, `${report}\n\nHisob 0 dan qayta boshlandi.`);
+}
 
-bot.command('bugun', async (ctx) => {
+async function handleBugun(ctx) {
   const rows = await db.todaySummary(ctx.chat.id);
-  sendLong(ctx, renderSummary('Bugungi hisobot', rows));
-});
+  await sendLong(ctx, renderSummary('Bugungi hisobot', rows));
+}
 
-bot.command('oy', async (ctx) => {
+async function handleOy(ctx) {
   const rows = await db.monthSummary(ctx.chat.id);
-  sendLong(ctx, renderSummary('Shu oylik hisobot', rows));
-});
+  await sendLong(ctx, renderSummary('Shu oylik hisobot', rows));
+}
+
+async function handleBekor(ctx) {
+  const last = await db.deleteLastTransaction(ctx.chat.id);
+  if (!last) return ctx.reply('Bekor qilinadigan yozuv topilmadi.');
+  ctx.reply(`Oxirgi yozuv bekor qilindi: ${fmt(last.qty)} ta.`);
+}
+
+bot.command('royxat', handleRoyxat);
+bot.command('yopish', handleYopish);
+bot.command('bugun', handleBugun);
+bot.command('oy', handleOy);
+bot.command('bekor', handleBekor);
 
 bot.command('tarix', async (ctx) => {
   const name = ctx.message.text.replace(/^\/tarix(@\w+)?\s*/i, '').trim();
@@ -164,12 +189,6 @@ bot.command('tarix', async (ctx) => {
   if (rows.length === 0) return ctx.reply(`"${name}" bo'yicha yozuv topilmadi.`);
   const lines = rows.map((r) => `• ${r.created_at} — ${fmt(r.qty)} ta`);
   sendLong(ctx, `"${name}" tarixi (oxirgi ${rows.length} ta):\n\n${lines.join('\n')}`);
-});
-
-bot.command('bekor', async (ctx) => {
-  const last = await db.deleteLastTransaction(ctx.chat.id);
-  if (!last) return ctx.reply("Bekor qilinadigan yozuv topilmadi.");
-  ctx.reply(`Oxirgi yozuv bekor qilindi: ${fmt(last.qty)} ta.`);
 });
 
 bot.command('ochir', async (ctx) => {
@@ -191,9 +210,22 @@ bot.command('tozalash', async (ctx) => {
   ctx.reply("Hammasi o'chirildi. Hisob butunlay 0 dan boshlandi.");
 });
 
+const MENU_HANDLERS = {
+  [MENU_LABELS.ROYXAT]: handleRoyxat,
+  [MENU_LABELS.BUGUN]: handleBugun,
+  [MENU_LABELS.OY]: handleOy,
+  [MENU_LABELS.YOPISH]: handleYopish,
+  [MENU_LABELS.BEKOR]: handleBekor,
+};
+
 bot.on('text', async (ctx) => {
   const text = ctx.message.text.trim();
   if (text.startsWith('/')) return;
+
+  const menuHandler = MENU_HANDLERS[text];
+  if (menuHandler) {
+    return menuHandler(ctx);
+  }
 
   const lines = text
     .split(/[\n;]+/)
