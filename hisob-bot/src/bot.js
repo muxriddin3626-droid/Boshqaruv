@@ -86,24 +86,6 @@ function renderSummary(title, rows) {
   return text;
 }
 
-function renderStockSummary(rows) {
-  if (rows.length === 0) {
-    return "Ombordagi qoldiq\n\nHozircha mahsulotlar yo'q.";
-  }
-  let totalSum = 0;
-  const lines = rows.map((r) => {
-    const sum = r.qoldiq * r.price;
-    totalSum += sum;
-    const sumPart = r.price ? ` — ${fmt(sum)} so'm` : '';
-    return `• ${r.name}: ${fmt(r.qoldiq)} ${r.unit} (kirim ${fmt(r.total_in)}, chiqim ${fmt(r.total_out)})${sumPart}`;
-  });
-  let text = `Ombordagi qoldiq\n\n${lines.join('\n')}`;
-  if (totalSum !== 0) {
-    text += `\n\nQoldiq summasi: ${fmt(totalSum)} so'm`;
-  }
-  return text;
-}
-
 const MENU_LABELS = {
   ROYXAT: "📋 Ro'yxat",
   BUGUN: '📅 Bugun',
@@ -115,8 +97,6 @@ const MENU_LABELS = {
   NARX: '💰 Narx',
   OCHIR: "🗑 O'chirish",
   TOZALASH: '🧹 Tozalash',
-  KIRIM: '📥 Kirim',
-  QOLDIQ: '📦 Qoldiq',
 };
 
 function productsKeyboard(products, prefix) {
@@ -129,20 +109,19 @@ function productsKeyboard(products, prefix) {
 }
 
 const mainMenu = Markup.keyboard([
-  [MENU_LABELS.ROYXAT, MENU_LABELS.QOLDIQ],
-  [MENU_LABELS.BUGUN, MENU_LABELS.OY],
-  [MENU_LABELS.YOPISH, MENU_LABELS.BEKOR],
-  [MENU_LABELS.TARIX, MENU_LABELS.QOSHISH],
-  [MENU_LABELS.KIRIM, MENU_LABELS.NARX],
+  [MENU_LABELS.ROYXAT, MENU_LABELS.BUGUN],
+  [MENU_LABELS.OY, MENU_LABELS.YOPISH],
+  [MENU_LABELS.BEKOR, MENU_LABELS.TARIX],
+  [MENU_LABELS.QOSHISH, MENU_LABELS.NARX],
   [MENU_LABELS.OCHIR, MENU_LABELS.TOZALASH],
 ]).resize();
 
 bot.start((ctx) => {
   ctx.reply(
     [
-      "Assalomu alaykum! Men chiqim hisob-kitob botiman.",
+      "Assalomu alaykum! Men hisob-kitob botiman.",
       '',
-      "Mahsulot chiqimini yozib yuborish uchun shunchaki shu ko'rinishda yozing:",
+      "Mahsulot va miqdorini yozib yuborish uchun shunchaki shu ko'rinishda yozing:",
       '  Megamir Finish 100 ta',
       '  Megamir Satin 50',
       '',
@@ -153,17 +132,13 @@ bot.start((ctx) => {
       '  Alpina 30 ta',
       '',
       "Pastdagi tugmalar orqali tezkor hisobotlarni ko'rasiz - yuqoriga aylanib",
-      "buyruq yozib yurish shart emas. Qo'shish/Narx/Tarix/O'chirish/Kirim",
-      "tugmalari esa qanday yozish kerakligini ko'rsatadi.",
+      "buyruq yozib yurish shart emas. Qo'shish/Narx/Tarix/O'chirish tugmalari",
+      "esa qanday yozish kerakligini ko'rsatadi.",
       '',
-      "📥 Kirim — ombor to'ldirilganda (mahsulot kelganda) shu tugma orqali",
-      "qo'shing, 📦 Qoldiq esa hozirgi ombordagi haqiqiy sonni (kirim - chiqim)",
-      "ko'rsatadi. Har kuni ertalab soat 9:00 da kechagi kunning hisoboti",
-      "avtomatik yuboriladi.",
+      "Har kuni ertalab soat 9:00 da kechagi kunning hisoboti avtomatik yuboriladi.",
       '',
       "Buyruq sifatida ham yozsangiz bo'ladi:",
-      '/qoshish Megamir Finish [narx] — mahsulotni ro\'yxatga qo\'shish (chiqim yozmasdan)',
-      '/kirim Megamir Finish 100 ta — ombor to\'ldirish (kirim)',
+      '/qoshish Megamir Finish [narx] — mahsulotni ro\'yxatga qo\'shish (miqdor yozmasdan)',
       '/narx Megamir Finish 45000 — mahsulotga narx belgilash',
       '/tarix Megamir Finish — oxirgi yozuvlar',
       '/ochir Megamir Finish — mahsulotni butunlay o‘chirish',
@@ -211,49 +186,8 @@ async function handleNarx(ctx, argText) {
   ctx.reply(`"${name.trim()}" narxi ${fmt(price)} so'm qilib belgilandi.`);
 }
 
-async function handleKirim(ctx, argText) {
-  const text = (argText || '').trim();
-  if (!text) {
-    const products = await db.listProducts(ctx.chat.id);
-    if (products.length === 0) {
-      return ctx.reply("Hozircha mahsulotlar yo'q. Avval /qoshish orqali mahsulot qo'shing.");
-    }
-    return ctx.reply("Qaysi mahsulotga kirim qilyapsiz?", productsKeyboard(products, 'kirimprod'));
-  }
-  const match = text.match(ENTRY_RE);
-  if (!match) {
-    return ctx.reply('Foydalanish: /kirim Megamir Finish 100 ta');
-  }
-  const name = match[1].trim();
-  const qty = parseInt(match[2], 10);
-  const product = await db.getOrCreateProduct(ctx.chat.id, name);
-  await db.addTransaction(ctx.chat.id, product.id, qty, 'kirim');
-  const rows = await db.stockSummary(ctx.chat.id);
-  const row = rows.find((r) => r.name.toLowerCase() === name.toLowerCase());
-  const unit = row ? row.unit : 'ta';
-  const qoldiq = row ? row.qoldiq : qty;
-  ctx.reply(`"${name}" ga ${fmt(qty)} ${unit} kirim qilindi. Joriy qoldiq: ${fmt(qoldiq)} ${unit}.`);
-}
-
-async function handleQoldiq(ctx) {
-  const rows = await db.stockSummary(ctx.chat.id);
-  await sendLong(ctx, renderStockSummary(rows));
-}
-
 bot.command('qoshish', (ctx) => handleQoshish(ctx, ctx.message.text.replace(/^\/qoshish(@\w+)?\s*/i, '')));
 bot.command('narx', (ctx) => handleNarx(ctx, ctx.message.text.replace(/^\/narx(@\w+)?\s*/i, '')));
-bot.command('kirim', (ctx) => handleKirim(ctx, ctx.message.text.replace(/^\/kirim(@\w+)?\s*/i, '')));
-bot.command('qoldiq', handleQoldiq);
-
-bot.action(/^kirimprod:(\d+)$/, async (ctx) => {
-  const productId = parseInt(ctx.match[1], 10);
-  const products = await db.listProducts(ctx.chat.id);
-  const product = products.find((p) => p.id === productId);
-  await ctx.answerCbQuery();
-  if (!product) return ctx.reply('Mahsulot topilmadi.');
-  await db.setPendingAction(ctx.chat.id, 'add_stock', product.id, product.name);
-  ctx.reply(`"${product.name}" ga nechta kirim qilyapsiz? Son yozing (masalan: 50).`);
-});
 
 bot.action(/^priceprod:(\d+)$/, async (ctx) => {
   const productId = parseInt(ctx.match[1], 10);
@@ -357,8 +291,6 @@ const MENU_HANDLERS = {
   [MENU_LABELS.NARX]: (ctx) => handleNarx(ctx, ''),
   [MENU_LABELS.OCHIR]: (ctx) => handleOchir(ctx, ''),
   [MENU_LABELS.TOZALASH]: (ctx) => handleTozalash(ctx, ''),
-  [MENU_LABELS.KIRIM]: (ctx) => handleKirim(ctx, ''),
-  [MENU_LABELS.QOLDIQ]: handleQoldiq,
 };
 
 bot.on('text', async (ctx) => {
@@ -397,19 +329,6 @@ bot.on('text', async (ctx) => {
       const price = parseInt(text, 10);
       await db.setPrice(ctx.chat.id, productName, price);
       return ctx.reply(`"${productName}" narxi ${fmt(price)} so'm qilib belgilandi.`);
-    }
-    if (pending.type === 'add_stock') {
-      if (!/^\d+$/.test(text)) {
-        return ctx.reply('Iltimos, faqat son yozing (masalan: 50).');
-      }
-      await db.clearPendingAction(ctx.chat.id);
-      const qty = parseInt(text, 10);
-      await db.addTransaction(ctx.chat.id, pending.product_id, qty, 'kirim');
-      const rows = await db.stockSummary(ctx.chat.id);
-      const row = rows.find((r) => r.name.toLowerCase() === productName.toLowerCase());
-      const unit = row ? row.unit : 'ta';
-      const qoldiq = row ? row.qoldiq : qty;
-      return ctx.reply(`"${productName}" ga ${fmt(qty)} ${unit} kirim qilindi. Joriy qoldiq: ${fmt(qoldiq)} ${unit}.`);
     }
   } else if (pending) {
     await db.clearPendingAction(ctx.chat.id);

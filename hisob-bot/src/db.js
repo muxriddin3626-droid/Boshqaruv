@@ -207,24 +207,6 @@ async function periodSummary(chatId) {
   return res.rows;
 }
 
-// Ombordagi qoldiq: barcha vaqtdagi kirim minus barcha vaqtdagi chiqim.
-// Bu "/yopish" bilan reset bo'lmaydi - qoldiq har doim haqiqiy fizik holatni
-// ko'rsatadi.
-async function stockSummary(chatId) {
-  const res = await client.execute({
-    sql: `SELECT p.name AS name, p.unit AS unit, p.price AS price,
-                 COALESCE(SUM(CASE WHEN t.type = 'kirim' THEN t.qty ELSE 0 END), 0) AS total_in,
-                 COALESCE(SUM(CASE WHEN t.type = 'chiqim' THEN t.qty ELSE 0 END), 0) AS total_out
-          FROM products p
-          LEFT JOIN transactions t ON t.product_id = p.id AND t.chat_id = p.chat_id
-          WHERE p.chat_id = ?
-          GROUP BY p.id
-          ORDER BY p.name`,
-    args: [chatId],
-  });
-  return res.rows.map((r) => ({ ...r, qoldiq: r.total_in - r.total_out }));
-}
-
 // Kamida bitta mahsulot ro'yxatga qo'shilgan barcha chatlar - kunlik
 // avtomatik hisobotni kimlarga yuborish kerakligini aniqlash uchun.
 async function listActiveChats() {
@@ -269,7 +251,6 @@ module.exports = {
   monthSummary,
   allTimeSummary,
   periodSummary,
-  stockSummary,
   listActiveChats,
   closePeriod,
   history,

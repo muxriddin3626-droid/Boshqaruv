@@ -71,7 +71,7 @@ Megamir Finish 100 ta
 Megamir Satin 50
 ```
 
-Bot avtomatik ravishda mahsulotni yaratadi (agar mavjud bo'lmasa) va chiqim sifatida
+Bot avtomatik ravishda mahsulotni yaratadi (agar mavjud bo'lmasa) va miqdorni
 qayd etadi, so'ng shu mahsulot bo'yicha jami sonini qaytaradi.
 
 Bir nechta mahsulotni (masalan, avval chiqargan mahsulotlaringizni) birdan kiritish
@@ -90,14 +90,10 @@ yig'indini ko'rsatadi. Qatorlardan biri tushunarsiz bo'lsa, faqat o'sha qator
 
 ### Buyruqlar
 
-- `/qoshish Megamir Finish [narx]` — mahsulotni ro'yxatga qo'shish, chiqim
+- `/qoshish Megamir Finish [narx]` — mahsulotni ro'yxatga qo'shish, miqdor
   yozmasdan (masalan, mahsulotlar ro'yxatini oldindan tayyorlab qo'yish uchun)
-- `/kirim Megamir Finish 100 ta` — ombor to'ldirilganda (mahsulot kelganda)
-  kirim sifatida qayd etish
-- `/qoldiq` — ombordagi haqiqiy qoldiq (barcha vaqtdagi kirim − chiqim);
-  `/yopish` bilan reset bo'lmaydi, doim haqiqiy fizik holatni ko'rsatadi
 - `/narx Megamir Finish 45000` — mahsulotga narx belgilash (ixtiyoriy, summani hisoblash uchun)
-- `/royxat` — joriy hisob (oxirgi `/yopish` dan beri to'plangan chiqim miqdorlari)
+- `/royxat` — joriy hisob (oxirgi `/yopish` dan beri to'plangan miqdorlar)
 - `/bugun` — bugungi kunlik hisobot
 - `/oy` — shu oylik hisobot
 - `/tarix Megamir Finish` — mahsulot bo'yicha oxirgi 10 ta yozuv
@@ -108,9 +104,9 @@ yig'indini ko'rsatadi. Qatorlardan biri tushunarsiz bo'lsa, faqat o'sha qator
 - `/tozalash TASDIQLAYMAN` — barcha mahsulot va tarixni butunlay o'chirib, 0 dan boshlash
 
 Barcha buyruqlar uchun pastda doimiy tugmali menyu ham mavjud (`/start` orqali
-chiqadi) — "O'chirish", "Narx" va "Kirim" tugmalari bosilganda mahsulotlar
-ro'yxati tugma sifatida chiqadi, birontasini tanlasangiz keyingi qadam
-(miqdor/narx) so'raladi.
+chiqadi) — "O'chirish" va "Narx" tugmalari bosilganda mahsulotlar ro'yxati
+tugma sifatida chiqadi, birontasini tanlasangiz keyingi qadam (miqdor/narx)
+so'raladi.
 
 Har kuni ertalab soat 9:00 da (Toshkent vaqti bo'yicha), kechagi kunda
 faoliyat bo'lgan har bir chatga o'sha kunning hisoboti avtomatik yuboriladi.
