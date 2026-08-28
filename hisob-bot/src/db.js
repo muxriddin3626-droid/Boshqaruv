@@ -34,6 +34,14 @@ const ready = (async () => {
       current_period INTEGER NOT NULL DEFAULT 1
     )
   `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS pending_actions (
+      chat_id INTEGER PRIMARY KEY,
+      type TEXT NOT NULL,
+      product_id INTEGER,
+      product_name TEXT
+    )
+  `);
 })();
 
 async function findProduct(chatId, name) {
@@ -111,11 +119,35 @@ async function deleteProduct(chatId, name) {
   return true;
 }
 
+// "O'chirish"/"Narx" tugmasi orqali mahsulot tanlangandan keyin, keyingi
+// javobda nima kutilayotganini bazada saqlaydi - shu bilan server qayta
+// ishga tushib qolsa ham (masalan bepul tarifda spin-down/up bo'lganda)
+// bu holat yo'qolib ketmaydi.
+async function setPendingAction(chatId, type, productId, productName) {
+  await client.execute({
+    sql: 'INSERT OR REPLACE INTO pending_actions (chat_id, type, product_id, product_name) VALUES (?, ?, ?, ?)',
+    args: [chatId, type, productId, productName],
+  });
+}
+
+async function getPendingAction(chatId) {
+  const res = await client.execute({
+    sql: 'SELECT * FROM pending_actions WHERE chat_id = ?',
+    args: [chatId],
+  });
+  return res.rows[0] || null;
+}
+
+async function clearPendingAction(chatId) {
+  await client.execute({ sql: 'DELETE FROM pending_actions WHERE chat_id = ?', args: [chatId] });
+}
+
 // Shu chat uchun barcha mahsulot, tarix va hisobni butunlay o'chiradi (qaytarib bo'lmaydi).
 async function wipeAll(chatId) {
   await client.execute({ sql: 'DELETE FROM transactions WHERE chat_id = ?', args: [chatId] });
   await client.execute({ sql: 'DELETE FROM products WHERE chat_id = ?', args: [chatId] });
   await client.execute({ sql: 'DELETE FROM chat_meta WHERE chat_id = ?', args: [chatId] });
+  await client.execute({ sql: 'DELETE FROM pending_actions WHERE chat_id = ?', args: [chatId] });
 }
 
 async function summaryForPeriod(chatId, sinceSql) {
@@ -201,4 +233,7 @@ module.exports = {
   closePeriod,
   history,
   wipeAll,
+  setPendingAction,
+  getPendingAction,
+  clearPendingAction,
 };
