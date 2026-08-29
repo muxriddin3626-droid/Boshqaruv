@@ -67,21 +67,53 @@ function formatUnitTotals(rows) {
     .join(', ');
 }
 
+// Nomida " bilan " so'zi bo'lgan mahsulotlar (masalan "Suxrob bilan Megamir
+// Finish") hamkorlikdagi alohida hisob deb qaraladi - bu mahsulotlar asosiy
+// "Umumiy" ga qo'shilmaydi, o'zining alohida "Umumiy"siga ega bo'ladi.
+function isPartnerEntry(name) {
+  return / bilan /i.test(name);
+}
+
+function splitByGroup(rows) {
+  const main = [];
+  const partner = [];
+  for (const r of rows) {
+    (isPartnerEntry(r.name) ? partner : main).push(r);
+  }
+  return { main, partner };
+}
+
+function renderLines(list) {
+  return list
+    .map((r) => {
+      const sum = r.total_qty * r.price;
+      const sumPart = r.price ? ` — ${fmt(sum)} so'm` : '';
+      return `• ${r.name}: ${fmt(r.total_qty)} ${r.unit}${sumPart}`;
+    })
+    .join('\n');
+}
+
+function renderTotals(list) {
+  const totalSum = list.reduce((s, r) => s + r.total_qty * r.price, 0);
+  let text = `Umumiy: ${formatUnitTotals(list)}`;
+  if (totalSum > 0) {
+    text += `\nJami summa: ${fmt(totalSum)} so'm`;
+  }
+  return text;
+}
+
 function renderSummary(title, rows) {
   if (rows.length === 0) {
     return `${title}\n\nHozircha mahsulotlar yo'q.`;
   }
-  let totalSum = 0;
-  const lines = rows.map((r) => {
-    const sum = r.total_qty * r.price;
-    totalSum += sum;
-    const sumPart = r.price ? ` — ${fmt(sum)} so'm` : '';
-    return `• ${r.name}: ${fmt(r.total_qty)} ${r.unit}${sumPart}`;
-  });
-  let text = `${title}\n\n${lines.join('\n')}`;
-  text += `\n\nUmumiy: ${formatUnitTotals(rows)}`;
-  if (totalSum > 0) {
-    text += `\nJami summa: ${fmt(totalSum)} so'm`;
+  const { main, partner } = splitByGroup(rows);
+
+  let text = title;
+  if (main.length > 0) {
+    text += `\n\n${renderLines(main)}\n\n${renderTotals(main)}`;
+  }
+  if (partner.length > 0) {
+    text += `\n\n— Hamkorlikda —\n\n${renderLines(partner)}\n\n${renderTotals(partner)}`;
   }
   return text;
 }
@@ -397,7 +429,13 @@ bot.on('text', async (ctx) => {
   });
 
   let reply = `Qayd etildi:\n${entryLines.join('\n')}`;
-  reply += `\n\nUmumiy (barcha mahsulotlar): ${formatUnitTotals(rows)}`;
+  const { main, partner } = splitByGroup(rows);
+  if (main.length > 0) {
+    reply += `\n\nUmumiy: ${formatUnitTotals(main)}`;
+  }
+  if (partner.length > 0) {
+    reply += `\n\nUmumiy (hamkorlikda): ${formatUnitTotals(partner)}`;
+  }
   if (unrecognized.length > 0) {
     reply += `\n\nTushunilmadi (bular saqlanmadi):\n${unrecognized.map((l) => `• ${l}`).join('\n')}`;
     reply +=
