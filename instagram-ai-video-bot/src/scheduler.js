@@ -6,6 +6,8 @@ const { bot, generateAndPresent, ADMIN_IDS } = require('./bot');
 const { createPost } = require('./pipeline');
 const { publishReel } = require('./instagramPublisher');
 const { isAutoPostEnabled } = require('./configStore');
+const { recordPost } = require('./postLog');
+const { refreshStats } = require('./analytics');
 
 async function notifyAdmins(text) {
   for (const chatId of ADMIN_IDS) {
@@ -21,6 +23,14 @@ async function runDailyJob() {
   if (ADMIN_IDS.length === 0) {
     console.warn('ADMIN_CHAT_IDS sozlanmagan - kunlik vazifa o\'tkazib yuborildi.');
     return;
+  }
+
+  if (process.env.IG_ACCESS_TOKEN && process.env.IG_BUSINESS_ACCOUNT_ID) {
+    try {
+      await refreshStats();
+    } catch (err) {
+      console.error("O'tgan postlar statistikasini yangilashda xato:", err.message);
+    }
   }
 
   if (!isAutoPostEnabled()) {
@@ -52,6 +62,13 @@ async function runDailyJob() {
   try {
     const videoUrl = `${base.replace(/\/$/, '')}/media/${post.fileName}`;
     const result = await publishReel({ videoUrl, caption: post.caption });
+    recordPost({
+      mediaId: result.mediaId,
+      quoteIndex: post.quoteIndex,
+      mood: post.mood,
+      quoteText: post.quoteText,
+      permalink: result.permalink,
+    });
     await notifyAdmins(`✅ Kunlik video avtomatik joylandi!${result.permalink ? `\n${result.permalink}` : ''}`);
   } catch (err) {
     console.error('Kunlik Instagramga joylash xatosi:', err);

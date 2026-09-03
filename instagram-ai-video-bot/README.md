@@ -139,9 +139,27 @@ yoki Render'ning pullik tarifiga o'tish.
 - `/holat` - joriy sozlamalarni ko'rsatadi
 - `/auto_yoq` - kunlik videoni **avtomatik** Instagramga joylashni yoqadi
 - `/auto_ochir` - avtomatik joylashni o'chiradi (video tasdiq kutadi)
+- `/statistika` - Instagram hisobingizni (obunachilar, postlar) va
+  joylangan videolarning haqiqiy natijasini (like, reach, ko'rishlar)
+  tahlil qiladi
 
 Video tasdiqlash xabari ostida uchta tugma chiqadi: **✅ Instagramga
 joylash**, **🔄 Boshqa video**, **❌ Bekor qilish**.
+
+## Natijaga qarab o'zini moslashtirishi (o'z-o'zini o'rgatish)
+
+Har safar video Instagramga joylanganda, bot qaysi iqtibos/mood (fon uslubi)
+ishlatilganini `data/post-log.json` ga yozib boradi. `/statistika` buyrug'i
+(va kunlik avtomatik vazifa, agar Instagram tokeni sozlangan bo'lsa) har bir
+joylangan videoning haqiqiy natijasini (like+comment+share+saved / reach)
+Instagram Graph API orqali so'rab, shu faylga yozadi.
+
+Keyingi safar video tayyorlanayotganda, bot **yaxshi natija bergan
+mood'larni ko'proq ehtimollik bilan** tanlaydi (kamida 3 ta mood bo'yicha
+statistika to'planganidan keyin ishga tushadi; undan oldin tanlov sof
+tasodifiy bo'ladi). Ya'ni sizdan qo'shimcha ish talab qilmasdan, vaqt
+o'tishi bilan qaysi uslub obunachilaringizga ko'proq yoqishini "o'rganib"
+boradi.
 
 ## Kontentni o'zgartirish
 

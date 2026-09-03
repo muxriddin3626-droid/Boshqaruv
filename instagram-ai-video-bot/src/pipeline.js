@@ -7,6 +7,7 @@ const { readHistory, markUsed } = require('./history');
 const { fetchBackgroundVideo } = require('./backgroundService');
 const { synthesize } = require('./ttsService');
 const { generateVideo } = require('./videoGenerator');
+const { computeMoodScores } = require('./analytics');
 
 const MEDIA_DIR = path.join(__dirname, '..', 'media');
 const TTS_DIR = path.join(__dirname, '..', 'media', 'tts');
@@ -18,7 +19,8 @@ function buildCaption(quoteText) {
 }
 
 async function createPost({ pexelsApiKey } = {}) {
-  const quote = pickQuote(readHistory());
+  const moodScores = computeMoodScores();
+  const quote = pickQuote(readHistory(), moodScores);
   const backgroundPath = await fetchBackgroundVideo(
     quote.mood,
     pexelsApiKey || process.env.PEXELS_API_KEY
@@ -44,6 +46,8 @@ async function createPost({ pexelsApiKey } = {}) {
     fileName,
     caption: buildCaption(quote.text),
     quoteText: quote.text,
+    quoteIndex: quote.index,
+    mood: quote.mood,
   };
 }
 

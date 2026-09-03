@@ -5,6 +5,8 @@ const { Telegraf, Markup } = require('telegraf');
 const { createPost } = require('./pipeline');
 const { publishReel } = require('./instagramPublisher');
 const { isAutoPostEnabled, setAutoPost } = require('./configStore');
+const { recordPost } = require('./postLog');
+const { buildReport } = require('./analytics');
 
 const token = process.env.BOT_TOKEN;
 if (!token) {
@@ -96,6 +98,13 @@ async function publishPending(id) {
   }
   const videoUrl = `${base.replace(/\/$/, '')}/media/${post.fileName}`;
   const result = await publishReel({ videoUrl, caption: post.caption });
+  recordPost({
+    mediaId: result.mediaId,
+    quoteIndex: post.quoteIndex,
+    mood: post.mood,
+    quoteText: post.quoteText,
+    permalink: result.permalink,
+  });
   cleanupPending(id);
   return result;
 }
@@ -106,7 +115,8 @@ bot.command('start', (ctx) => {
     "/video - hozir bitta video tayyorlash\n" +
     "/holat - joriy sozlamalarni ko'rish\n" +
     "/auto_yoq - kunlik avtomatik joylashni yoqish\n" +
-    "/auto_ochir - kunlik avtomatik joylashni o'chirish"
+    "/auto_ochir - kunlik avtomatik joylashni o'chirish\n" +
+    "/statistika - Instagram hisobim va postlar natijasini tahlil qilish"
   );
 });
 
@@ -138,6 +148,17 @@ bot.command('auto_yoq', requireAdmin(async (ctx) => {
 bot.command('auto_ochir', requireAdmin(async (ctx) => {
   setAutoPost(false);
   await ctx.reply('❌ Kunlik avtomatik joylash o\'chirildi. Bot video tayyorlab, tasdiqlashingizni kutadi.');
+}));
+
+bot.command('statistika', requireAdmin(async (ctx) => {
+  await ctx.reply('⏳ Instagram statistikasi olinmoqda...');
+  try {
+    const report = await buildReport();
+    await ctx.reply(report);
+  } catch (err) {
+    console.error('Statistika xatosi:', err);
+    await ctx.reply(`❌ Statistikani olishda xato:\n${err.message}`);
+  }
 }));
 
 bot.action(/^publish:(.+)$/, requireAdmin(async (ctx) => {

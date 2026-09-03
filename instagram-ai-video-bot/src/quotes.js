@@ -23,11 +23,42 @@ const QUOTES = [
   { text: "Sening vaqting hozir.", mood: "clock sunrise" },
 ];
 
-function pickQuote(usedIndexes = []) {
+// moodScores - ixtiyoriy {mood: o'rtacha_engagement_darajasi} xaritasi
+// (src/analytics.js dan keladi, Instagram'da haqiqatda joylangan
+// postlarning natijalariga asoslanadi). Berilsa, yaxshi natija bergan
+// mood'lar ko'proq ehtimol bilan tanlanadi; berilmasa (yoki hali yetarli
+// tarix bo'lmasa) - hammasi teng ehtimollik bilan tanlanadi.
+function pickQuote(usedIndexes = [], moodScores = {}) {
   const available = QUOTES.map((q, i) => i).filter((i) => !usedIndexes.includes(i));
   const pool = available.length > 0 ? available : QUOTES.map((_, i) => i);
-  const idx = pool[Math.floor(Math.random() * pool.length)];
-  return { index: idx, ...QUOTES[idx] };
+
+  const scores = pool.map((i) => moodScores[QUOTES[i].mood]);
+  const known = scores.filter((s) => typeof s === 'number');
+  let weights;
+  if (known.length >= 3) {
+    const min = Math.min(...known);
+    const max = Math.max(...known);
+    weights = scores.map((s) => {
+      if (typeof s !== 'number') return 1; // hali natijasi noma'lum mood - o'rtacha imkoniyat
+      const normalized = max > min ? (s - min) / (max - min) : 0.5;
+      return 0.5 + normalized * 1.5; // eng yomoni x0.5, eng yaxshisi x2
+    });
+  } else {
+    weights = pool.map(() => 1); // tarix hali kam - sof tasodifiy tanlov
+  }
+
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  let chosen = pool[pool.length - 1];
+  for (let k = 0; k < pool.length; k++) {
+    r -= weights[k];
+    if (r <= 0) {
+      chosen = pool[k];
+      break;
+    }
+  }
+
+  return { index: chosen, ...QUOTES[chosen] };
 }
 
 module.exports = { QUOTES, pickQuote };
