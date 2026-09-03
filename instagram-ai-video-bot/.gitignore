@@ -1,0 +1,7 @@
+node_modules/
+.env
+media/*.mp4
+media/bg/*
+!media/bg/.gitkeep
+data/*.json
+!data/.gitkeep

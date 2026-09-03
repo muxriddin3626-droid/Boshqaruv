@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: instagram-ai-video-bot
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_CHAT_IDS
+        sync: false
+      - key: PEXELS_API_KEY
+        sync: false
+      - key: IG_ACCESS_TOKEN
+        sync: false
+      - key: IG_BUSINESS_ACCOUNT_ID
+        sync: false
+      - key: AUTO_POST
+        value: "false"
+      - key: DAILY_POST_HOUR
+        value: "9"
+      - key: DAILY_POST_MINUTE
+        value: "0"
