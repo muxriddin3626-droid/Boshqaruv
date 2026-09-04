@@ -174,16 +174,31 @@ async function summaryForPeriod(chatId, sinceSql) {
   return res.rows;
 }
 
+// Ma'lumotlar bazasida vaqt UTC bo'yicha saqlanadi, lekin "bugun"/"kecha"/"oy"
+// chegarasi Toshkent vaqti (UTC+5) bo'yicha hisoblanishi kerak - aks holda
+// tunda soat 00:00-05:00 orasida kiritilgan yozuvlar "kechagi kun"ga tushib
+// qolardi.
+const TZ_OFFSET = "'+5 hours'";
+
 async function todaySummary(chatId) {
-  return summaryForPeriod(chatId, "AND date(t.created_at) = date('now')");
+  return summaryForPeriod(
+    chatId,
+    `AND date(t.created_at, ${TZ_OFFSET}) = date('now', ${TZ_OFFSET})`
+  );
 }
 
 async function yesterdaySummary(chatId) {
-  return summaryForPeriod(chatId, "AND date(t.created_at) = date('now', '-1 day')");
+  return summaryForPeriod(
+    chatId,
+    `AND date(t.created_at, ${TZ_OFFSET}) = date('now', ${TZ_OFFSET}, '-1 day')`
+  );
 }
 
 async function monthSummary(chatId) {
-  return summaryForPeriod(chatId, "AND strftime('%Y-%m', t.created_at) = strftime('%Y-%m', 'now')");
+  return summaryForPeriod(
+    chatId,
+    `AND strftime('%Y-%m', t.created_at, ${TZ_OFFSET}) = strftime('%Y-%m', 'now', ${TZ_OFFSET})`
+  );
 }
 
 async function allTimeSummary(chatId) {
@@ -230,7 +245,9 @@ async function history(chatId, name, limit = 10) {
   const product = await findProduct(chatId, name);
   if (!product) return [];
   const res = await client.execute({
-    sql: 'SELECT * FROM transactions WHERE product_id = ? ORDER BY id DESC LIMIT ?',
+    sql: `SELECT id, chat_id, product_id, qty, period, type,
+                 datetime(created_at, ${TZ_OFFSET}) AS created_at
+          FROM transactions WHERE product_id = ? ORDER BY id DESC LIMIT ?`,
     args: [product.id, limit],
   });
   return res.rows;
