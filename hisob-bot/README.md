@@ -96,7 +96,8 @@ yig'indini ko'rsatadi. Qatorlardan biri tushunarsiz bo'lsa, faqat o'sha qator
 - `/royxat` — joriy hisob (oxirgi `/yopish` dan beri to'plangan miqdorlar)
 - `/bugun` — bugungi kunlik hisobot
 - `/oy` — shu oylik hisobot
-- `/tarix Megamir Finish` — mahsulot bo'yicha oxirgi 10 ta yozuv
+- `/tarix` — umumiy tarix: qachon, qaysi mahsulotga qancha kiritilgani (oxirgi 20 ta yozuv)
+- `/tarix Megamir Finish` — faqat shu mahsulot bo'yicha oxirgi 10 ta yozuv
 - `/bekor` — oxirgi qayd etilgan yozuvni bekor qilish
 - `/ochir Megamir Finish` — mahsulotni butunlay o'chirish
 - `/yopish` — joriy hisobni yakunlab, yakuniy hisobotni chiqaradi va keyingi

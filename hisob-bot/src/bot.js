@@ -172,7 +172,7 @@ bot.start((ctx) => {
       "Buyruq sifatida ham yozsangiz bo'ladi:",
       '/qoshish Megamir Finish [narx] — mahsulotni ro\'yxatga qo\'shish (miqdor yozmasdan)',
       '/narx Megamir Finish 45000 — mahsulotga narx belgilash',
-      '/tarix Megamir Finish — oxirgi yozuvlar',
+      '/tarix — umumiy tarix (qachon nima qo\'shilgani), yoki /tarix Megamir Finish — bitta mahsulot tarixi',
       '/ochir Megamir Finish — mahsulotni butunlay o‘chirish',
       '/tozalash — barcha mahsulot va tarixni butunlay o\'chirib, 0 dan boshlash',
     ].join('\n'),
@@ -266,7 +266,15 @@ bot.command('bekor', handleBekor);
 
 async function handleTarix(ctx, argText) {
   const name = (argText || '').trim();
-  if (!name) return ctx.reply('Foydalanish: /tarix Megamir Finish');
+  if (!name) {
+    const rows = await db.recentHistory(ctx.chat.id, 20);
+    if (rows.length === 0) return ctx.reply("Hozircha yozuvlar yo'q.");
+    const lines = rows.map((r) => {
+      const sign = r.qty >= 0 ? '+' : '';
+      return `• ${r.created_at} — ${r.product_name}: ${sign}${fmt(r.qty)} ${r.unit}`;
+    });
+    return sendLong(ctx, `Umumiy tarix (oxirgi ${rows.length} ta yozuv):\n\n${lines.join('\n')}`);
+  }
   const rows = await db.history(ctx.chat.id, name, 10);
   if (rows.length === 0) return ctx.reply(`"${name}" bo'yicha yozuv topilmadi.`);
   const lines = rows.map((r) => `• ${r.created_at} — ${fmt(r.qty)} ta`);
