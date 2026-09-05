@@ -253,6 +253,22 @@ async function history(chatId, name, limit = 10) {
   return res.rows;
 }
 
+// Bitta mahsulotga cheklanmagan, shu chatdagi barcha mahsulotlar bo'yicha
+// so'nggi yozuvlar (qachon, qaysi mahsulot, qancha) - umumiy tarix uchun.
+async function recentHistory(chatId, limit = 20) {
+  const res = await client.execute({
+    sql: `SELECT t.id, p.name AS product_name, p.unit AS unit, t.qty, t.type,
+                 datetime(t.created_at, ${TZ_OFFSET}) AS created_at
+          FROM transactions t
+          JOIN products p ON p.id = t.product_id
+          WHERE t.chat_id = ?
+          ORDER BY t.id DESC
+          LIMIT ?`,
+    args: [chatId, limit],
+  });
+  return res.rows;
+}
+
 module.exports = {
   ready,
   findProduct,
@@ -271,6 +287,7 @@ module.exports = {
   listActiveChats,
   closePeriod,
   history,
+  recentHistory,
   wipeAll,
   setPendingAction,
   getPendingAction,
