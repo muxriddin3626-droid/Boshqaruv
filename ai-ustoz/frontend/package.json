@@ -1,0 +1,35 @@
+{
+  "name": "ai-ustoz-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "14.2.18",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "framer-motion": "11.15.0",
+    "three": "0.171.0",
+    "react-markdown": "9.0.1",
+    "remark-math": "6.0.0",
+    "rehype-katex": "7.0.1",
+    "katex": "0.16.11",
+    "mermaid": "11.4.1",
+    "zustand": "5.0.2",
+    "clsx": "2.1.1"
+  },
+  "devDependencies": {
+    "typescript": "5.7.2",
+    "@types/node": "22.10.2",
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
+    "@types/three": "0.171.0",
+    "tailwindcss": "3.4.17",
+    "postcss": "8.4.49",
+    "autoprefixer": "10.4.20"
+  }
+}
