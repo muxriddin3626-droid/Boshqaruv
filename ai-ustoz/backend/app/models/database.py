@@ -68,6 +68,7 @@ class Lesson(Base):
     grade: Mapped[int] = mapped_column(Integer, nullable=False)
     topic_order: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
+    category: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     __table_args__ = (UniqueConstraint("subject", "grade", "topic_order", name="uq_lesson_order"),)
 
@@ -102,6 +103,7 @@ class WeakSpot(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     subject: Mapped[Subject] = mapped_column(String(20), nullable=False)
     topic: Mapped[str] = mapped_column(String(255), nullable=False)
+    category: Mapped[str | None] = mapped_column(String(100), nullable=True)
     mistake_description: Mapped[str] = mapped_column(Text, nullable=False)
     severity: Mapped[int] = mapped_column(Integer, default=1)  # 1..5
     resolved: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -150,3 +152,64 @@ class KnowledgeChunk(Base):
     chunk_text: Mapped[str] = mapped_column(Text, nullable=False)
     image_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     embedding: Mapped[list[float]] = mapped_column(Vector(1536), nullable=False)
+
+
+# Ebbinghaus unutish egri chizig'i bosqichlari: har biridan keyin necha kunda takrorlash kerak.
+SPACED_REPETITION_INTERVALS_DAYS: list[int] = [1, 3, 7, 30]
+
+
+class Flashcard(Base):
+    """AI tomonidan dars/suhbat oxirida avtomatik generatsiya qilingan flashcard."""
+
+    __tablename__ = "flashcards"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    subject: Mapped[Subject] = mapped_column(String(20), nullable=False)
+    lesson_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("lessons.id"), nullable=True)
+    front_text: Mapped[str] = mapped_column(Text, nullable=False)
+    back_text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    queue_entry: Mapped["SpacedRepetitionQueue"] = relationship(
+        back_populates="flashcard", cascade="all, delete-orphan", uselist=False
+    )
+
+
+class SpacedRepetitionQueue(Base):
+    """Har bir flashcard uchun keyingi takrorlash vaqti (Anki uslubidagi navbat)."""
+
+    __tablename__ = "spaced_repetition_queue"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    flashcard_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("flashcards.id", ondelete="CASCADE"), unique=True
+    )
+    stage: Mapped[int] = mapped_column(Integer, default=0)  # SPACED_REPETITION_INTERVALS_DAYS indeksi
+    remembered_streak: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(20), default="active")  # "active" | "mastered"
+    next_review_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_result: Mapped[str | None] = mapped_column(String(20), nullable=True)  # "remembered" | "forgot"
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    flashcard: Mapped["Flashcard"] = relationship(back_populates="queue_entry")
+
+
+class UserWeaknessRadar(Base):
+    """O'quvchining bo'lim (category) bo'yicha o'zlashtirish foizi — Radar Chart uchun keshlanadi."""
+
+    __tablename__ = "user_weakness_radar"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    subject: Mapped[Subject] = mapped_column(String(20), nullable=False)
+    category: Mapped[str] = mapped_column(String(100), nullable=False)
+    mastery_percentage: Mapped[float] = mapped_column(Float, default=50.0)
+    sample_size: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (UniqueConstraint("user_id", "subject", "category", name="uq_radar_user_subject_category"),)

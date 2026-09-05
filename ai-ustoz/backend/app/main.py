@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import chat, progress, voice
+from app.api.routes import chat, conspect, flashcards, progress, sync, voice, weakness
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -24,6 +24,10 @@ app.add_middleware(
 app.include_router(chat.router)
 app.include_router(voice.router)
 app.include_router(progress.router)
+app.include_router(flashcards.router)
+app.include_router(weakness.router)
+app.include_router(conspect.router)
+app.include_router(sync.router)
 
 
 @app.get("/health", tags=["system"])

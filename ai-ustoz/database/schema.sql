@@ -43,6 +43,7 @@ create table if not exists lessons (
     grade           integer not null check (grade between 5 and 11),
     topic_order     integer not null,
     title           varchar(255) not null,
+    category        varchar(100),          -- masalan: "Organik kimyo", "Genetika" — Weakness Radar uchun guruh
     unique (subject, grade, topic_order)
 );
 
@@ -70,6 +71,7 @@ create table if not exists weak_spots (
     user_id                 uuid not null references users(id) on delete cascade,
     subject                 subject_enum not null,
     topic                   varchar(255) not null,
+    category                varchar(100),          -- Weakness Radar guruhi (Lessons.category bilan mos)
     mistake_description     text not null,
     severity                integer not null default 1 check (severity between 1 and 5),
     resolved                boolean not null default false,
@@ -130,6 +132,67 @@ create index if not exists idx_knowledge_chunks_embedding
 create index if not exists idx_knowledge_chunks_subject_grade on knowledge_chunks(subject, grade);
 
 -- =============================================================================
+-- MODUL 1: AI SMART FLASHCARDS & SPACED REPETITION (Ebbinghaus/Anki metodi)
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- FLASHCARDS — AI tomonidan dars/suhbat oxirida avtomatik generatsiya qilingan kartalar
+-- -----------------------------------------------------------------------------
+create table if not exists flashcards (
+    id              uuid primary key default uuid_generate_v4(),
+    user_id         uuid not null references users(id) on delete cascade,
+    subject         subject_enum not null,
+    lesson_id       uuid references lessons(id),
+    front_text      text not null,          -- savol/atama (old tarafi)
+    back_text       text not null,          -- javob/tushuntirish (orqa tarafi, KaTeX bo'lishi mumkin)
+    created_at      timestamptz not null default now()
+);
+
+create index if not exists idx_flashcards_user_subject on flashcards(user_id, subject);
+
+-- -----------------------------------------------------------------------------
+-- SPACED_REPETITION_QUEUE — har bir karta uchun keyingi takrorlash vaqti
+-- interval_days ketma-ketligi: [1, 3, 7, 30] — Ebbinghaus unutish egri chizig'i
+-- -----------------------------------------------------------------------------
+create table if not exists spaced_repetition_queue (
+    id                  uuid primary key default uuid_generate_v4(),
+    user_id             uuid not null references users(id) on delete cascade,
+    flashcard_id        uuid not null references flashcards(id) on delete cascade,
+    stage               integer not null default 0,        -- interval_days massividagi indeks
+    remembered_streak   integer not null default 0,
+    status              varchar(20) not null default 'active' check (status in ('active', 'mastered')),
+    next_review_at      timestamptz not null default now(),
+    last_reviewed_at    timestamptz,
+    last_result         varchar(20) check (last_result in ('remembered', 'forgot')),
+    created_at          timestamptz not null default now(),
+    unique (flashcard_id)
+);
+
+create index if not exists idx_srq_due on spaced_repetition_queue(user_id, next_review_at) where status = 'active';
+
+-- =============================================================================
+-- MODUL 3: WEAKNESS RADAR & TARGETED DRILL
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- USER_WEAKNESS_RADAR — o'quvchining har bir bo'lim (category) bo'yicha
+-- o'zlashtirish foizi. `weakness_service.recalculate_radar()` tomonidan
+-- test_results va weak_spots asosida qayta hisoblanadi (materialized cache).
+-- -----------------------------------------------------------------------------
+create table if not exists user_weakness_radar (
+    id                  uuid primary key default uuid_generate_v4(),
+    user_id             uuid not null references users(id) on delete cascade,
+    subject             subject_enum not null,
+    category            varchar(100) not null,     -- masalan: "Genetika", "Organik kimyo"
+    mastery_percentage  double precision not null default 50 check (mastery_percentage between 0 and 100),
+    sample_size         integer not null default 0,  -- necha ta test/xato asosida hisoblangani
+    updated_at          timestamptz not null default now(),
+    unique (user_id, subject, category)
+);
+
+create index if not exists idx_weakness_radar_user_subject on user_weakness_radar(user_id, subject);
+
+-- =============================================================================
 -- Eslatma: `updated_at` maydonini avtomatik yangilash uchun trigger
 -- =============================================================================
 create or replace function set_updated_at()
@@ -143,4 +206,9 @@ $$ language plpgsql;
 drop trigger if exists trg_progress_updated_at on progress;
 create trigger trg_progress_updated_at
     before update on progress
+    for each row execute function set_updated_at();
+
+drop trigger if exists trg_weakness_radar_updated_at on user_weakness_radar;
+create trigger trg_weakness_radar_updated_at
+    before update on user_weakness_radar
     for each row execute function set_updated_at();

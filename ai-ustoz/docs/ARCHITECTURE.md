@@ -67,7 +67,105 @@ O'rniga:
    (Three.js) komponentiga uzatiladi — orb ovoz balandligiga qarab
    kattalashadi/porlaydi.
 
-## 5. Nima keyingi bosqichda qo'shilishi kerak (production yo'l xaritasi)
+## 5. Eksklyuziv modullar (Flashcards, Debate, Radar, PDF, Offline Sync)
+
+### 5.1 AI Smart Flashcards & Spaced Repetition (Anki/Ebbinghaus)
+
+`flashcard_service.py` Ebbinghaus unutish egri chizig'iga mos qat'iy interval
+jadvalidan foydalanadi: `SPACED_REPETITION_INTERVALS_DAYS = [1, 3, 7, 30]`
+(`models/database.py`). Har bir flashcard uchun `spaced_repetition_queue`
+jadvalida bitta yozuv bo'ladi (`stage` — shu massivdagi joriy indeks):
+
+- **"Esladim"** → `stage += 1`, `next_review_at = now + intervals[stage]`.
+  Agar allaqachon oxirgi bosqichda (30 kun) bo'lsa → `status = "mastered"`
+  (navbatdan butunlay chiqadi).
+- **"Eslayolmadim"** → `stage = 0`, ya'ni ertaga qayta ko'rsatiladi — bu
+  Ebbinghaus metodining asosiy g'oyasi (unutilgan narsa tez-tez
+  takrorlanishi kerak).
+
+Oqim: `POST /api/v1/flashcards/generate` (dars/suhbat matnidan AI orqali
+kartalar yaratadi, JSON-mode) → `GET /api/v1/flashcards/due` (bugungi
+kartalar) → `POST /api/v1/flashcards/review` (natijani yozadi).
+`FlashcardDeck.tsx` bitta kartani ko'rsatadi, Framer Motion bilan flip
+animatsiyasi qiladi.
+
+### 5.2 AI Live Voice Debates (Munozara rejimi)
+
+`prompts/debate_prompt.py` `build_debate_system_prompt()` — oddiy
+`system_prompt.py`dan farqli, AI'ga ATAYIN noto'g'ri gipoteza aytishni va
+o'quvchi kuchsiz dalil keltirsa yanada qat'iyroq turib olishni buyuradi.
+Mavzu tanlash ustuvorligi: `topic_hint` (agar berilsa) → eng jiddiy
+`weak_spot` → fan bo'yicha zaxira (fallback) mavzular ro'yxati.
+
+`POST /api/v1/voice/session` endi `mode: "tutor" | "debate"` qabul qiladi
+(`VoiceSessionIn`); `mode=debate` bo'lsa, ephemeral Realtime sessiya
+`instructions` maydoni `build_debate_system_prompt()` natijasi bilan
+to'ldiriladi. Butun munozara ovozli (speech-to-speech) davom etadi —
+backend har bir gapni alohida baholamaydi, model o'zi jonli mulohaza
+yuritadi. Frontendda `VoiceSession.tsx`ga oddiy rejim tugmasi qo'shildi.
+
+### 5.3 Weakness Radar & Targeted Drill
+
+`user_weakness_radar` jadvali — har bir fan bo'limi (`category`, masalan
+"Genetika", "Organik kimyo") uchun 0-100% mastery foizini saqlaydigan
+kesh. `weakness_service.recalculate_radar()`:
+
+1. So'nggi `test_results.details.topic_breakdown` (`{category: {correct,
+   total}}`) yig'indisidan mastery% hisoblaydi.
+2. Hal qilinmagan `weak_spots` (agar `category` maydoni to'ldirilgan bo'lsa)
+   severity darajasiga qarab yuqori chegara (cap) qo'yadi — masalan,
+   severity=5 bo'lsa mastery 25%dan oshmaydi, hatto testda yaxshi natija
+   bo'lsa ham (chunki weak_spot hali "hal qilinmagan").
+3. Natija `user_weakness_radar`ga upsert qilinadi.
+
+`GET /api/v1/weakness/radar` shu keshni qaytaradi (birinchi so'rovda hali
+hisoblanmagan bo'lsa, on-the-fly hisoblaydi) — `WeaknessRadarChart.tsx`
+buni Recharts `RadarChart`da chizadi. "Zaif Nuqtalarni Ishlash" tugmasi
+(`TargetedDrill.tsx`) `POST /api/v1/weakness/drill`ni chaqiradi — bu eng
+past mastery'li 2-3 bo'limni tanlab, OpenAI JSON-mode orqali faqat shu
+bo'limlardan DTM uslubidagi test tuzadi. Test yakunlanganda natija
+`test_results`ga (`topic_breakdown` bilan) yoziladi va bu radar'ni
+avtomatik yangilaydi.
+
+### 5.4 Auto-PDF Konspekt Generator
+
+`pdf_service.py` uch bosqichda ishlaydi: (1) `chat_messages` va
+`weak_spots`dan xom matn yig'iladi, (2)
+`openai_service.summarize_for_conspect()` buni JSON-mode orqali
+`{"formulas": [...], "rules": [...], "mistakes": [...]}` strukturasiga
+aylantiradi, (3) ReportLab (`SimpleDocTemplate` + `Paragraph`/
+`ListFlowable`) shu strukturadan PDF bayt oqimini yasaydi.
+`POST /api/v1/conspect/generate` PDF'ni to'g'ridan-to'g'ri
+`application/pdf` sifatida qaytaradi; frontend (`downloadLessonConspect`)
+uni blob orqali brauzerda yuklab beradi.
+
+O'zbek lotin alifbosidagi maxsus belgilar (`oʻ`, `gʻ`) uchun Unicode TTF
+shrift kerak — `assets/fonts/README.md`da tushuntirilgan (fayl bo'lmasa,
+avtomatik Helvetica'ga tushadi).
+
+### 5.5 Offline Sync (PWA & IndexedDB)
+
+Uch qatlamli oqim:
+
+1. **Frontend keshlash**: `FlashcardDeck.tsx` har safar serverdan due
+   kartalarni olganda `lib/offlineDb.ts` orqali IndexedDB'ga keshlaydi.
+   Server bilan aloqa bo'lmasa, shu keshdan o'qiladi.
+2. **Offline navbat**: internet yo'qligida "Esladim/Eslayolmadim" yoki
+   test natijasi IndexedDB'ning `pending_reviews` / `pending_test_results`
+   do'konlariga `client_action_id` (UUID) bilan birga yoziladi.
+3. **Auto-sync**: `hooks/useOnlineSync.ts` `online` hodisasini kuzatadi va
+   internet tiklanganda `POST /api/v1/sync/push`ni chaqiradi.
+   `sync_service.py` har bir elementni Redis `SETNX
+   sync:applied:{client_action_id}` orqali IDEMPOTENT qo'llaydi — shu
+   bilan bir xil harakat tarmoq uzilib qayta yuborilsa ham ikki marta
+   qo'llanilmaydi.
+
+`public/sw.js` — service worker faqat ilova "shell"ini (statik sahifa)
+keshlaydi, `/api/` so'rovlariga tegilmaydi (ular yuqoridagi IndexedDB
+mantig'i orqali boshqariladi). `public/manifest.json` — PWA sifatida
+"Bosh ekranga qo'shish" imkoniyatini beradi.
+
+## 6. Nima keyingi bosqichda qo'shilishi kerak (production yo'l xaritasi)
 
 - Darslik matnlarini avtomatik chunking + embedding qiluvchi ingestion
   pipeline (LangChain/LlamaIndex `DirectoryLoader` + `RecursiveCharacterTextSplitter`).
@@ -78,3 +176,11 @@ O'rniga:
 - Alembic migratsiyalari (`schema.sql` — boshlang'ich manba haqiqat).
 - Test testlarni avtomatik baholovchi modul (`test_results.details` dagi
   `wrong_topics` asosida `weak_spots`ni avtomatik yaratish).
+- `sync_service.py`ni har bir element uchun alohida natija (applied/skipped/
+  failed) qaytaradigan qilib kengaytirish — hozir frontend faqat umumiy
+  sonlarni oladi va barcha yuborilgan elementlarni navbatdan o'chiradi.
+- PDF konspekt uchun Unicode TTF shrift va PWA ikonkalarini (`icon-192.png`,
+  `icon-512.png`) loyihaga qo'shish.
+- Munozara rejimi (5.2) uchun frontendda tanlangan `topic_hint`ni
+  `VoiceSessionIn`ga uzatish imkoniyatini qo'shish (hozir faqat backend
+  weak_spot/fallback asosida avtomatik tanlaydi).

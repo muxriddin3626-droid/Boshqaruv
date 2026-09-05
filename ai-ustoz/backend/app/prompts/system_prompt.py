@@ -65,7 +65,7 @@ devor kabi uzun matn yozma.
 """
 
 
-def _format_weak_spots(weak_spots: list[WeakSpot]) -> str:
+def format_weak_spots(weak_spots: list[WeakSpot]) -> str:
     if not weak_spots:
         return "Hozircha qayd etilgan doimiy xato yo'q."
     lines = [
@@ -102,7 +102,7 @@ JORIY O'QUVCHI HAQIDA MA'LUMOT:
 - {avg_score_block}
 
 O'QUVCHINING DOIMIY XATO QILADIGAN MAVZULARI (weak_spots):
-{_format_weak_spots(ctx.weak_spots)}
+{format_weak_spots(ctx.weak_spots)}
 
 Ushbu ma'lumotlarga tayanib, darsni davom ettir. Agar o'quvchi weak_spots'da \
 qayd etilgan mavzuga yaqin savol bersa, o'sha eski xatosini eslatib o't va \

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 
 import { createVoiceSession } from "@/lib/api";
+import type { Subject, VoiceMode } from "@/lib/types";
 
 import NeonOrb from "./NeonOrb";
 import { useAudioVisualizer } from "./useAudioVisualizer";
@@ -16,8 +17,14 @@ const OPENAI_REALTIME_URL = "https://api.openai.com/v1/realtime";
  * 3. SDP offer OpenAI serveriga yuboriladi, javobda kelgan SDP answer o'rnatiladi.
  * 4. Modelning ovoz oqimi (remote track) audio elementga ulanadi va
  *    Neon Orb vizualizatori shu oqimning amplitudasini ko'rsatadi.
+ *
+ * MODUL 2: "Munozara rejimi" — `mode="debate"` tanlansa, AI Ustoz atayin
+ * noto'g'ri ilmiy gipoteza aytadi va o'quvchi buni ovozli ravishda rad
+ * etishi kerak bo'ladi (backend `debate_prompt.py` orqali system promptni
+ * almashtiradi, frontend faqat rejimni tanlab beradi).
  */
-export default function VoiceSession({ token }: { token: string }) {
+export default function VoiceSession({ token, subject }: { token: string; subject: Subject }) {
+  const [mode, setMode] = useState<VoiceMode>("tutor");
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +40,7 @@ export default function VoiceSession({ token }: { token: string }) {
     setError(null);
     setIsConnecting(true);
     try {
-      const session = await createVoiceSession(token);
+      const session = await createVoiceSession(token, subject, mode);
 
       const pc = new RTCPeerConnection();
       peerConnectionRef.current = pc;
@@ -93,6 +100,27 @@ export default function VoiceSession({ token }: { token: string }) {
     <div className="flex flex-col items-center gap-4">
       <NeonOrb amplitude={amplitude} isActive={isConnected} />
       <audio ref={audioElRef} autoPlay hidden />
+
+      {!isConnected && (
+        <div className="flex gap-2 text-xs">
+          {(
+            [
+              { value: "tutor" as VoiceMode, label: "Repetitor rejimi" },
+              { value: "debate" as VoiceMode, label: "Munozara rejimi" },
+            ]
+          ).map((option) => (
+            <button
+              key={option.value}
+              onClick={() => setMode(option.value)}
+              className={`rounded-full px-3 py-1 ${
+                mode === option.value ? "bg-neon-pink text-white" : "bg-surface text-gray-400"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {error && <p className="text-sm text-red-400">{error}</p>}
 

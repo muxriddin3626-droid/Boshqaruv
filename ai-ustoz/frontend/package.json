@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "14.2.18",
+    "next": "14.2.35",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "framer-motion": "11.15.0",
@@ -20,7 +20,8 @@
     "katex": "0.16.11",
     "mermaid": "11.4.1",
     "zustand": "5.0.2",
-    "clsx": "2.1.1"
+    "clsx": "2.1.1",
+    "recharts": "2.13.3"
   },
   "devDependencies": {
     "typescript": "5.7.2",
