@@ -172,7 +172,7 @@ bot.start((ctx) => {
       "Buyruq sifatida ham yozsangiz bo'ladi:",
       '/qoshish Megamir Finish [narx] — mahsulotni ro\'yxatga qo\'shish (miqdor yozmasdan)',
       '/narx Megamir Finish 45000 — mahsulotga narx belgilash',
-      '/tarix — umumiy tarix (qachon nima qo\'shilgani), yoki /tarix Megamir Finish — bitta mahsulot tarixi',
+      '/tarix — mahsulot tanlab, uning tarixini ko\'rish (yoki /tarix Megamir Finish)',
       '/ochir Megamir Finish — mahsulotni butunlay o‘chirish',
       '/tozalash — barcha mahsulot va tarixni butunlay o\'chirib, 0 dan boshlash',
     ].join('\n'),
@@ -264,21 +264,33 @@ bot.command('bugun', handleBugun);
 bot.command('oy', handleOy);
 bot.command('bekor', handleBekor);
 
-async function handleTarix(ctx, argText) {
-  const name = (argText || '').trim();
-  if (!name) {
-    const rows = await db.recentHistory(ctx.chat.id, 20);
-    if (rows.length === 0) return ctx.reply("Hozircha yozuvlar yo'q.");
-    const lines = rows.map((r) => {
-      const sign = r.qty >= 0 ? '+' : '';
-      return `• ${r.created_at} — ${r.product_name}: ${sign}${fmt(r.qty)} ${r.unit}`;
-    });
-    return sendLong(ctx, `Umumiy tarix (oxirgi ${rows.length} ta yozuv):\n\n${lines.join('\n')}`);
-  }
+async function showProductHistory(ctx, name) {
   const rows = await db.history(ctx.chat.id, name, 10);
   if (rows.length === 0) return ctx.reply(`"${name}" bo'yicha yozuv topilmadi.`);
   const lines = rows.map((r) => `• ${r.created_at} — ${fmt(r.qty)} ta`);
-  sendLong(ctx, `"${name}" tarixi (oxirgi ${rows.length} ta):\n\n${lines.join('\n')}`);
+  return sendLong(ctx, `"${name}" tarixi (oxirgi ${rows.length} ta):\n\n${lines.join('\n')}`);
+}
+
+async function showAllHistory(ctx) {
+  const rows = await db.recentHistory(ctx.chat.id, 20);
+  if (rows.length === 0) return ctx.reply("Hozircha yozuvlar yo'q.");
+  const lines = rows.map((r) => {
+    const sign = r.qty >= 0 ? '+' : '';
+    return `• ${r.created_at} — ${r.product_name}: ${sign}${fmt(r.qty)} ${r.unit}`;
+  });
+  return sendLong(ctx, `Umumiy tarix (oxirgi ${rows.length} ta yozuv):\n\n${lines.join('\n')}`);
+}
+
+async function handleTarix(ctx, argText) {
+  const name = (argText || '').trim();
+  if (!name) {
+    const products = await db.listProducts(ctx.chat.id);
+    if (products.length === 0) return ctx.reply("Hozircha mahsulotlar yo'q.");
+    const keyboard = productsKeyboard(products, 'tarixprod');
+    keyboard.reply_markup.inline_keyboard.push([Markup.button.callback('📜 Hammasi', 'tarixall')]);
+    return ctx.reply("Qaysi mahsulot tarixini ko'rmoqchisiz?", keyboard);
+  }
+  return showProductHistory(ctx, name);
 }
 
 async function handleOchir(ctx, argText) {
@@ -307,6 +319,20 @@ async function handleTozalash(ctx, argText) {
 bot.command('tarix', (ctx) => handleTarix(ctx, ctx.message.text.replace(/^\/tarix(@\w+)?\s*/i, '')));
 bot.command('ochir', (ctx) => handleOchir(ctx, ctx.message.text.replace(/^\/ochir(@\w+)?\s*/i, '')));
 bot.command('tozalash', (ctx) => handleTozalash(ctx, ctx.message.text.replace(/^\/tozalash(@\w+)?\s*/i, '')));
+
+bot.action(/^tarixprod:(\d+)$/, async (ctx) => {
+  const productId = parseInt(ctx.match[1], 10);
+  const products = await db.listProducts(ctx.chat.id);
+  const product = products.find((p) => p.id === productId);
+  await ctx.answerCbQuery();
+  if (!product) return ctx.reply('Mahsulot topilmadi.');
+  await showProductHistory(ctx, product.name);
+});
+
+bot.action('tarixall', async (ctx) => {
+  await ctx.answerCbQuery();
+  await showAllHistory(ctx);
+});
 
 bot.action(/^delprod:(\d+)$/, async (ctx) => {
   const productId = parseInt(ctx.match[1], 10);
