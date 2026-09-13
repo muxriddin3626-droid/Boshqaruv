@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.remoteagent">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:label="Remote Agent"
+        android:icon="@mipmap/ic_launcher"
+        android:theme="@style/Theme.RemoteAgent"
+        android:allowBackup="false">
+
+        <activity
+            android:name=".LoginActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="false" />
+
+        <!--
+          Ekranni uzatuvchi foreground service.
+          Android OS bu turdagi service ishlayotganda EKRAN TEPASIDA
+          doimiy bildirishnoma (notification) ko'rsatishni MAJBURIY qiladi -
+          buni dastur o'chira olmaydi. Bu foydalanuvchi hech qachon
+          bilmasdan kuzatilmasligi uchun tizim darajasidagi kafolat.
+        -->
+        <service
+            android:name=".ScreenCaptureService"
+            android:foregroundServiceType="mediaProjection"
+            android:exported="false" />
+
+        <!--
+          Masofaviy buyruqlarni (tegish, surish, matn kiritish) bajaruvchi
+          Accessibility Service. Bu ham foydalanuvchi tomonidan
+          Sozlamalar > Erishimlilik bo'limida QO'LDA yoqilishi shart -
+          dastur o'zi avtomatik yoqa olmaydi.
+        -->
+        <service
+            android:name=".RemoteInputAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+    </application>
+</manifest>

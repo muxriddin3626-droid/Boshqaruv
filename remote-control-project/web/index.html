@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Remote Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- ===================== AUTH EKRANI ===================== -->
+<section id="view-auth" class="view view--auth">
+  <div class="auth-card">
+    <div class="brand">
+      <span class="brand__mark">◈</span>
+      <span class="brand__name">Remote Console</span>
+    </div>
+    <p class="auth-sub">Ochiq, tasdiqlashga asoslangan masofaviy ulanish paneli</p>
+
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="email" placeholder="siz@misol.com" />
+    </div>
+    <div class="field">
+      <label for="password">Parol</label>
+      <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" />
+    </div>
+
+    <div class="auth-actions">
+      <button id="btn-login" class="btn btn--primary">Kirish</button>
+      <button id="btn-register" class="btn btn--ghost">Ro'yxatdan o'tish</button>
+    </div>
+    <p id="auth-error" class="auth-error"></p>
+  </div>
+</section>
+
+<!-- ===================== ASOSIY KONSOL ===================== -->
+<section id="view-console" class="view view--console hidden">
+  <aside class="sidebar">
+    <div class="brand brand--compact">
+      <span class="brand__mark">◈</span>
+      <span class="brand__name">Remote Console</span>
+    </div>
+    <nav class="nav">
+      <button class="nav__item is-active" data-tab="connect">
+        <span class="nav__dot"></span> Ulanish
+      </button>
+      <button class="nav__item" data-tab="devices">
+        <span class="nav__dot"></span> Qurilmalar
+      </button>
+      <button class="nav__item" data-tab="sessions">
+        <span class="nav__dot"></span> Sessiyalar tarixi
+      </button>
+    </nav>
+    <button id="btn-logout" class="nav__logout">Chiqish</button>
+  </aside>
+
+  <main class="main">
+
+    <!-- --- TAB: ULANISH --- -->
+    <div class="tab tab--connect is-active" id="tab-connect">
+      <header class="tab-header">
+        <h1>Qurilmaga ulanish</h1>
+        <p>Kuzatiluvchi qurilmada ko'rsatilgan 6 xonali kodni kiriting. Ulanish faqat u tomon <b>tasdiqlagandan</b> so'ng boshlanadi.</p>
+      </header>
+
+      <div class="connect-grid">
+        <div class="code-panel" id="code-panel">
+          <svg class="code-ring" viewBox="0 0 120 120">
+            <circle class="code-ring__bg" cx="60" cy="60" r="54" />
+            <circle class="code-ring__progress" id="ring-progress" cx="60" cy="60" r="54" />
+          </svg>
+          <input id="pairing-code" class="code-input" maxlength="6" inputmode="numeric" placeholder="000000" />
+        </div>
+
+        <div class="connect-side">
+          <button id="btn-connect" class="btn btn--primary btn--lg">Ulanish</button>
+          <div class="status-line">
+            <span class="status-dot" id="status-dot"></span>
+            <span id="status-text">Ulanmagan</span>
+          </div>
+          <p class="hint">Havola orqali kod olgan bo'lsangiz, u avtomatik to'ldiriladi.</p>
+        </div>
+      </div>
+
+      <div class="screen-wrap hidden" id="screen-wrap">
+        <video id="remote-video" autoplay playsinline></video>
+      </div>
+    </div>
+
+    <!-- --- TAB: QURILMALAR --- -->
+    <div class="tab tab--devices" id="tab-devices">
+      <header class="tab-header">
+        <h1>Ro'yxatga olingan qurilmalar</h1>
+        <p>Hisobingizga bog'langan barcha Agent va Controller qurilmalar.</p>
+      </header>
+      <div class="table" id="devices-table">
+        <div class="table__empty">Hali qurilma yo'q.</div>
+      </div>
+    </div>
+
+    <!-- --- TAB: SESSIYALAR --- -->
+    <div class="tab tab--sessions" id="tab-sessions">
+      <header class="tab-header">
+        <h1>Sessiyalar tarixi</h1>
+        <p>Har bir o'tgan ulanish — kim, qachon, qancha davom etgani.</p>
+      </header>
+      <div class="table" id="sessions-table">
+        <div class="table__empty">Hali sessiya yo'q.</div>
+      </div>
+    </div>
+
+  </main>
+</section>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

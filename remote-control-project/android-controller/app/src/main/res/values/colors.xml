@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Xuddi shu brend palitrasi, lekin controller "faol boshqaruvchi" ekanini
+         bildirish uchun asosiy rang biroz quyuqroq -->
+    <color name="brand_primary">#0A3D3D</color>
+    <color name="brand_primary_dark">#062727</color>
+    <color name="brand_primary_light">#4E8C8C</color>
+    <color name="brand_accent">#FF6B4A</color>
+    <color name="status_live">#E8543C</color>
+    <color name="status_idle">#8FA3A3</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_alt">#F2F6F5</color>
+    <color name="background">#F7FAF9</color>
+    <color name="on_surface">#16211F</color>
+    <color name="on_surface_muted">#5C6E6B</color>
+    <color name="error">#D64545</color>
+    <color name="outline">#D6E2DF</color>

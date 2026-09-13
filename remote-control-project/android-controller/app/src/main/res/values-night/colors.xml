@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand_primary">#4E8C8C</color>
+    <color name="brand_primary_dark">#0A3D3D</color>
+    <color name="brand_primary_light">#7BB0B0</color>
+    <color name="brand_accent">#FF8567</color>
+    <color name="status_live">#FF7A5C</color>
+    <color name="status_idle">#6B7D7A</color>
+    <color name="surface">#132320</color>
+    <color name="surface_alt">#1B2E2A</color>
+    <color name="background">#0D1917</color>
+    <color name="on_surface">#EAF2F0</color>
+    <color name="on_surface_muted">#9FB3B0</color>
+    <color name="error">#FF7070</color>
+    <color name="outline">#2C4340</color>

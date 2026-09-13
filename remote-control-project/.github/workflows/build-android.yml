@@ -1,0 +1,60 @@
+name: Android APK yig'ish
+
+# Har safar main branch'ga push qilinganda yoki qo'lda ishga tushirilganda
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  build-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK o'rnatish
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Gradle o'rnatish
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.7
+
+      - name: Debug APK yaratish (Agent)
+        working-directory: android-agent
+        run: gradle assembleDebug
+
+      - name: APK'ni saqlash
+        uses: actions/upload-artifact@v4
+        with:
+          name: remote-agent-debug-apk
+          path: android-agent/app/build/outputs/apk/debug/app-debug.apk
+
+  build-controller:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK o'rnatish
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Gradle o'rnatish
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.7
+
+      - name: Debug APK yaratish (Controller)
+        working-directory: android-controller
+        run: gradle assembleDebug
+
+      - name: APK'ni saqlash
+        uses: actions/upload-artifact@v4
+        with:
+          name: remote-controller-debug-apk
+          path: android-controller/app/build/outputs/apk/debug/app-debug.apk
