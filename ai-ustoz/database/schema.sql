@@ -9,17 +9,14 @@ create extension if not exists "uuid-ossp";
 create extension if not exists vector;
 
 -- -----------------------------------------------------------------------------
--- ENUM turlari
+-- Eslatma: `subject` va `test_type` ataylab Postgres native `enum` turi emas,
+-- `varchar` + `check` sifatida saqlanadi. Backend (SQLAlchemy) bu ustunlarni
+-- VARCHAR sifatida bog'laydi (validatsiya Python/Pydantic enum darajasida
+-- amalga oshiriladi) — agar bu yerda native `enum` ishlatilsa, Postgres har
+-- bir so'rovda "operator does not exist: subject_enum = character varying"
+-- xatosini beradi (asyncpg parametrni VARCHAR sifatida yuboradi, Postgres esa
+-- avtomatik cast qilmaydi).
 -- -----------------------------------------------------------------------------
-do $$ begin
-    create type subject_enum as enum ('kimyo', 'biologiya');
-exception when duplicate_object then null;
-end $$;
-
-do $$ begin
-    create type test_type_enum as enum ('oraliq', 'dtm_mock', 'milliy_sertifikat');
-exception when duplicate_object then null;
-end $$;
 
 -- -----------------------------------------------------------------------------
 -- USERS — o'quvchilar (Supabase Auth bilan bog'lanadi: id = auth.users.id)
@@ -39,7 +36,7 @@ create table if not exists users (
 -- -----------------------------------------------------------------------------
 create table if not exists lessons (
     id              uuid primary key default uuid_generate_v4(),
-    subject         subject_enum not null,
+    subject         varchar(20) not null check (subject in ('kimyo', 'biologiya')),
     grade           integer not null check (grade between 5 and 11),
     topic_order     integer not null,
     title           varchar(255) not null,
@@ -53,7 +50,7 @@ create table if not exists lessons (
 create table if not exists progress (
     id                  uuid primary key default uuid_generate_v4(),
     user_id             uuid not null references users(id) on delete cascade,
-    subject             subject_enum not null,
+    subject             varchar(20) not null check (subject in ('kimyo', 'biologiya')),
     current_lesson_id   uuid references lessons(id),
     current_step        varchar(255),         -- masalan: "3-masala, Alkanlar izomeriyasi"
     average_score       double precision,      -- so'nggi testlar o'rtacha foizi
@@ -69,7 +66,7 @@ create index if not exists idx_progress_user on progress(user_id);
 create table if not exists weak_spots (
     id                      uuid primary key default uuid_generate_v4(),
     user_id                 uuid not null references users(id) on delete cascade,
-    subject                 subject_enum not null,
+    subject                 varchar(20) not null check (subject in ('kimyo', 'biologiya')),
     topic                   varchar(255) not null,
     category                varchar(100),          -- Weakness Radar guruhi (Lessons.category bilan mos)
     mistake_description     text not null,
@@ -86,8 +83,8 @@ create index if not exists idx_weak_spots_user_subject on weak_spots(user_id, su
 create table if not exists test_results (
     id              uuid primary key default uuid_generate_v4(),
     user_id         uuid not null references users(id) on delete cascade,
-    subject         subject_enum not null,
-    test_type       test_type_enum not null,
+    subject         varchar(20) not null check (subject in ('kimyo', 'biologiya')),
+    test_type       varchar(30) not null check (test_type in ('oraliq', 'dtm_mock', 'milliy_sertifikat')),
     score           double precision not null,
     max_score       double precision not null,
     details         jsonb not null default '{}'::jsonb,   -- {"wrong_topics": [...], "duration_sec": ...}
@@ -102,7 +99,7 @@ create index if not exists idx_test_results_user on test_results(user_id, subjec
 create table if not exists chat_messages (
     id              uuid primary key default uuid_generate_v4(),
     user_id         uuid not null references users(id) on delete cascade,
-    subject         subject_enum not null,
+    subject         varchar(20) not null check (subject in ('kimyo', 'biologiya')),
     role            varchar(20) not null check (role in ('user', 'assistant')),
     content         text not null,
     created_at      timestamptz not null default now()
@@ -116,7 +113,7 @@ create index if not exists idx_chat_messages_user on chat_messages(user_id, subj
 -- -----------------------------------------------------------------------------
 create table if not exists knowledge_chunks (
     id              uuid primary key default uuid_generate_v4(),
-    subject         subject_enum not null,
+    subject         varchar(20) not null check (subject in ('kimyo', 'biologiya')),
     grade           integer not null check (grade between 5 and 11),
     source_title    varchar(255) not null,     -- masalan: "9-sinf Kimyo darsligi, 24-bet"
     chunk_text      text not null,
@@ -141,7 +138,7 @@ create index if not exists idx_knowledge_chunks_subject_grade on knowledge_chunk
 create table if not exists flashcards (
     id              uuid primary key default uuid_generate_v4(),
     user_id         uuid not null references users(id) on delete cascade,
-    subject         subject_enum not null,
+    subject         varchar(20) not null check (subject in ('kimyo', 'biologiya')),
     lesson_id       uuid references lessons(id),
     front_text      text not null,          -- savol/atama (old tarafi)
     back_text       text not null,          -- javob/tushuntirish (orqa tarafi, KaTeX bo'lishi mumkin)
@@ -182,7 +179,7 @@ create index if not exists idx_srq_due on spaced_repetition_queue(user_id, next_
 create table if not exists user_weakness_radar (
     id                  uuid primary key default uuid_generate_v4(),
     user_id             uuid not null references users(id) on delete cascade,
-    subject             subject_enum not null,
+    subject             varchar(20) not null check (subject in ('kimyo', 'biologiya')),
     category            varchar(100) not null,     -- masalan: "Genetika", "Organik kimyo"
     mastery_percentage  double precision not null default 50 check (mastery_percentage between 0 and 100),
     sample_size         integer not null default 0,  -- necha ta test/xato asosida hisoblangani
@@ -217,7 +214,7 @@ create table if not exists student_exam_status (
 create table if not exists real_exam_submitted_questions (
     id                      uuid primary key default uuid_generate_v4(),
     user_id                 uuid not null references users(id) on delete cascade,
-    subject                 subject_enum not null,
+    subject                 varchar(20) not null check (subject in ('kimyo', 'biologiya')),
     raw_input_type          varchar(10) not null check (raw_input_type in ('text', 'voice', 'image')),
     topic                   varchar(255),               -- AI aniqlagan mavzu nomi
     grade                   integer check (grade between 5 and 11),
@@ -247,7 +244,7 @@ create index if not exists idx_real_exam_questions_embedding
 -- -----------------------------------------------------------------------------
 create table if not exists ai_generated_innovations (
     id                  uuid primary key default uuid_generate_v4(),
-    subject             subject_enum not null,
+    subject             varchar(20) not null check (subject in ('kimyo', 'biologiya')),
     topic_id            uuid references lessons(id),
     innovation_type     varchar(20) not null check (innovation_type in ('NEW_METHOD', 'TRICK_QUESTION')),
     content             text not null,          -- yangi usul/masala matni
@@ -282,7 +279,7 @@ create table if not exists ai_research_logs (
 create table if not exists user_audio_lectures (
     id                  uuid primary key default uuid_generate_v4(),
     user_id             uuid not null references users(id) on delete cascade,
-    subject             subject_enum not null,
+    subject             varchar(20) not null check (subject in ('kimyo', 'biologiya')),
     grade               integer check (grade between 5 and 11),
     lecture_title       varchar(255) not null,
     lecture_summary     text,

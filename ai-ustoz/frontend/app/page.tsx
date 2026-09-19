@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import AudioLibrary from "@/components/audio/AudioLibrary";
 import ChatWindow from "@/components/chat/ChatWindow";
@@ -33,11 +33,27 @@ export default function HomePage() {
   const [subject, setSubject] = useState<Subject>("kimyo");
   const [activeTab, setActiveTab] = useState<TabKey>("suhbat");
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
-  const [token] = useState<string>(() =>
-    typeof window !== "undefined" ? window.localStorage.getItem("ai_ustoz_token") ?? "" : ""
-  );
+
+  // `token`ni useState initializer'ida emas, useEffect'da o'qiymiz: server
+  // render paytida `window` mavjud emas, shuning uchun agar client'ning
+  // BIRINCHI render'i (hydration uchun ishlatiladigan) localStorage'ni
+  // sinxron o'qib, boshqacha JSX chiqarsa — React "Hydration failed"
+  // xatosini beradi. Shu sababli ikkala tomon ham dastlab bir xil (bo'sh)
+  // holatni chizadi, token esa faqat mount bo'lgach (hydration tugagach)
+  // o'rnatiladi.
+  const [token, setToken] = useState("");
+  const [isTokenChecked, setIsTokenChecked] = useState(false);
+
+  useEffect(() => {
+    setToken(window.localStorage.getItem("ai_ustoz_token") ?? "");
+    setIsTokenChecked(true);
+  }, []);
 
   const { isOnline, isSyncing } = useOnlineSync(token);
+
+  if (!isTokenChecked) {
+    return <main className="flex h-screen items-center justify-center text-gray-500">Yuklanmoqda...</main>;
+  }
 
   if (!token) {
     return (
