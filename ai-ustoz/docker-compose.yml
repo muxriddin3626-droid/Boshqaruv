@@ -5,6 +5,13 @@
 #
 # Keyin: docker compose exec backend python scripts/seed_test_user.py
 # (test foydalanuvchi + JWT token yaratadi, batafsil: README.md)
+#
+# Telefon (yoki boshqa qurilma)dan, bir xil Wi-Fi tarmog'ida sinash uchun:
+#
+#   HOST_IP=192.168.X.X docker compose up --build
+#
+# (192.168.X.X — kompyuteringizning lokal tarmoq IP'i). HOST_IP berilmasa,
+# standart holatda "localhost" ishlatiladi (faqat shu kompyuterdan ochiladi).
 
 services:
   postgres:
@@ -41,6 +48,9 @@ services:
       # xizmat nomlari DNS sifatida ishlaydi).
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/ai_ustoz
       REDIS_URL: redis://redis:6379/0
+      # Frontend qaysi manzildan ochilsa (localhost yoki HOST_IP), backend
+      # shu manzildan kelayotgan so'rovlarni CORS orqali qabul qilishi kerak.
+      CORS_ORIGINS: http://localhost:3000,http://${HOST_IP:-localhost}:3000
     ports:
       - "8000:8000"
     depends_on:
@@ -56,7 +66,10 @@ services:
       - ./frontend:/app
     command: sh -c "npm install && npm run dev"
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+      # Telefon/boshqa qurilmadan ochilganda "localhost" o'sha qurilmaning
+      # o'ziga ishora qiladi — shuning uchun HOST_IP orqali kompyuterning
+      # haqiqiy tarmoq manzili beriladi (yuqoridagi izohga qarang).
+      NEXT_PUBLIC_API_BASE_URL: http://${HOST_IP:-localhost}:8000
     ports:
       - "3000:3000"
     depends_on:

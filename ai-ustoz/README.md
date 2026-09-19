@@ -30,15 +30,46 @@ Bir necha daqiqadan so'ng:
    ```bash
    docker compose exec backend python scripts/seed_test_user.py
    ```
-   Skript chiqargan `localStorage.setItem(...)` qatorini nusxalab oling.
-2. Brauzerda **http://localhost:3000** ni oching.
-3. `F12` (Developer Tools) → **Console** bo'limini oching, nusxalangan qatorni
-   joylashtirib Enter bosing — sahifa qayta yuklanadi va ilova ochiladi.
+   Skript ikki variant chiqaradi: brauzer konsoli uchun buyruq va tayyor
+   `http://localhost:3000/?token=...` havola.
+2. Shu havolani (yoki `http://localhost:3000`ni ochib, konsol buyrug'ini)
+   brauzeringizda ishlating — ilova ochiladi.
 
 Shundan so'ng barcha bo'limlar (Suhbat, Flashcard'lar, Zaif nuqtalar, Audio
 kutubxona) haqiqiy ma'lumotlar bazasi bilan ishlaydi. `OPENAI_API_KEY` to'g'ri
 qo'yilgan bo'lsa, chat/ovoz/flashcard-generatsiya kabi AI funksiyalari ham
 to'liq ishlaydi.
+
+### Telefondan sinash (bir xil Wi-Fi tarmog'ida)
+
+Kompyuteringiz va telefoningiz **bir xil Wi-Fi tarmog'ida** bo'lsa:
+
+1. Kompyuteringizning lokal tarmoq IP'ini toping:
+   - Windows: `ipconfig` → "IPv4 Address" (Wi-Fi ostida)
+   - macOS/Linux: `ifconfig` yoki `ip addr` → `en0`/`wlan0` ostidagi `inet`
+   - Odatda `192.168.X.X` yoki `10.0.X.X` ko'rinishida bo'ladi.
+2. `docker compose up --build` o'rniga shuni ishga tushiring:
+   ```bash
+   HOST_IP=192.168.X.X docker compose up --build
+   ```
+   (`192.168.X.X` — 1-qadamda topgan IP'ingiz)
+3. Test foydalanuvchi/token'ni shu safar `--host` bilan yarating (yangi
+   terminalda):
+   ```bash
+   docker compose exec backend python scripts/seed_test_user.py --host 192.168.X.X
+   ```
+4. Skript chiqargan **`http://192.168.X.X:3000/?token=...`** havolasini
+   telefoningizga yuboring (Telegram/SMS/AirDrop — qanday qulay bo'lsa) va
+   telefon brauzerida oching — DevTools kerak emas, sahifa ochilishi bilan
+   token avtomatik saqlanadi.
+
+> **Muhim cheklov:** brauzerlar (Chrome, Safari) mikrofon (`getUserMedia`)
+> va Service Worker (PWA)ni faqat **HTTPS yoki `localhost`** ostida ishga
+> tushiradi — oddiy `http://192.168.X.X` "xavfsiz kontekst" hisoblanmaydi.
+> Ya'ni telefonda **Suhbat (matn), Flashcard'lar, Zaif nuqtalar, Audio
+> kutubxona** to'liq ishlaydi, lekin **Ovozli suhbat (mikrofon)** tugmasi
+> ishlamasligi mumkin — buni sinash uchun HTTPS bilan haqiqiy hosting kerak
+> (masalan, Vercel + Render/Railway + Supabase — bu alohida deploy bosqichi).
 
 > **Eslatma:** `scripts/seed_test_user.py` — Supabase Auth hali ulanmagan
 > frontend uchun faqat lokal sinov yo'li (production'da ishlatilmasin).

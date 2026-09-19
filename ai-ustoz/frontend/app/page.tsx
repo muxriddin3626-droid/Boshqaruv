@@ -45,7 +45,17 @@ export default function HomePage() {
   const [isTokenChecked, setIsTokenChecked] = useState(false);
 
   useEffect(() => {
-    setToken(window.localStorage.getItem("ai_ustoz_token") ?? "");
+    // Mobil qurilmalarda Developer Tools/Console ochish qulay bo'lmagani
+    // uchun token URL query parametri sifatida ham qabul qilinadi
+    // (masalan: https://.../?token=...). Topilsa localStorage'ga
+    // ko'chiriladi va URL'dan tozalanadi (tarixda/ekranda qolib ketmasin).
+    const urlToken = new URLSearchParams(window.location.search).get("token");
+    if (urlToken) {
+      window.localStorage.setItem("ai_ustoz_token", urlToken);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+
+    setToken(urlToken ?? window.localStorage.getItem("ai_ustoz_token") ?? "");
     setIsTokenChecked(true);
   }, []);
 
@@ -108,12 +118,12 @@ export default function HomePage() {
         </div>
       </header>
 
-      <nav className="flex gap-2">
+      <nav className="flex gap-2 overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition ${
               activeTab === tab.key ? "bg-neon-cyan text-black" : "bg-surface text-gray-400"
             }`}
           >
@@ -124,7 +134,7 @@ export default function HomePage() {
         <button
           onClick={handleDownloadConspect}
           disabled={isDownloadingPdf}
-          className="ml-auto rounded-full border border-neon-pink/50 px-4 py-1.5 text-sm text-neon-pink disabled:opacity-50"
+          className="ml-auto shrink-0 rounded-full border border-neon-pink/50 px-4 py-1.5 text-sm text-neon-pink disabled:opacity-50"
         >
           {isDownloadingPdf ? "Tayyorlanmoqda..." : "PDF konspekt"}
         </button>

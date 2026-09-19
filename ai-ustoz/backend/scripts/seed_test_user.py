@@ -8,8 +8,10 @@ o'zi tekshira oladigan JWT token generatsiya qiladi.
 Ishlatish (docker compose bilan):
     docker compose exec backend python scripts/seed_test_user.py
 
-Natijada chiqadigan buyruqni brauzer konsoliga (F12 -> Console) joylashtiring.
+    # Telefon/boshqa qurilmadan (HOST_IP bilan ishga tushirilgan bo'lsa):
+    docker compose exec backend python scripts/seed_test_user.py --host 192.168.X.X
 """
+import argparse
 import asyncio
 import sys
 from pathlib import Path
@@ -30,7 +32,7 @@ from app.models.database import User  # noqa: E402
 TEST_EMAIL = "test@ai-ustoz.local"
 
 
-async def main() -> None:
+async def main(frontend_host: str) -> None:
     settings = get_settings()
 
     async with AsyncSessionLocal() as db:
@@ -47,10 +49,19 @@ async def main() -> None:
 
     token = jwt.encode({"sub": str(user.id)}, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
-    print("\n=== Brauzer konsolida (F12 -> Console) shuni ishga tushiring ===\n")
+    print("\n=== Kompyuterdan: brauzer konsolida (F12 -> Console) shuni ishga tushiring ===\n")
     print(f"localStorage.setItem('ai_ustoz_token', '{token}'); location.reload();")
-    print("\n==================================================================\n")
+    print("\n=== Telefondan (yoki DevTools'siz): shu havolani brauzerda oching ===\n")
+    print(f"http://{frontend_host}:3000/?token={token}")
+    print()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--host",
+        default="localhost",
+        help="Frontend qaysi manzilda ochilishi (masalan, telefon uchun HOST_IP bilan bir xil qiymat)",
+    )
+    args = parser.parse_args()
+    asyncio.run(main(args.host))
