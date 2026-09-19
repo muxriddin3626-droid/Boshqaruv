@@ -98,3 +98,19 @@ export interface SyncPushResult {
   skipped_duplicate: number;
   failed: number;
 }
+
+// ---------------------------------------------------------------------------
+// MODUL 8: Audio Lecture Engine
+// ---------------------------------------------------------------------------
+
+export interface AudioLecture {
+  id: string;
+  subject: Subject;
+  grade: number | null;
+  lecture_title: string;
+  lecture_summary: string | null;
+  audio_url: string;
+  duration_seconds: number;
+  is_saved: boolean;
+  created_at: string;
+}

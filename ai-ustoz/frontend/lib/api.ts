@@ -1,4 +1,5 @@
 import type {
+  AudioLecture,
   DrillResponse,
   Flashcard,
   FlashcardReviewResult,
@@ -195,4 +196,55 @@ export async function pushOfflineSync(
     body: JSON.stringify({ flashcard_reviews: flashcardReviews, test_results: testResults }),
   });
   return (await assertOk(response, "Offline ma'lumotlarni sinxronlab bo'lmadi")).json();
+}
+
+// ---------------------------------------------------------------------------
+// MODUL 8: Audio Lecture Engine
+// ---------------------------------------------------------------------------
+
+export async function generateAudioLecture(
+  token: string,
+  subject: Subject,
+  lectureTitle: string,
+  lectureText: string,
+  lectureSummary?: string,
+  voice = "onyx"
+): Promise<AudioLecture> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/audio-lectures/generate`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({
+      subject,
+      lecture_title: lectureTitle,
+      lecture_text: lectureText,
+      lecture_summary: lectureSummary ?? null,
+      voice,
+    }),
+  });
+  return (await assertOk(response, "Audio ma'ruza generatsiya qilib bo'lmadi")).json();
+}
+
+export async function fetchAudioLectures(token: string, subject?: Subject): Promise<AudioLecture[]> {
+  const query = subject ? `?subject=${subject}` : "";
+  const response = await fetch(`${API_BASE_URL}/api/v1/audio-lectures${query}`, {
+    headers: authHeaders(token),
+  });
+  return (await assertOk(response, "Audio kutubxonani olib bo'lmadi")).json();
+}
+
+export async function setAudioLectureSaved(token: string, lectureId: string, isSaved: boolean): Promise<AudioLecture> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/audio-lectures/${lectureId}`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify({ is_saved: isSaved }),
+  });
+  return (await assertOk(response, "Audio ma'ruza holatini yangilab bo'lmadi")).json();
+}
+
+export async function deleteAudioLecture(token: string, lectureId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/audio-lectures/${lectureId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  await assertOk(response, "Audio ma'ruzani o'chirib bo'lmadi");
 }

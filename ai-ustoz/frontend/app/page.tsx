@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import AudioLibrary from "@/components/audio/AudioLibrary";
 import ChatWindow from "@/components/chat/ChatWindow";
 import FlashcardDeck from "@/components/flashcards/FlashcardDeck";
 import VoiceSession from "@/components/voice/VoiceSession";
@@ -11,12 +12,13 @@ import { useOnlineSync } from "@/hooks/useOnlineSync";
 import { downloadLessonConspect } from "@/lib/api";
 import type { Subject } from "@/lib/types";
 
-type TabKey = "suhbat" | "flashcards" | "radar";
+type TabKey = "suhbat" | "flashcards" | "radar" | "audio";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "suhbat", label: "Suhbat" },
   { key: "flashcards", label: "Flashcard'lar" },
   { key: "radar", label: "Zaif nuqtalar" },
+  { key: "audio", label: "Audio kutubxona" },
 ];
 
 /**
@@ -133,6 +135,12 @@ export default function HomePage() {
         <section className="flex-1 space-y-4 overflow-y-auto rounded-2xl border border-neon-cyan/20 bg-surface/40 p-4">
           <WeaknessRadarChart token={token} subject={subject} />
           <TargetedDrill token={token} subject={subject} />
+        </section>
+      )}
+
+      {activeTab === "audio" && (
+        <section className="flex-1 overflow-hidden rounded-2xl border border-neon-pink/20 bg-surface/40 p-4">
+          <AudioLibrary token={token} subject={subject} />
         </section>
       )}
     </main>

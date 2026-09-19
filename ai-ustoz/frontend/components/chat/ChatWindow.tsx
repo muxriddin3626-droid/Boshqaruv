@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { fetchProgress, streamChatMessage } from "@/lib/api";
+import { fetchProgress, generateAudioLecture, streamChatMessage } from "@/lib/api";
 import type { ChatMessage, ProgressResponse, Subject } from "@/lib/types";
 
 import MessageBubble from "./MessageBubble";
@@ -28,6 +28,11 @@ export default function ChatWindow({ token, subject }: { token: string; subject:
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
+
+  async function handleGenerateAudio(content: string) {
+    const title = content.slice(0, 60).trim() || "AI Ustoz ma'ruzasi";
+    await generateAudioLecture(token, subject, title, content);
+  }
 
   async function handleSend() {
     const text = input.trim();
@@ -80,9 +85,18 @@ export default function ChatWindow({ token, subject }: { token: string; subject:
             {SUBJECT_LABELS[subject]} bo&apos;yicha savolingizni yozing. AI Ustoz sizni tinglayapti.
           </p>
         )}
-        {messages.map((message, index) => (
-          <MessageBubble key={index} message={message} />
-        ))}
+        {messages.map((message, index) => {
+          const isStreamingThisMessage = isSending && index === messages.length - 1;
+          return (
+            <MessageBubble
+              key={index}
+              message={message}
+              onGenerateAudio={
+                message.role === "assistant" && !isStreamingThisMessage ? handleGenerateAudio : undefined
+              }
+            />
+          );
+        })}
       </div>
 
       <div className="mt-3 flex gap-2">

@@ -1,11 +1,31 @@
+"use client";
+
 import clsx from "clsx";
+import { useState } from "react";
 
 import type { ChatMessage } from "@/lib/types";
 
 import MarkdownRenderer from "./MarkdownRenderer";
 
-export default function MessageBubble({ message }: { message: ChatMessage }) {
+interface MessageBubbleProps {
+  message: ChatMessage;
+  /** MODUL 8: berilsa, assistant xabarlari ostida "Audio qilish" tugmasi chiqadi. */
+  onGenerateAudio?: (content: string) => Promise<void>;
+}
+
+export default function MessageBubble({ message, onGenerateAudio }: MessageBubbleProps) {
   const isUser = message.role === "user";
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+
+  async function handleGenerateAudio() {
+    if (!onGenerateAudio || isGeneratingAudio) return;
+    setIsGeneratingAudio(true);
+    try {
+      await onGenerateAudio(message.content);
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  }
 
   return (
     <div className={clsx("flex w-full", isUser ? "justify-end" : "justify-start")}>
@@ -20,7 +40,18 @@ export default function MessageBubble({ message }: { message: ChatMessage }) {
         {isUser ? (
           <p className="whitespace-pre-wrap">{message.content}</p>
         ) : (
-          <MarkdownRenderer content={message.content} />
+          <>
+            <MarkdownRenderer content={message.content} />
+            {onGenerateAudio && message.content && (
+              <button
+                onClick={handleGenerateAudio}
+                disabled={isGeneratingAudio}
+                className="mt-2 text-xs text-neon-cyan underline disabled:opacity-50"
+              >
+                {isGeneratingAudio ? "Audio tayyorlanmoqda..." : "Audio qilish"}
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

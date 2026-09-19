@@ -193,6 +193,108 @@ create table if not exists user_weakness_radar (
 create index if not exists idx_weakness_radar_user_subject on user_weakness_radar(user_id, subject);
 
 -- =============================================================================
+-- MODUL 6: EXAM CROWDSOURCING & MEMORY ENGINE
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- STUDENT_EXAM_STATUS — o'quvchining imtihon holati ("Exam Today" belgisi).
+-- Har bir o'quvchi uchun bitta yozuv (1:1 users bilan).
+-- -----------------------------------------------------------------------------
+create table if not exists student_exam_status (
+    user_id             uuid primary key references users(id) on delete cascade,
+    target_exam_date    date,
+    exam_completed      boolean not null default false,
+    feedback_provided   boolean not null default false,
+    updated_at          timestamptz not null default now()
+);
+
+-- -----------------------------------------------------------------------------
+-- REAL_EXAM_SUBMITTED_QUESTIONS — o'quvchilar imtihondan keyin "topshirgan"
+-- (og'zaki/matn/rasm orqali) haqiqiy savollar. AI tomonidan tiklanadi,
+-- mavzusi va qiyinchilik darajasi aniqlanadi, yechimi tayyorlanadi va
+-- vector qidiruv uchun embedding qilinadi (AI'ning "xotira bazasi").
+-- -----------------------------------------------------------------------------
+create table if not exists real_exam_submitted_questions (
+    id                      uuid primary key default uuid_generate_v4(),
+    user_id                 uuid not null references users(id) on delete cascade,
+    subject                 subject_enum not null,
+    raw_input_type          varchar(10) not null check (raw_input_type in ('text', 'voice', 'image')),
+    topic                   varchar(255),               -- AI aniqlagan mavzu nomi
+    grade                   integer check (grade between 5 and 11),
+    cert_level              varchar(50),                -- masalan: "Milliy Sertifikat", "DTM/BMBA"
+    difficulty_level        varchar(10) check (difficulty_level in ('A', 'A+')),
+    reconstructed_question  text not null,               -- AI tomonidan tiklangan/tuzatilgan savol matni
+    verified_solution       text,                        -- AI tayyorlagan to'liq, tekshirilgan yechim
+    vector_embedding        vector(1536),
+    submission_date         timestamptz not null default now()
+);
+
+create index if not exists idx_real_exam_questions_subject on real_exam_submitted_questions(subject, topic);
+
+-- Vector qidiruv uchun ivfflat indeks (cosine distance) — o'xshash savollarni topish uchun
+create index if not exists idx_real_exam_questions_embedding
+    on real_exam_submitted_questions using ivfflat (vector_embedding vector_cosine_ops)
+    with (lists = 100);
+
+-- =============================================================================
+-- MODUL 7: AUTONOMOUS AI RESEARCHER & PEDAGOGICAL INNOVATOR ENGINE
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- AI_GENERATED_INNOVATIONS — AI mustaqil generatsiya qilgan yangi tushuntirish
+-- usullari (NEW_METHOD) va yangi "tuzoq masalalar" (TRICK_QUESTION).
+-- Weakness Radar'dagi eng zaif bo'limlarga qarata yaratiladi.
+-- -----------------------------------------------------------------------------
+create table if not exists ai_generated_innovations (
+    id                  uuid primary key default uuid_generate_v4(),
+    subject             subject_enum not null,
+    topic_id            uuid references lessons(id),
+    innovation_type     varchar(20) not null check (innovation_type in ('NEW_METHOD', 'TRICK_QUESTION')),
+    content             text not null,          -- yangi usul/masala matni
+    explanation         text not null,          -- nima uchun samarali / yechim tushuntirishi
+    validation_score    double precision default 0,  -- 0-1 oralig'ida sifat bahosi (auto yoki inson)
+    created_at          timestamptz not null default now()
+);
+
+create index if not exists idx_innovations_subject_topic on ai_generated_innovations(subject, topic_id);
+
+-- -----------------------------------------------------------------------------
+-- AI_RESEARCH_LOGS — AI mustaqil izlanish (web-scan) natijalari jurnali.
+-- -----------------------------------------------------------------------------
+create table if not exists ai_research_logs (
+    id                          uuid primary key default uuid_generate_v4(),
+    source_url                  varchar(1024),
+    topic                       varchar(255),
+    extracted_insight           text not null,
+    added_to_knowledge_base     boolean not null default false,
+    "timestamp"                 timestamptz not null default now()
+);
+
+-- =============================================================================
+-- MODUL 8: AUDIO LECTURE ENGINE
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- USER_AUDIO_LECTURES — AI Ustoz ma'ruzalarining audio (TTS) versiyalari.
+-- Fayl Supabase Storage'ning `audio_lectures` bucket'ida saqlanadi, bu yerda
+-- faqat ommaviy URL va metadata saqlanadi.
+-- -----------------------------------------------------------------------------
+create table if not exists user_audio_lectures (
+    id                  uuid primary key default uuid_generate_v4(),
+    user_id             uuid not null references users(id) on delete cascade,
+    subject             subject_enum not null,
+    grade               integer check (grade between 5 and 11),
+    lecture_title       varchar(255) not null,
+    lecture_summary     text,
+    audio_url           varchar(1024) not null,
+    duration_seconds    integer not null default 0,
+    is_saved            boolean not null default true,
+    created_at          timestamptz not null default now()
+);
+
+create index if not exists idx_audio_lectures_user on user_audio_lectures(user_id, subject, created_at desc);
+
+-- =============================================================================
 -- Eslatma: `updated_at` maydonini avtomatik yangilash uchun trigger
 -- =============================================================================
 create or replace function set_updated_at()
@@ -211,4 +313,9 @@ create trigger trg_progress_updated_at
 drop trigger if exists trg_weakness_radar_updated_at on user_weakness_radar;
 create trigger trg_weakness_radar_updated_at
     before update on user_weakness_radar
+    for each row execute function set_updated_at();
+
+drop trigger if exists trg_exam_status_updated_at on student_exam_status;
+create trigger trg_exam_status_updated_at
+    before update on student_exam_status
     for each row execute function set_updated_at();

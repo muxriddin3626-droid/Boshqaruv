@@ -165,6 +165,87 @@ keshlaydi, `/api/` so'rovlariga tegilmaydi (ular yuqoridagi IndexedDB
 mantig'i orqali boshqariladi). `public/manifest.json` — PWA sifatida
 "Bosh ekranga qo'shish" imkoniyatini beradi.
 
+### 5.6 Exam Crowdsourcing & Memory Engine
+
+Maqsad — har bir imtihondan keyin o'quvchilardan real savollarni "yig'ib
+olish" va shu orqali AI'ning bilim bazasini avtomatik boyitish.
+
+**Exam Feedback Interaction Logic** (`prompts/exam_feedback_prompt.py`):
+`chat.py` va `voice.py` har bir so'rovda `student_exam_status`ni o'qiydi
+(`exam_pipeline_service.get_exam_status()`) va uch holatdan biriga qarab
+system promptga qo'shimcha qo'shadi:
+- `exam_completed=true, feedback_provided=false` → AI DARHOL do'stona
+  ohangda qaysi savollar tushganini so'raydi, ovozli/rasm orqali yuborishni
+  taklif qiladi.
+- `target_exam_date == bugun, exam_completed=false` → AI qisqa motivatsiya
+  beradi, uzoq darsga tortmaydi.
+- Har doim (passiv): o'quvchi o'zi "imtihondan chiqdim" desa, flag
+  qo'yilmagan bo'lsa ham AI darhol feedback so'rashga o'tadi.
+
+**Question Reconstruction Pipeline** (`exam_pipeline_service.py`):
+```
+Input (matn/ovoz/rasm)
+  -> [voice] openai_service.transcribe_audio()  (Whisper)
+  -> [image] openai_service.ocr_image_to_text()  (GPT-4o vision)
+  -> reconstruct_exam_question()  — JSON-mode: savolni tiklaydi, mavzu va
+     qiyinchilik (A/A+) darajasini aniqlaydi, mukammal yechim tayyorlaydi
+  -> rag_service.embed_query()  — reconstructed_question'ni vektorlashtiradi
+  -> real_exam_submitted_questions jadvaliga saqlaydi
+```
+`POST /api/v1/exam-feedback/submit` — multipart endpoint (`subject`,
+`raw_input_type`, ixtiyoriy `text_input`/`audio_file`/`image_file`).
+
+### 5.7 Autonomous AI Researcher & Pedagogical Innovator Engine
+
+Ikki mustaqil fon jarayoni, `services/scheduler.py` (APScheduler
+`AsyncIOScheduler`) orqali davriy ishga tushadi (`RESEARCH_SCAN_ENABLED=true`
+bo'lsa):
+
+1. **Research Agent** (`research_service.run_research_scan`): standart
+   mavzular ro'yxati (`DEFAULT_RESEARCH_TOPICS`) bo'yicha
+   `search_web()` (Tavily/Serper uslubidagi tashqi API) chaqiriladi,
+   natijalar `openai_service.synthesize_research_insight()` orqali bitta
+   foydali xulosaga siqiladi va `ai_research_logs`ga yoziladi.
+   `added_to_knowledge_base` flag ataylab `false` boshlanadi — asosiy RAG
+   bazasiga (`knowledge_chunks`) faqat inson/nazoratli jarayon tasdiqlagach
+   `promote_research_log_to_knowledge_base()` orqali "ko'tariladi" (bu
+   tekshirilmagan veb-ma'lumotning to'g'ridan-to'g'ri o'quv materialiga
+   aralashib ketishining oldini oladi).
+2. **Innovation Generator** (`research_service.run_innovation_scan`): har
+   fan uchun `get_platform_weakest_categories()` orqali BARCHA
+   o'quvchilar kesimida eng past o'rtacha mastery%ga ega bo'limni topadi,
+   so'ng `openai_service.generate_innovation()` shu bo'lim uchun yangi
+   `NEW_METHOD` (sodda analogiya) yoki `TRICK_QUESTION` (gibrid tuzoq
+   masala) yaratadi. Natija `_auto_validate()` orqali oddiy sifat bahosi
+   (`validation_score`) bilan `ai_generated_innovations`ga saqlanadi.
+
+**System Prompt Innovative Teacher Logic** (`prompts/innovation_prompt.py`):
+`chat.py` har bir so'rovda o'quvchining o'z zaif bo'limlariga
+(`weakness_service.get_weakest_categories`) mos eng so'nggi innovatsiyani
+qidiradi (`research_service.get_relevant_innovation`) va topilsa, uni
+"Kecha so'nggi sertifikat tendentsiyalarini tahlil qilib, senga maxsus
+yangi bir usul tayyorladim!" kabi eksklyuzivlik framing bilan promptga
+qo'shadi. Bir xil innovatsiya bir o'quvchiga qayta-qayta ko'rsatilmasligi
+uchun Redis'da `innovation:shown:{user_id}:{innovation_id}` kaliti 24
+soatlik TTL bilan belgilanadi.
+
+### 5.8 Audio Lecture Engine
+
+Oqim (`audio_service.py`): ma'ruza matni → `openai_service.text_to_speech()`
+(OpenAI TTS, standart ovoz — `onyx`) → MP3 bayt oqimi → `mutagen` orqali
+haqiqiy davomiylik (`duration_seconds`) o'qiladi → Supabase Storage REST
+API'siga (`/storage/v1/object/{bucket}/{path}`) yuklanadi → ommaviy URL
+`user_audio_lectures`ga metadata bilan saqlanadi.
+
+Frontend integratsiyasi ikki joyda:
+- `ChatWindow.tsx` → `MessageBubble.tsx`: AI Ustozning har bir javobi
+  ostida "Audio qilish" tugmasi — bosilganda shu javob matni
+  `POST /api/v1/audio-lectures/generate`ga yuboriladi.
+- `AudioLibrary.tsx` (Audio kutubxona tab'i): saqlangan ma'ruzalar
+  ro'yxati, har biri `AudioPlayer.tsx` (Play/Pause, 1x-2x tezlik,
+  seek-bar, konspektni ko'rsatish/yashirish) bilan render qilinadi;
+  "saqlash/olib tashlash" va "o'chirish" amallari mavjud.
+
 ## 6. Nima keyingi bosqichda qo'shilishi kerak (production yo'l xaritasi)
 
 - Darslik matnlarini avtomatik chunking + embedding qiluvchi ingestion
@@ -184,3 +265,16 @@ mantig'i orqali boshqariladi). `public/manifest.json` — PWA sifatida
 - Munozara rejimi (5.2) uchun frontendda tanlangan `topic_hint`ni
   `VoiceSessionIn`ga uzatish imkoniyatini qo'shish (hozir faqat backend
   weak_spot/fallback asosida avtomatik tanlaydi).
+- Exam Crowdsourcing (5.6) uchun maxsus frontend widget (masalan, chat
+  ichida "Savolni yuborish" tugmasi + audio yozib olish/rasm biriktirish
+  UI) — hozircha backend/DB tayyor, lekin frontend qo'lda
+  `/api/v1/exam-feedback/submit`ni chaqirishi kerak.
+- `research_service.search_web()` uchun haqiqiy provider (Tavily/Serper/
+  Bing) kaliti bilan ulash va natijalarni ishonchlilik bo'yicha filtrlash
+  (hozir faqat LLM "is_relevant" bahosiga tayanadi).
+- `ai_generated_innovations.validation_score`ni haqiqiy inson/o'quvchi
+  fikr-mulohazasi (masalan, "foydali bo'ldimi?" tugmasi) bilan yangilab
+  borish — hozir faqat oddiy avtomatik heuristika.
+- Audio Lecture Engine (5.8) uchun Supabase Storage bucket private bo'lsa,
+  signed URL generatsiyasiga o'tish; `duration_seconds`ni frontendda
+  progress bar uchun `<audio>` metadata'siga to'liq bog'lash.

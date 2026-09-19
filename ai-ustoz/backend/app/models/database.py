@@ -12,6 +12,7 @@ from datetime import datetime
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -213,3 +214,105 @@ class UserWeaknessRadar(Base):
     )
 
     __table_args__ = (UniqueConstraint("user_id", "subject", "category", name="uq_radar_user_subject_category"),)
+
+
+# =============================================================================
+# MODUL 6: EXAM CROWDSOURCING & MEMORY ENGINE
+# =============================================================================
+
+
+class StudentExamStatus(Base):
+    """O'quvchining imtihon holati ("Exam Today" belgisi) — 1:1 users bilan."""
+
+    __tablename__ = "student_exam_status"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    target_exam_date: Mapped[Date | None] = mapped_column(Date, nullable=True)
+    exam_completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    feedback_provided: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class RealExamSubmittedQuestion(Base):
+    """O'quvchi imtihondan keyin "topshirgan" haqiqiy savol — AI'ning xotira bazasi."""
+
+    __tablename__ = "real_exam_submitted_questions"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    subject: Mapped[Subject] = mapped_column(String(20), nullable=False)
+    raw_input_type: Mapped[str] = mapped_column(String(10), nullable=False)  # "text" | "voice" | "image"
+    topic: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    grade: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cert_level: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    difficulty_level: Mapped[str | None] = mapped_column(String(10), nullable=True)  # "A" | "A+"
+    reconstructed_question: Mapped[str] = mapped_column(Text, nullable=False)
+    verified_solution: Mapped[str | None] = mapped_column(Text, nullable=True)
+    vector_embedding: Mapped[list[float] | None] = mapped_column(Vector(1536), nullable=True)
+    submission_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# =============================================================================
+# MODUL 7: AUTONOMOUS AI RESEARCHER & PEDAGOGICAL INNOVATOR ENGINE
+# =============================================================================
+
+
+class InnovationType(str, enum.Enum):
+    NEW_METHOD = "NEW_METHOD"
+    TRICK_QUESTION = "TRICK_QUESTION"
+
+
+class AiGeneratedInnovation(Base):
+    """AI mustaqil yaratgan yangi tushuntirish usuli yoki "tuzoq masala"."""
+
+    __tablename__ = "ai_generated_innovations"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    subject: Mapped[Subject] = mapped_column(String(20), nullable=False)
+    topic_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("lessons.id"), nullable=True)
+    innovation_type: Mapped[InnovationType] = mapped_column(String(20), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    explanation: Mapped[str] = mapped_column(Text, nullable=False)
+    validation_score: Mapped[float] = mapped_column(Float, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AiResearchLog(Base):
+    """AI'ning mustaqil izlanish (web-scan) natijalari jurnali."""
+
+    __tablename__ = "ai_research_logs"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    topic: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    extracted_insight: Mapped[str] = mapped_column(Text, nullable=False)
+    added_to_knowledge_base: Mapped[bool] = mapped_column(Boolean, default=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        "timestamp", DateTime(timezone=True), server_default=func.now()
+    )
+
+
+# =============================================================================
+# MODUL 8: AUDIO LECTURE ENGINE
+# =============================================================================
+
+
+class UserAudioLecture(Base):
+    """AI Ustoz ma'ruzasining audio (TTS) versiyasi — Supabase Storage'da saqlanadi."""
+
+    __tablename__ = "user_audio_lectures"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    subject: Mapped[Subject] = mapped_column(String(20), nullable=False)
+    grade: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lecture_title: Mapped[str] = mapped_column(String(255), nullable=False)
+    lecture_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    audio_url: Mapped[str] = mapped_column(String(1024), nullable=False)
+    duration_seconds: Mapped[int] = mapped_column(Integer, default=0)
+    is_saved: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

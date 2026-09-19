@@ -17,28 +17,37 @@ ai-ustoz/
 │   │   │   ├── config.py      # Environment sozlamalari (pydantic-settings)
 │   │   │   └── security.py    # Supabase JWT tekshiruvi
 │   │   ├── prompts/
-│   │   │   ├── system_prompt.py   # STRICT TUTOR PERSONA system prompt qurilmasi
-│   │   │   └── debate_prompt.py   # MUNOZARA rejimi system prompt qurilmasi (Modul 2)
+│   │   │   ├── system_prompt.py     # STRICT TUTOR PERSONA system prompt qurilmasi
+│   │   │   ├── debate_prompt.py     # MUNOZARA rejimi system prompt qurilmasi (Modul 2)
+│   │   │   ├── exam_feedback_prompt.py  # Modul 6: Exam Feedback qo'shimchasi
+│   │   │   └── innovation_prompt.py     # Modul 7: Innovative Teacher qo'shimchasi
 │   │   ├── models/
 │   │   │   ├── database.py    # SQLAlchemy ORM modellari
 │   │   │   └── schemas.py     # Pydantic request/response sxemalari
 │   │   ├── services/
-│   │   │   ├── openai_service.py     # Chat streaming, Realtime voice, JSON generatsiya
+│   │   │   ├── openai_service.py     # Chat streaming, Realtime voice, JSON/Whisper/Vision/TTS
 │   │   │   ├── progress_service.py   # Progress/weak_spots CRUD + StudentContext
 │   │   │   ├── rag_service.py        # pgvector orqali darslik matnlarini qidirish
 │   │   │   ├── session_service.py    # Redis'dagi qisqa muddatli suhbat tarixi
 │   │   │   ├── flashcard_service.py  # Modul 1: Spaced Repetition (Ebbinghaus)
 │   │   │   ├── weakness_service.py   # Modul 3: Radar hisoblash + Targeted Drill
 │   │   │   ├── pdf_service.py        # Modul 4: ReportLab PDF konspekt
-│   │   │   └── sync_service.py       # Modul 5: Offline sync (idempotent apply)
+│   │   │   ├── sync_service.py       # Modul 5: Offline sync (idempotent apply)
+│   │   │   ├── exam_pipeline_service.py  # Modul 6: Voice/OCR->savol tiklash->embedding
+│   │   │   ├── research_service.py       # Modul 7: Web-research + innovatsiya generatori
+│   │   │   ├── scheduler.py              # Modul 7: APScheduler (async cron)
+│   │   │   └── audio_service.py          # Modul 8: TTS + Supabase Storage
 │   │   ├── api/routes/
-│   │   │   ├── chat.py        # POST /api/v1/chat (SSE streaming)
-│   │   │   ├── voice.py       # POST /api/v1/voice/session (tutor/debate rejimlari)
-│   │   │   ├── progress.py    # GET progress, POST test-results
-│   │   │   ├── flashcards.py  # Modul 1: generate/due/review
-│   │   │   ├── weakness.py    # Modul 3: radar/drill
-│   │   │   ├── conspect.py    # Modul 4: PDF generatsiya
-│   │   │   └── sync.py        # Modul 5: offline sync push
+│   │   │   ├── chat.py           # POST /api/v1/chat (SSE streaming)
+│   │   │   ├── voice.py          # POST /api/v1/voice/session (tutor/debate rejimlari)
+│   │   │   ├── progress.py       # GET progress, POST test-results
+│   │   │   ├── flashcards.py     # Modul 1: generate/due/review
+│   │   │   ├── weakness.py       # Modul 3: radar/drill
+│   │   │   ├── conspect.py       # Modul 4: PDF generatsiya
+│   │   │   ├── sync.py           # Modul 5: offline sync push
+│   │   │   ├── exam_feedback.py  # Modul 6: status/submit (matn/ovoz/rasm)
+│   │   │   ├── research.py       # Modul 7: scan/innovations (qo'lda ishga tushirish)
+│   │   │   └── audio.py          # Modul 8: generate/list/save/delete
 │   │   ├── assets/fonts/      # PDF uchun Unicode shrift (README bor, TTF qo'shilishi kerak)
 │   │   └── db/
 │   │       ├── session.py     # Async SQLAlchemy engine
@@ -50,12 +59,12 @@ ai-ustoz/
 ├── frontend/                  # Next.js (App Router, TypeScript)
 │   ├── app/
 │   │   ├── layout.tsx          # Manifest, PWA service worker registratsiyasi
-│   │   ├── page.tsx            # Fan tanlash + 3 bo'lim (Suhbat, Flashcard, Radar)
+│   │   ├── page.tsx            # Fan tanlash + 4 bo'lim (Suhbat, Flashcard, Radar, Audio)
 │   │   └── globals.css
 │   ├── components/
 │   │   ├── chat/
 │   │   │   ├── ChatWindow.tsx       # Chat oynasi, SSE oqimini qabul qiladi
-│   │   │   ├── MessageBubble.tsx
+│   │   │   ├── MessageBubble.tsx    # + "Audio qilish" tugmasi (Modul 8)
 │   │   │   ├── MarkdownRenderer.tsx # KaTeX render
 │   │   │   └── MermaidDiagram.tsx   # Mermaid.js diagrammalar
 │   │   ├── voice/
@@ -67,6 +76,9 @@ ai-ustoz/
 │   │   ├── weakness/
 │   │   │   ├── WeaknessRadarChart.tsx  # Modul 3: Recharts Radar Chart
 │   │   │   └── TargetedDrill.tsx       # Modul 3: "Zaif Nuqtalarni Ishlash"
+│   │   ├── audio/
+│   │   │   ├── AudioPlayer.tsx      # Modul 8: Play/Pause, 1x-2x tezlik, progress bar
+│   │   │   └── AudioLibrary.tsx     # Modul 8: shaxsiy audio kutubxona (dashboard)
 │   │   └── PwaRegister.tsx      # Modul 5: service worker registratsiyasi
 │   ├── hooks/
 │   │   └── useOnlineSync.ts    # Modul 5: online/offline kuzatuv + auto-sync
@@ -91,10 +103,10 @@ ai-ustoz/
 | Qatlam | Texnologiya |
 |---|---|
 | Frontend | Next.js 14 (App Router, TypeScript), Tailwind CSS, Framer Motion, KaTeX, Mermaid.js, Three.js, Recharts, IndexedDB (PWA) |
-| Backend | Python FastAPI, OpenAI API (Chat + Realtime + JSON mode), SQLAlchemy (async), ReportLab |
-| Database | PostgreSQL (Supabase) + pgvector, Redis |
+| Backend | Python FastAPI, OpenAI API (Chat + Realtime + Whisper + Vision + TTS + JSON mode), SQLAlchemy (async), ReportLab, APScheduler |
+| Database | PostgreSQL (Supabase) + pgvector, Redis, Supabase Storage |
 
-## 5 ta eksklyuziv modul
+## 8 ta eksklyuziv modul
 
 | # | Modul | Backend | Frontend |
 |---|---|---|---|
@@ -103,6 +115,9 @@ ai-ustoz/
 | 3 | Weakness Radar & Targeted Drill | `weakness_service.py`, `api/routes/weakness.py` | `WeaknessRadarChart.tsx`, `TargetedDrill.tsx` |
 | 4 | Auto-PDF Konspekt Generator | `pdf_service.py` (ReportLab), `api/routes/conspect.py` | "PDF konspekt" tugmasi (`page.tsx`) |
 | 5 | Offline Sync (PWA & IndexedDB) | `sync_service.py`, `api/routes/sync.py` | `lib/offlineDb.ts`, `hooks/useOnlineSync.ts`, `public/sw.js` |
+| 6 | Exam Crowdsourcing & Memory Engine | `exam_pipeline_service.py` (Whisper/Vision OCR), `api/routes/exam_feedback.py` | — (chat/voice orqali tabiiy suhbat) |
+| 7 | Autonomous AI Researcher & Innovator | `research_service.py`, `scheduler.py` (APScheduler), `api/routes/research.py` | — (natija `chat.py` promptiga in'ektsiya qilinadi) |
+| 8 | Audio Lecture Engine | `audio_service.py` (TTS + Supabase Storage), `api/routes/audio.py` | `components/audio/AudioPlayer.tsx`, `AudioLibrary.tsx` |
 
 Har birining mantiqiy oqimi `docs/ARCHITECTURE.md`da batafsil yozilgan.
 
@@ -165,3 +180,21 @@ Qaror va oqimlar tavsifi uchun `docs/ARCHITECTURE.md` faylini ko'ring.
   natijalari `details.topic_breakdown` maydonida
   `{"<category>": {"correct": N, "total": M}}` strukturasida yuborilishi kerak
   (bu `TargetedDrill.tsx`da avtomatik shakllantiriladi).
+- **Supabase Storage (Modul 8):** `audio_lectures` nomli PUBLIC bucket yaratib,
+  `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`ni to'ldiring — aks holda audio
+  generatsiya 502 xato qaytaradi. Bucket private bo'lsa, `audio_service.py`ni
+  signed URL yaratadigan qilib o'zgartirish kerak bo'ladi.
+- **Web-search provider (Modul 7):** `research_service.search_web()`
+  Tavily/Serper uslubidagi JSON API kutadi (`WEB_SEARCH_API_URL`/
+  `WEB_SEARCH_API_KEY`). Sozlanmasa, research skaneri jim ravishda hech narsa
+  topmaydi — xato tashlamaydi.
+- **Autonomous scheduler (Modul 7):** `RESEARCH_SCAN_ENABLED=true` qilib
+  yoqilmaguncha fon vazifalari ishlamaydi (standart: o'chirilgan). Bir nechta
+  `uvicorn` replika ishlatilsa, har biri alohida scheduler ishga tushiradi —
+  productionda buni bitta markazlashgan worker (masalan, Celery Beat) orqali
+  boshqarish tavsiya etiladi.
+- **Exam Crowdsourcing (Modul 6):** `/api/v1/exam-feedback/submit` multipart
+  form qabul qiladi (`subject`, `raw_input_type`, ixtiyoriy `text_input`,
+  `audio_file` yoki `image_file`). Bu uchun maxsus frontend komponenti
+  yozilmagan — hozircha backend/DB darajasida tayyor (spec talabiga ko'ra);
+  chat/voice suhbati orqali tabiiy ravishda ishga tushadi.

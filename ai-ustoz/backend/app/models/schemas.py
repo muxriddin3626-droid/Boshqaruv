@@ -1,6 +1,6 @@
 """API request/response uchun Pydantic sxemalar."""
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -183,3 +183,121 @@ class SyncPushOut(BaseModel):
     applied: int
     skipped_duplicate: int
     failed: int
+
+
+# =============================================================================
+# MODUL 6: EXAM CROWDSOURCING & MEMORY ENGINE
+# =============================================================================
+
+
+class RawInputType(str, Enum):
+    TEXT = "text"
+    VOICE = "voice"
+    IMAGE = "image"
+
+
+class ExamStatusOut(BaseModel):
+    target_exam_date: date | None
+    exam_completed: bool
+    feedback_provided: bool
+
+
+class ExamStatusIn(BaseModel):
+    """O'quvchi "Bugun imtihonim bor" yoki "Imtihondan chiqdim" deb belgilaganda yuboriladi."""
+
+    target_exam_date: date | None = None
+    exam_completed: bool | None = None
+
+
+class ExamSubmissionOut(BaseModel):
+    id: uuid.UUID
+    subject: SubjectSchema
+    raw_input_type: RawInputType
+    topic: str | None
+    difficulty_level: str | None
+    cert_level: str | None
+    reconstructed_question: str
+    verified_solution: str | None
+    submission_date: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# =============================================================================
+# MODUL 7: AUTONOMOUS AI RESEARCHER & PEDAGOGICAL INNOVATOR ENGINE
+# =============================================================================
+
+
+class InnovationTypeSchema(str, Enum):
+    NEW_METHOD = "NEW_METHOD"
+    TRICK_QUESTION = "TRICK_QUESTION"
+
+
+class InnovationOut(BaseModel):
+    id: uuid.UUID
+    subject: SubjectSchema
+    topic_id: uuid.UUID | None
+    innovation_type: InnovationTypeSchema
+    content: str
+    explanation: str
+    validation_score: float
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class InnovationTriggerIn(BaseModel):
+    subject: SubjectSchema
+    category: str | None = None  # None bo'lsa, eng zaif bo'lim avtomatik tanlanadi
+    innovation_type: InnovationTypeSchema = InnovationTypeSchema.NEW_METHOD
+
+
+class ResearchLogOut(BaseModel):
+    id: uuid.UUID
+    source_url: str | None
+    topic: str | None
+    extracted_insight: str
+    added_to_knowledge_base: bool
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ResearchScanTriggerIn(BaseModel):
+    topics: list[str] = Field(default_factory=list)  # bo'sh bo'lsa, standart mavzular ishlatiladi
+
+
+# =============================================================================
+# MODUL 8: AUDIO LECTURE ENGINE
+# =============================================================================
+
+
+class AudioLectureGenerateIn(BaseModel):
+    subject: SubjectSchema
+    grade: int | None = Field(default=None, ge=5, le=11)
+    lecture_title: str = Field(min_length=1, max_length=255)
+    lecture_text: str = Field(min_length=1, max_length=8000)
+    lecture_summary: str | None = None
+    voice: str = "onyx"  # OpenAI TTS ovozi: alloy/echo/fable/onyx/nova/shimmer
+
+
+class AudioLectureOut(BaseModel):
+    id: uuid.UUID
+    subject: SubjectSchema
+    grade: int | None
+    lecture_title: str
+    lecture_summary: str | None
+    audio_url: str
+    duration_seconds: int
+    is_saved: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AudioLectureUpdateIn(BaseModel):
+    is_saved: bool

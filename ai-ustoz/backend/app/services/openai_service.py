@@ -7,7 +7,11 @@ OpenAI integratsiyasi:
    oqmaydi — bu kechikishni minimal qiladi).
 3. Strukturaviy (JSON) generatsiya: flashcard'lar, maqsadli test savollari va
    PDF konspekt uchun qisqacha xulosalar.
+4. Whisper (ovoz->matn), Vision OCR (rasm->matn) va TTS (matn->ovoz) —
+   Exam Crowdsourcing (Modul 6) va Audio Lecture Engine (Modul 8) uchun.
 """
+import base64
+import io
 import json
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -166,3 +170,127 @@ async def summarize_for_conspect(subject: str, conversation_text: str, weak_spot
         f"O'quvchining bilingan zaif nuqtalari:\n{weak_spots_text}"
     )
     return await _generate_json(system_instruction, user_content)
+
+
+# =============================================================================
+# MODUL 6: EXAM CROWDSOURCING & MEMORY ENGINE — Whisper (ovoz) + Vision (OCR)
+# =============================================================================
+
+
+async def transcribe_audio(audio_bytes: bytes, filename: str = "audio.webm") -> str:
+    """Ovozli xabarni Whisper orqali matnga aylantiradi (o'quvchi imtihon savolini aytib beradi)."""
+    response = await client.audio.transcriptions.create(
+        model=settings.openai_whisper_model,
+        file=(filename, io.BytesIO(audio_bytes)),
+    )
+    return response.text
+
+
+async def ocr_image_to_text(image_bytes: bytes, mime_type: str = "image/jpeg") -> str:
+    """Rasmga tushirilgan imtihon savolini (GPT-4o vision) so'zma-so'z matnga o'giradi."""
+    encoded_image = base64.b64encode(image_bytes).decode("utf-8")
+    data_url = f"data:{mime_type};base64,{encoded_image}"
+
+    response = await client.chat.completions.create(
+        model=settings.openai_vision_model,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "Sen rasmdagi imtihon savolini so'zma-so'z, hech narsa o'zgartirmasdan "
+                    "matnga o'giruvchi OCR yordamchisan. Faqat savol matnini qaytar, boshqa "
+                    "izoh yozma."
+                ),
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Ushbu rasmdagi imtihon savolini matnga o'gir:"},
+                    {"type": "image_url", "image_url": {"url": data_url}},
+                ],
+            },
+        ],
+        temperature=0.0,
+    )
+    return response.choices[0].message.content or ""
+
+
+async def reconstruct_exam_question(subject: str, grade: int | None, raw_text: str) -> dict:
+    """
+    Xom (imlo xatoli/tugallanmagan) savol matnini to'liq, ilmiy jihatdan to'g'ri savolga
+    tiklaydi, mavzusi va qiyinchilik darajasini (A/A+) aniqlaydi, mukammal yechim tayyorlaydi.
+    """
+    system_instruction = (
+        "Sen O'zbekiston DTM/BMBA va Milliy Sertifikat imtihonlaridan chiqqan savollarni "
+        "qayta tiklovchi ekspertsan. O'quvchi yozgan/aytgan xom matn imlo xatoli yoki "
+        "tugallanmagan bo'lishi mumkin — sen uni aniq va to'liq ilmiy savol shakliga "
+        "keltirasan, so'ng mukammal, tekshirilgan yechim tayyorlaysan. "
+        "Faqat quyidagi JSON formatda javob ber: "
+        '{"reconstructed_question": "...", "topic": "...", "difficulty_level": "A yoki A+", '
+        '"cert_level": "...", "verified_solution": "..."}. '
+        "'topic' — aniq mavzu nomi (masalan 'Alkanlar izomeriyasi'), 'cert_level' — imtihon "
+        "turi (masalan 'Milliy Sertifikat' yoki 'DTM/BMBA'; noaniq bo'lsa 'DTM/BMBA' deb yoz). "
+        "Formulalarni KaTeX formatida yoz ($...$). O'zbek tilida yoz."
+    )
+    user_content = f"Fan: {subject}\nSinf: {grade or 'nomaʼlum'}\n\nXom matn:\n{raw_text}"
+    return await _generate_json(system_instruction, user_content)
+
+
+# =============================================================================
+# MODUL 7: AUTONOMOUS AI RESEARCHER & PEDAGOGICAL INNOVATOR ENGINE
+# =============================================================================
+
+
+async def generate_innovation(subject: str, category: str, innovation_type: str) -> dict:
+    """Zaif bo'lim uchun yangi tushuntirish usuli yoki hech qachon uchramagan 'tuzoq masala' yaratadi."""
+    if innovation_type == "TRICK_QUESTION":
+        focus = (
+            "Avval hech qachon uchramagan, gibrid (bir necha tushunchani birlashtirgan) "
+            "'tuzoq masala' (trick question) yarat — o'quvchini odatiy xatoga yo'ldiruvchi, "
+            "lekin to'g'ri yechimi mavjud va aniq."
+        )
+    else:
+        focus = (
+            "Ushbu mavzuni tushuntirish uchun sodda, hayotiy analogiyaga asoslangan YANGI "
+            "tushuntirish usulini (formula-klyuch) yarat — darslikdagi standart usuldan farqli, "
+            "lekin ilmiy jihatdan to'g'ri va yodda qolarli."
+        )
+    system_instruction = (
+        f"Sen pedagogik innovatsiyalar generatsiya qiluvchi ekspert metodistsan. {focus} "
+        "Faqat quyidagi JSON formatda javob ber: "
+        '{"content": "...", "explanation": "..."}. '
+        "'content' — usul/masalaning o'zi, 'explanation' — nega samarali ekanligi yoki "
+        "(tuzoq masala bo'lsa) to'liq yechim tushuntirishi. KaTeX formatidan foydalan. "
+        "O'zbek tilida yoz."
+    )
+    user_content = f"Fan: {subject}\nO'quvchilar ko'p qiynaladigan bo'lim: {category}"
+    return await _generate_json(system_instruction, user_content)
+
+
+async def synthesize_research_insight(topic: str, raw_snippets: str) -> dict:
+    """Web-qidiruv natijalaridan o'qituvchi uchun foydali bitta xulosani ajratib oladi."""
+    system_instruction = (
+        "Sen DTM/BMBA va Milliy Sertifikat metodikasi bo'yicha tadqiqotchi yordamchisan. "
+        "Quyida internetdan topilgan qisqa parchalar berilgan. Ular orasidan o'qituvchi "
+        "uchun haqiqatan foydali, yangi va aniq bo'lgan bitta xulosani ajratib ol. Agar "
+        "hech qanday foydali/ishonchli ma'lumot topilmasa, is_relevant=false qil. "
+        'Faqat quyidagi JSON formatda javob ber: {"insight": "...", "is_relevant": true/false}. '
+        "O'zbek tilida yoz."
+    )
+    user_content = f"Mavzu: {topic}\n\nTopilgan parchalar:\n{raw_snippets}"
+    return await _generate_json(system_instruction, user_content)
+
+
+# =============================================================================
+# MODUL 8: AUDIO LECTURE ENGINE — matndan ovozga (TTS)
+# =============================================================================
+
+
+async def text_to_speech(text: str, voice: str = "onyx") -> bytes:
+    """Ma'ruza matnini MP3 audio baytlariga aylantiradi."""
+    response = await client.audio.speech.create(
+        model=settings.openai_tts_model,
+        voice=voice,
+        input=text,
+    )
+    return response.read()
