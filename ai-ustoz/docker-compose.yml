@@ -1,6 +1,31 @@
-version: "3.9"
+# Tezkor lokal sinov uchun to'liq stek: Postgres (pgvector bilan) + Redis +
+# backend + frontend. Bitta buyruq bilan ishga tushadi:
+#
+#   docker compose up --build
+#
+# Keyin: docker compose exec backend python scripts/seed_test_user.py
+# (test foydalanuvchi + JWT token yaratadi, batafsil: README.md)
 
 services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ai_ustoz
+    ports:
+      - "5432:5432"
+    volumes:
+      - ai_ustoz_pgdata:/var/lib/postgresql/data
+      # Konteyner birinchi marta ishga tushganda avtomatik bajariladi
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   redis:
     image: redis:7-alpine
     ports:
@@ -11,11 +36,18 @@ services:
     env_file:
       - ./backend/.env
     environment:
+      # Yuqoridagi postgres/redis xizmatlariga ulanish — backend/.env'dagi
+      # DATABASE_URL/REDIS_URL qiymatlaridan ustun turadi (compose ichida
+      # xizmat nomlari DNS sifatida ishlaydi).
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/ai_ustoz
       REDIS_URL: redis://redis:6379/0
     ports:
       - "8000:8000"
     depends_on:
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   frontend:
     image: node:20-alpine
@@ -23,9 +55,12 @@ services:
     volumes:
       - ./frontend:/app
     command: sh -c "npm install && npm run dev"
-    env_file:
-      - ./frontend/.env
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
     ports:
       - "3000:3000"
     depends_on:
       - backend
+
+volumes:
+  ai_ustoz_pgdata:

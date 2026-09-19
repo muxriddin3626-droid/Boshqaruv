@@ -6,6 +6,45 @@ tayyorlaydigan, qattiqqo'l va talabchan xususiy repetitor xarakteridagi AI platf
 **Maqsad:** o'quvchini 0 balldan 189 ballgacha olib chiqish, Milliy Sertifikatdan
 A+ daraja oldirish va doimiy motivatsiyada tutish.
 
+## Tezkor sinov (5 daqiqada brauzerda ochish)
+
+Kompyuteringizda [Docker](https://docs.docker.com/get-docker/) o'rnatilgan bo'lsa,
+butun stek (Postgres+pgvector, Redis, backend, frontend) bitta buyruq bilan
+ishga tushadi — Supabase yoki boshqa tashqi xizmat shart emas:
+
+```bash
+git clone https://github.com/muxriddin3626-droid/Boshqaruv.git
+cd Boshqaruv/ai-ustoz
+
+cp backend/.env.example backend/.env
+# backend/.env faylini oching va kamida shu 2 ta qatorni to'ldiring:
+#   OPENAI_API_KEY=sk-...   (chat/ovoz/flashcard kabi AI funksiyalari uchun)
+#   JWT_SECRET=istalgan-tasodifiy-matn
+
+docker compose up --build
+```
+
+Bir necha daqiqadan so'ng:
+
+1. **Test foydalanuvchi va kirish tokeni yarating** (yangi terminalda):
+   ```bash
+   docker compose exec backend python scripts/seed_test_user.py
+   ```
+   Skript chiqargan `localStorage.setItem(...)` qatorini nusxalab oling.
+2. Brauzerda **http://localhost:3000** ni oching.
+3. `F12` (Developer Tools) → **Console** bo'limini oching, nusxalangan qatorni
+   joylashtirib Enter bosing — sahifa qayta yuklanadi va ilova ochiladi.
+
+Shundan so'ng barcha bo'limlar (Suhbat, Flashcard'lar, Zaif nuqtalar, Audio
+kutubxona) haqiqiy ma'lumotlar bazasi bilan ishlaydi. `OPENAI_API_KEY` to'g'ri
+qo'yilgan bo'lsa, chat/ovoz/flashcard-generatsiya kabi AI funksiyalari ham
+to'liq ishlaydi.
+
+> **Eslatma:** `scripts/seed_test_user.py` — Supabase Auth hali ulanmagan
+> frontend uchun faqat lokal sinov yo'li (production'da ishlatilmasin).
+> Audio Lecture Engine (Modul 8) uchun Supabase Storage kerak — bo'lmasa
+> shu modul bundan tashqari hammasi ishlayveradi.
+
 ## Loyiha strukturasi
 
 ```
