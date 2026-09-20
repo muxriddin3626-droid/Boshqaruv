@@ -207,6 +207,35 @@ uvicorn app.main:app --reload
 `database/schema.sql` faylini Supabase SQL Editor'da (yoki `psql`) ishga tushiring,
 so'ng ixtiyoriy ravishda `database/seed.sql`.
 
+### 2.1. Darsliklarni ulash (RAG bilim bazasi)
+
+AI Ustoz javob berayotganda `knowledge_chunks` jadvalidagi darslik matnlariga
+tayanadi (`rag_service.py`). Bu jadvalni Kimyo/Biologiya darslik PDF'lari bilan
+to'ldirish uchun `backend/scripts/ingest_textbook.py` skriptidan foydalaning:
+
+```bash
+cd backend
+
+# 1) Avval chunk'larga qanday bo'linishini ko'rib chiqing (OpenAI/DB'ga tegmaydi, bepul):
+python scripts/ingest_textbook.py --pdf /path/to/kimyo-9-sinf.pdf --subject kimyo --grade 9 --dry-run
+
+# 2) Chunk'lar to'g'ri ko'rinsa — real yuklash (embedding oladi va DB'ga yozadi):
+python scripts/ingest_textbook.py --pdf /path/to/kimyo-9-sinf.pdf --subject kimyo --grade 9
+
+# docker compose bilan ishlatayotgan bo'lsangiz:
+docker compose exec backend python scripts/ingest_textbook.py --pdf /darsliklar/kimyo-9-sinf.pdf --subject kimyo --grade 9
+```
+
+Har bir fan/sinf uchun alohida PDF yuklang (masalan, `kimyo` 5–11-sinf va
+`biologiya` 5–11-sinf uchun alohida-alohida). Xuddi shu darslikni qayta
+yuklasangiz (masalan, yaxshiroq skanerlangan versiyasi bilan), eski
+chunk'larni o'chirib qayta yozish uchun `--replace` flagini qo'shing.
+
+**Eslatma:** skript faqat matn qatlami bor PDF'lar bilan ishlaydi (masalan,
+Word'dan PDF'ga eksport qilingan yoki matn-based skanerlar). Agar darslik
+sof rasm (skanerlangan sahifa, matn qatlamisiz) bo'lsa, avval OCR qilish
+kerak — bu skript OCR qilmaydi.
+
 ### 3. Frontend
 
 ```bash
@@ -232,9 +261,9 @@ Qaror va oqimlar tavsifi uchun `docs/ARCHITECTURE.md` faylini ko'ring.
 
 - **Auth:** Frontend Supabase Auth orqali login qiladi, JWT backendga
   `Authorization: Bearer <token>` header orqali yuboriladi (`core/security.py`).
-- **RAG ingestion:** `knowledge_chunks` jadvaliga darslik matnlarini
-  bo'laklab (chunking) va embedding qilib yuklovchi alohida skript kerak —
-  bu repo faqat *retrieval* qismini o'z ichiga oladi.
+- **RAG ingestion:** `knowledge_chunks` jadvaliga darslik PDF'larini
+  yuklash uchun `backend/scripts/ingest_textbook.py` skriptidan foydalaning
+  (yuqoridagi "Darsliklarni ulash" bo'limiga qarang).
 - **Realtime Voice:** Backend faqat ephemeral `client_secret` beradi;
   audio oqimi to'g'ridan-to'g'ri brauzer ↔ OpenAI orasida WebRTC orqali
   o'tadi (kechikishni minimal qilish uchun).
