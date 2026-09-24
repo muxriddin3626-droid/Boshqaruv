@@ -241,6 +241,7 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
 
     override fun onHeard(text: String) = append("🗣 $text")
     override fun onReply(text: String) = append("🤖 $text")
+    override fun onInfo(text: String) = append("⚠ $text")
     override fun onAlternatives(texts: List<String>) = append("   (yoki: ${texts.joinToString(" | ")})")
 
     override fun onListening(active: Boolean) {

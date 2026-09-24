@@ -33,6 +33,11 @@ class AiBrain(private val context: Context) {
     /** Oxirgi bir necha savol-javob — AI oldingi gapni eslab qolishi uchun. */
     private val history = ArrayDeque<Pair<String, String>>()
 
+    /** Oxirgi xato sababi (ekranda ko'rsatish uchun): noto'g'ri kalit, limit tugagan va h.k. */
+    @Volatile
+    var lastError: String? = null
+        private set
+
     val isEnabled: Boolean
         get() = Prefs.aiEnabled(context) && Prefs.keyFor(context, Prefs.aiProvider(context)).isNotBlank()
 
@@ -50,12 +55,15 @@ class AiBrain(private val context: Context) {
     fun interpret(alternatives: List<String>, onResult: (Result?) -> Unit) {
         val said = alternatives.distinct().take(5)
         executor.execute {
+            lastError = null
             val result = try {
                 ask(said)
             } catch (e: Exception) {
                 android.util.Log.w("AiBrain", "AI so'rovi bajarilmadi", e)
+                lastError = e.message ?: e.javaClass.simpleName
                 null
             }
+            if (result == null && lastError == null) lastError = "AI tushunarli javob qaytarmadi"
             main.post { onResult(result) }
         }
     }
@@ -113,6 +121,7 @@ class AiBrain(private val context: Context) {
                 if (code !in 200..299) {
                     val err = conn.errorStream?.bufferedReader()?.use { it.readText() }
                     android.util.Log.w("AiBrain", "Gemini xatosi $code: $err")
+                    lastError = "Gemini xatosi $code: " + (geminiError(err) ?: "")
                     return null
                 }
                 val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
@@ -145,6 +154,13 @@ class AiBrain(private val context: Context) {
 
     companion object {
         private val GEMINI_MODELS = listOf("gemini-flash-latest", "gemini-2.5-flash")
+
+        /** Gemini xato javobidan qisqa sababni ajratadi: {"error":{"message":"API key not valid..."}} */
+        fun geminiError(body: String?): String? = try {
+            JSONObject(body ?: "").optJSONObject("error")?.optString("message")?.takeIf { it.isNotBlank() }
+        } catch (e: Exception) {
+            body?.take(200)
+        }
 
         /** Gemini javobidan matnni ajratadi: candidates[0].content.parts[*].text */
         fun geminiText(json: JSONObject): String? {

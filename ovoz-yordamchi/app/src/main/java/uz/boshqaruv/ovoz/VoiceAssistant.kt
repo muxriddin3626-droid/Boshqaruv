@@ -24,6 +24,8 @@ class VoiceAssistant(private val context: Context, private val listener: Listene
         fun onHeard(text: String) {}
         /** Ovoz taniydigan xizmatning boshqa taxminlari (nima eshitganini ko'rsatish uchun). */
         fun onAlternatives(texts: List<String>) {}
+        /** Qo'shimcha texnik ma'lumot (masalan, AI xatosining sababi). */
+        fun onInfo(text: String) {}
         fun onReply(text: String) {}
         fun onListening(active: Boolean) {}
         /** Suhbat tugadi — yordamchi hech narsa kutmayapti. */
@@ -229,8 +231,14 @@ class VoiceAssistant(private val context: Context, private val listener: Listene
             when {
                 r?.command != null -> execute(r.command)
                 r?.reply != null -> say(r.reply)
-                local is Command.Unknown -> say("Sun'iy intellekt javob bermadi. Internet va API kalitni tekshiring.")
-                else -> execute(local)
+                local is Command.Unknown -> {
+                    brain.lastError?.let { listener.onInfo(it) }
+                    say("Sun'iy intellekt javob bermadi. Internet va API kalitni tekshiring.")
+                }
+                else -> {
+                    brain.lastError?.let { listener.onInfo(it) }
+                    execute(local)
+                }
             }
         }
     }

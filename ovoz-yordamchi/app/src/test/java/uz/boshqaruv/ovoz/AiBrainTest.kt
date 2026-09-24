@@ -42,4 +42,10 @@ class AiBrainTest {
         assertEquals(Command.Music("Shahzoda"), AiBrain.parse(text)!!.command)
         assertNull(AiBrain.geminiText(org.json.JSONObject("{}")))
     }
+
+    @Test fun geminiXatosi() {
+        assertEquals("API key not valid. Please pass a valid API key.",
+            AiBrain.geminiError("""{"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT"}}"""))
+        assertEquals("oddiy matn", AiBrain.geminiError("oddiy matn"))
+    }
 }
