@@ -26,6 +26,9 @@ class AiBrain(private val context: Context) {
     /** [command] — bajariladigan buyruq; [reply] — AI'ning o'zbekcha javobi (suhbat uchun). */
     data class Result(val command: Command?, val reply: String?)
 
+    /** Gemini xatosidan keyin nima qilish: shu modelni qayta, keyingi model yoki to'xtash. */
+    enum class Retry { SAME, NEXT_MODEL, NO }
+
     private val main = Handler(Looper.getMainLooper())
     private val executor = Executors.newSingleThreadExecutor()
     private var client: AnthropicClient? = null
@@ -170,8 +173,6 @@ class AiBrain(private val context: Context) {
         private val GEMINI_MODELS = listOf(
             "gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-2.5-flash-lite"
         )
-
-        enum class Retry { SAME, NEXT_MODEL, NO }
 
         /** 503/500 — model vaqtincha band: shu modelni qayta; 429 — shu model limiti tugagan: keyingi model. */
         fun geminiRetry(code: Int): Retry = when (code) {
