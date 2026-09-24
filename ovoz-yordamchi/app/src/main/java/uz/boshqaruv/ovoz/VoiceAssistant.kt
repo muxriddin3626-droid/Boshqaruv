@@ -9,12 +9,9 @@ import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
 /**
  * Ovozli yordamchining "miyasi": eshitadi → tushunadi → bajaradi → ovoz bilan javob beradi.
@@ -45,38 +42,12 @@ class VoiceAssistant(private val context: Context, private val listener: Listene
     private val actions = PhoneActions(context)
     private val contacts = ContactFinder(context)
     private var recognizer: SpeechRecognizer? = null
-    private var tts: TextToSpeech? = null
-    private var ttsReady = false
-    private val afterSpeech = HashMap<String, () -> Unit>()
+    val speaker = Speaker(context)
     private var pending: Pending? = null
     private var listening = false
 
     /** true bo'lsa, faqat "Yordamchi ..." bilan boshlangan gaplarga javob beradi (doimiy tinglash). */
     var requireWakeWord = false
-
-    init {
-        tts = TextToSpeech(context.applicationContext) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                val t = tts ?: return@TextToSpeech
-                // O'zbek ovozi bo'lmasa — turk ovozi o'zbek lotin yozuvini yaxshi o'qiydi
-                val locales = listOf(Locale("uz", "UZ"), Locale("tr", "TR"), Locale.getDefault())
-                for (l in locales) {
-                    if (t.setLanguage(l) >= TextToSpeech.LANG_AVAILABLE) break
-                }
-                t.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                    override fun onStart(id: String?) {}
-                    override fun onDone(id: String?) = finish(id)
-                    @Deprecated("Deprecated in Java")
-                    override fun onError(id: String?) = finish(id)
-                    private fun finish(id: String?) {
-                        val next = synchronized(afterSpeech) { afterSpeech.remove(id) } ?: return
-                        main.post(next)
-                    }
-                })
-                ttsReady = true
-            }
-        }
-    }
 
     val isBusy: Boolean get() = listening || pending != null
 
@@ -333,7 +304,7 @@ class VoiceAssistant(private val context: Context, private val listener: Listene
             Command.Bluetooth -> say("Bluetooth sozlamasi ochildi.") { actions.bluetoothSettings(); listener.onIdle() }
             Command.Stop -> {
                 pending = null
-                tts?.stop()
+                speaker.stop()
                 listener.onIdle()
             }
             Command.Yes, Command.No -> listener.onIdle()
@@ -356,7 +327,7 @@ class VoiceAssistant(private val context: Context, private val listener: Listene
         if (pending is Pending.Incoming) {
             pending = null
             stopListening()
-            tts?.stop()
+            speaker.stop()
             listener.onIdle()
         }
     }
@@ -365,23 +336,13 @@ class VoiceAssistant(private val context: Context, private val listener: Listene
 
     fun say(text: String, then: (() -> Unit)? = null) {
         listener.onReply(text)
-        val t = tts
-        if (t == null || !ttsReady) {
-            main.postDelayed({ (then ?: { if (pending == null) listener.onIdle() }).invoke() }, 600)
-            return
-        }
-        val id = UUID.randomUUID().toString()
-        synchronized(afterSpeech) {
-            afterSpeech[id] = then ?: { if (pending == null && !listening) listener.onIdle() }
-        }
-        t.speak(text, TextToSpeech.QUEUE_FLUSH, null, id)
+        speaker.speak(text, then ?: { if (pending == null && !listening) listener.onIdle() })
     }
 
     fun release() {
         recognizer?.destroy()
         recognizer = null
-        tts?.shutdown()
-        tts = null
+        speaker.release()
     }
 
     companion object {

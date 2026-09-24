@@ -38,6 +38,16 @@ ko'taradi / rad etadi, SMS yozadi, fonarni yoqadi, ilovalarni ochadi.
 | "Kamerani och" / "Batareya necha foiz?" | Kamera / batareya |
 | "Wi-Fi" / "Bluetooth" | Sozlamasini ochadi |
 
+## O'zbekcha gapirishi
+
+Yordamchi javoblarni quyidagi tartibda aytadi:
+1. Telefonda **o'zbekcha ovoz** o'rnatilgan bo'lsa — o'sha bilan.
+2. Bo'lmasa, **"O'zbekcha ovoz (internet orqali)"** yoqilgan va internet bor bo'lsa — onlayn o'zbekcha ovoz bilan.
+3. Internet bo'lmasa — telefonning turk yoki rus ovozi bilan, lekin matn ular to'g'ri
+   o'qiydigan qilib o'giriladi (masalan, "sh" → "ş", "q" → "k").
+
+"Sinash" tugmasini bosib, qaysi ovoz ishlayotganini ko'rish mumkin.
+
 ## Ovoz yaxshi tushunilmasa
 
 - Ilova nima eshitganini ekranga yozadi (🗣 va "yoki: ..." qatorlari) — shunga qarab tushunish mumkin.

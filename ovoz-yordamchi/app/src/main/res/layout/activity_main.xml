@@ -94,6 +94,27 @@
         android:text="Doimiy tinglash («Yordamchi, …» deb chaqiring)"
         android:textColor="#FFECEFF1" />
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <Switch
+            android:id="@+id/switch_online_voice"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="O\'zbekcha ovoz (internet orqali)"
+            android:textColor="#FFECEFF1" />
+
+        <Button
+            android:id="@+id/btn_test_voice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sinash" />
+    </LinearLayout>
+
     <RadioGroup
         android:id="@+id/lang"
         android:layout_width="match_parent"

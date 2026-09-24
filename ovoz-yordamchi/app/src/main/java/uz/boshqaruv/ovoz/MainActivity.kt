@@ -57,6 +57,14 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
             if (actionId == EditorInfo.IME_ACTION_SEND) { send(); true } else false
         }
 
+        val onlineVoice = findViewById<Switch>(R.id.switch_online_voice)
+        onlineVoice.isChecked = Prefs.onlineVoice(this)
+        onlineVoice.setOnCheckedChangeListener { _, on -> Prefs.setOnlineVoice(this, on) }
+        findViewById<Button>(R.id.btn_test_voice).setOnClickListener {
+            assistant.say("Assalomu alaykum! Men sizning ovozli yordamchingizman. Nima qilay?")
+            append("ℹ Ovoz: ${assistant.speaker.describe()}")
+        }
+
         val lang = findViewById<RadioGroup>(R.id.lang)
         lang.check(if (Prefs.language(this) == "ru-RU") R.id.lang_ru else R.id.lang_uz)
         lang.setOnCheckedChangeListener { _, id ->
