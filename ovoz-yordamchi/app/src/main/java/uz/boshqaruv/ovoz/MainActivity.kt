@@ -7,7 +7,11 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.net.Uri
+import android.view.inputmethod.EditorInfo
 import android.widget.Button
+import android.widget.EditText
+import android.widget.RadioGroup
 import android.widget.ImageButton
 import android.widget.ScrollView
 import android.widget.Switch
@@ -38,6 +42,27 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
 
         mic.setOnClickListener { startListening() }
 
+        // Ovoz yaxshi tanilmasa — buyruqni yozib ham berish mumkin
+        val input = findViewById<EditText>(R.id.input)
+        val send = {
+            val text = input.text.toString().trim()
+            if (text.isNotEmpty()) {
+                input.setText("")
+                assistant.stopListening()
+                assistant.handle(listOf(text))
+            }
+        }
+        findViewById<Button>(R.id.btn_send).setOnClickListener { send() }
+        input.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEND) { send(); true } else false
+        }
+
+        val lang = findViewById<RadioGroup>(R.id.lang)
+        lang.check(if (Prefs.language(this) == "ru-RU") R.id.lang_ru else R.id.lang_uz)
+        lang.setOnCheckedChangeListener { _, id ->
+            Prefs.setLanguage(this, if (id == R.id.lang_ru) "ru-RU" else "uz-UZ")
+        }
+
         callSwitch.isChecked = Prefs.callControl(this)
         continuousSwitch.isChecked = Prefs.continuous(this)
         callSwitch.setOnCheckedChangeListener { _, on ->
@@ -47,6 +72,7 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
         continuousSwitch.setOnCheckedChangeListener { _, on ->
             Prefs.setContinuous(this, on)
             syncService()
+            if (on) askOverlayPermission()
         }
 
         findViewById<Button>(R.id.btn_permissions).setOnClickListener { askPermissions() }
@@ -107,6 +133,19 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
         }
     }
 
+    /**
+     * Fondan (ekran o'chiq holatda) ilova, musiqa, xarita ochish uchun Android
+     * "Boshqa ilovalar ustidan ko'rsatish" ruxsatini talab qiladi.
+     */
+    private fun askOverlayPermission() {
+        if (Settings.canDrawOverlays(this)) return
+        Toast.makeText(this, "\"Boshqa ilovalar ustidan ko'rsatish\"ga ruxsat bering — fonda ilovalarni ochish uchun kerak", Toast.LENGTH_LONG).show()
+        try {
+            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+        } catch (e: Exception) {
+        }
+    }
+
     private fun askPermissions() {
         val perms = mutableListOf(
             Manifest.permission.RECORD_AUDIO,
@@ -138,6 +177,7 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
 
     override fun onHeard(text: String) = append("🗣 $text")
     override fun onReply(text: String) = append("🤖 $text")
+    override fun onAlternatives(texts: List<String>) = append("   (yoki: ${texts.joinToString(" | ")})")
 
     override fun onListening(active: Boolean) {
         mic.isActivated = active

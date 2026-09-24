@@ -27,6 +27,25 @@ ko'taradi / rad etadi, SMS yozadi, fonarni yoqadi, ilovalarni ochadi.
 | "Fonarni yoq" / "Fonarni o'chir" | Fonar |
 | "Soat necha?" / "Bugun nechanchi?" | Vaqt / sana |
 | "Telegramni och" | Ilovani ochadi |
+| "Muzika qo'y" / "Musiqa qo'y" | Oxirgi musiqani davom ettiradi yoki musiqa ilovasini ochadi |
+| "Shahzodaning qo'shig'ini qo'y" | Qo'shiqchini qidirib qo'yadi (YouTube Music / Spotify / YouTube) |
+| "Keyingi qo'shiq" / "Oldingi" / "Musiqani to'xtat" | Musiqani boshqarish |
+| "Ovozni baland qil" / "past qil" / "o'chir" | Ovoz balandligi |
+| "Soat 7 ga budilnik qo'y" / "6:30 da uyg'ot" | Budilnik |
+| "5 daqiqaga taymer qo'y" | Taymer |
+| "Chorsuga yo'l ko'rsat" | Xaritada yo'l |
+| "YouTubedan ... och" / "... ni qidir" | YouTube / Google qidiruv |
+| "Kamerani och" / "Batareya necha foiz?" | Kamera / batareya |
+| "Wi-Fi" / "Bluetooth" | Sozlamasini ochadi |
+
+## Ovoz yaxshi tushunilmasa
+
+- Ilova nima eshitganini ekranga yozadi (🗣 va "yoki: ..." qatorlari) — shunga qarab tushunish mumkin.
+- Buyruqni **aniq va biroz sekin** ayting, telefonni og'izga yaqin tuting.
+- **"Tanish tili: Ruscha"**ni tanlab ko'ring — ba'zi telefonlarda ruscha tanish yaxshiroq ishlaydi,
+  ruscha buyruqlar ham tushuniladi ("позвони Али", "включи музыку").
+- Google ilovasi → Sozlamalar → Ovoz → **Oflayn nutqni tanish**da o'zbek/rus tilini yuklab oling.
+- Ovoz ishlamasa, buyruqni pastdagi maydonga **yozib** "Bajar"ni bosing.
 
 ## Qanday chaqiriladi
 
@@ -40,6 +59,9 @@ ko'taradi / rad etadi, SMS yozadi, fonarni yoqadi, ilovalarni ochadi.
   "Uy" tugmasini bosib turganda ochiladi (hamma telefonlarda ham chiqmaydi).
 
 ## Cheklovlar
+
+- "Doimiy tinglash" rejimida ekran o'chiq paytda ilova/musiqa ochish uchun
+  **"Boshqa ilovalar ustidan ko'rsatish"** ruxsatini bering (ilova o'zi so'raydi).
 
 - Qo'ng'iroqni ovoz bilan rad etish Android 9 va undan yangi versiyalarda ishlaydi.
 - Xiaomi/Huawei kabi telefonlarda ilovaga **"Avtoishga tushirish"** va

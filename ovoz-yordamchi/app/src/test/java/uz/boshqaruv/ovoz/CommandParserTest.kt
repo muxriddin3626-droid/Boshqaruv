@@ -45,4 +45,48 @@ class CommandParserTest {
         assertEquals("ali", CommandParser.stripDative("aliga"))
         assertEquals("akam", CommandParser.stripDative("akamga"))
     }
+
+    @Test fun musiqa() {
+        assertEquals(Command.Music(null), p("muzika qo'y"))
+        assertEquals(Command.Music(null), p("Musiqa qo'y"))
+        assertEquals(Command.Music(null), p("музыку включи"))
+        assertEquals(Command.Music("shahzoda"), p("Shahzodaning qo'shig'ini qo'y"))
+        assertEquals(Command.MusicPause, p("musiqani to'xtat"))
+        assertEquals(Command.MusicPause, p("muzikani o'chir"))
+        assertEquals(Command.MusicNext, p("keyingi qo'shiq"))
+        assertEquals(Command.MusicNext, p("keyingisi"))
+        assertEquals(Command.MusicPrev, p("oldingi qo'shiqni qo'y"))
+        assertEquals(Command.VolumeUp, p("ovozni baland qil"))
+        assertEquals(Command.VolumeUp, p("ovozni ko'tar"))
+        assertEquals(Command.VolumeDown, p("ovozni pasaytir"))
+        assertEquals(Command.YouTube("shahzoda"), p("YouTubedan Shahzoda qo'shiqlarini och"))
+    }
+
+    @Test fun xatoTanilsaHam() {
+        // ovoz tanish xizmati harflarni biroz boshqacha yozsa ham
+        assertEquals(Command.Call("aliga"), p("aliga kongirok qil"))
+        assertEquals(Command.Call("aliga"), p("aliga qo'ng'iroq qi"))
+        assertEquals(Command.Call("ali"), p("позвони Али"))
+        assertEquals(Command.Answer, p("ko'tar"))
+        assertEquals(Command.MusicPause, p("musiqani toxtat"))
+    }
+
+    @Test fun budilnikVaTaymer() {
+        assertEquals(Command.Alarm(7, 0), p("soat 7 ga budilnik qo'y"))
+        assertEquals(Command.Alarm(6, 30), p("ertalab 6:30 da uyg'ot"))
+        assertEquals(Command.Alarm(7, 0), p("yettiga budilnik qo'y"))
+        assertEquals(Command.Alarm(null, 0), p("budilnikni och"))
+        assertEquals(Command.Timer(300), p("5 daqiqaga taymer qo'y"))
+        assertEquals(Command.Timer(900), p("o'n besh minutga taymer"))
+    }
+
+    @Test fun boshqaBuyruqlar() {
+        assertEquals(Command.Battery, p("batareya necha foiz"))
+        assertEquals(Command.Camera, p("kamerani och"))
+        assertEquals(Command.Wifi, p("wifi ni yoq"))
+        assertEquals(Command.Navigate("chorsu"), p("Chorsuga yo'l ko'rsat"))
+        assertEquals(Command.Search("ob havo"), p("ob havo ni qidir"))
+        assertEquals(Command.OpenApp("telegram"), p("telegramni ochib ber"))
+        assertEquals(Command.HangUp, p("qo'y"))
+    }
 }

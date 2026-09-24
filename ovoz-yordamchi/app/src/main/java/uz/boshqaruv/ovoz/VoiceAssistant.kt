@@ -2,6 +2,7 @@ package uz.boshqaruv.ovoz
 
 import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -24,6 +25,8 @@ class VoiceAssistant(private val context: Context, private val listener: Listene
     interface Listener {
         fun onStatus(text: String) {}
         fun onHeard(text: String) {}
+        /** Ovoz taniydigan xizmatning boshqa taxminlari (nima eshitganini ko'rsatish uchun). */
+        fun onAlternatives(texts: List<String>) {}
         fun onReply(text: String) {}
         fun onListening(active: Boolean) {}
         /** Suhbat tugadi — yordamchi hech narsa kutmayapti. */
@@ -90,9 +93,15 @@ class VoiceAssistant(private val context: Context, private val listener: Listene
         }
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "uz-UZ")
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "uz-UZ")
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
+            val lang = Prefs.language(context)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, lang)
+            putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, false)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 10)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            // Gap orasidagi qisqa to'xtashda kesib qo'ymasligi uchun
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
         }
         try {
@@ -122,7 +131,10 @@ class VoiceAssistant(private val context: Context, private val listener: Listene
         override fun onRmsChanged(rmsdB: Float) {}
         override fun onBufferReceived(buffer: ByteArray?) {}
         override fun onEndOfSpeech() {}
-        override fun onPartialResults(partialResults: Bundle?) {}
+        override fun onPartialResults(partialResults: Bundle?) {
+            partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+                ?.takeIf { it.isNotBlank() }?.let { listener.onStatus("… $it") }
+        }
         override fun onEvent(eventType: Int, params: Bundle?) {}
 
         override fun onError(error: Int) {
@@ -187,6 +199,7 @@ class VoiceAssistant(private val context: Context, private val listener: Listene
 
         val first = texts.first()
         listener.onHeard(first)
+        if (texts.size > 1) listener.onAlternatives(texts.drop(1).distinct().take(4))
 
         when (val p = pending) {
             is Pending.SmsText -> {
@@ -270,13 +283,61 @@ class VoiceAssistant(private val context: Context, private val listener: Listene
                 val name = actions.openApp(cmd.name)
                 say(if (name != null) "$name ochilyapti." else "${cmd.name} ilovasi topilmadi.")
             }
+            is Command.Music -> {
+                if (cmd.query != null) {
+                    say("${cmd.query.replaceFirstChar { it.uppercase() }} qo'yilyapti.") {
+                        if (!actions.playFromSearch(cmd.query)) say("Musiqa ilovasi topilmadi.") else listener.onIdle()
+                    }
+                } else {
+                    say("Musiqa qo'yilyapti.") {
+                        actions.musicResume()
+                        // Hech narsa chalinmasa — musiqa ilovasini ochamiz
+                        main.postDelayed({
+                            if (!actions.isMusicPlaying) actions.openMusicApp()
+                            listener.onIdle()
+                        }, 1500)
+                    }
+                }
+            }
+            Command.MusicPause -> { actions.musicPause(); listener.onIdle() }
+            Command.MusicNext -> { actions.musicNext(); listener.onIdle() }
+            Command.MusicPrev -> { actions.musicPrev(); listener.onIdle() }
+            Command.VolumeUp -> { actions.volume(AudioManager.ADJUST_RAISE); listener.onIdle() }
+            Command.VolumeDown -> { actions.volume(AudioManager.ADJUST_LOWER); listener.onIdle() }
+            Command.VolumeMute -> { actions.volume(AudioManager.ADJUST_MUTE); listener.onIdle() }
+            is Command.Alarm -> {
+                val ok = actions.alarm(cmd.hour, cmd.minute)
+                say(
+                    when {
+                        !ok -> "Budilnik ilovasi topilmadi."
+                        cmd.hour == null -> "Budilnik ochildi."
+                        else -> "Budilnik soat ${cmd.hour}:${"%02d".format(cmd.minute)} ga qo'yildi."
+                    }
+                )
+            }
+            is Command.Timer -> {
+                val ok = actions.timer(cmd.seconds)
+                val m = cmd.seconds / 60
+                val sec = cmd.seconds % 60
+                val len = listOfNotNull(if (m > 0) "$m daqiqa" else null, if (sec > 0) "$sec soniya" else null).joinToString(" ")
+                say(if (ok) "Taymer $len ga qo'yildi." else "Taymer qo'yib bo'lmadi.")
+            }
+            is Command.Search -> say("${cmd.query} qidirilyapti.") { actions.search(cmd.query); listener.onIdle() }
+            is Command.YouTube -> say("YouTube ochilyapti.") { actions.youtube(cmd.query); listener.onIdle() }
+            is Command.Navigate -> say(if (cmd.place.isBlank()) "Xarita ochilyapti." else "${cmd.place.replaceFirstChar { it.uppercase() }}ga yo'l ko'rsatyapman.") {
+                actions.navigate(cmd.place); listener.onIdle()
+            }
+            Command.Camera -> if (actions.camera()) listener.onIdle() else say("Kamera ochilmadi.")
+            Command.Battery -> say("Batareya ${actions.batteryPercent()} foiz.")
+            Command.Wifi -> say("Wi-Fi sozlamasi ochildi.") { actions.wifiSettings(); listener.onIdle() }
+            Command.Bluetooth -> say("Bluetooth sozlamasi ochildi.") { actions.bluetoothSettings(); listener.onIdle() }
             Command.Stop -> {
                 pending = null
                 tts?.stop()
                 listener.onIdle()
             }
             Command.Yes, Command.No -> listener.onIdle()
-            is Command.Unknown -> say("Tushunmadim: ${cmd.text}")
+            is Command.Unknown -> say("Tushunmadim: ${cmd.text}. Qaytadan, sekinroq ayting.")
         }
     }
 

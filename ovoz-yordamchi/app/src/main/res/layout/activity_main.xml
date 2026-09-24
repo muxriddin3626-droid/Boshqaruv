@@ -35,12 +35,36 @@
             android:id="@+id/log"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Misollar:\n• Aliga qo'ng'iroq qil\n• Onamga sms yoz, uyga kechroq boraman\n• Akamga «qayerdasan» deb xabar yubor\n• Ko'tar  /  O'chir  (telefon jiringlaganda)\n• Fonarni yoq / o'chir\n• Soat necha?\n• Telegramni och"
+            android:hint="Misollar:\n• Aliga qo\'ng\'iroq qil\n• Onamga sms yoz, uyga kechroq boraman\n• Akamga «qayerdasan» deb xabar yubor\n• Ko\'tar  /  O\'chir  (telefon jiringlaganda)\n• Fonarni yoq / o\'chir\n• Muzika qo\'y / Shahzodaning qo\'shig\'ini qo\'y\n• Keyingi qo\'shiq / Musiqani to\'xtat\n• Ovozni baland qil / past qil\n• Soat 7 ga budilnik qo\'y / 5 daqiqaga taymer\n• Chorsuga yo\'l ko\'rsat\n• YouTubedan … och / … ni qidir\n• Batareya necha foiz? / Soat necha?\n• Telegramni och"
             android:lineSpacingExtra="4dp"
             android:textColor="#FFECEFF1"
             android:textColorHint="#FF78909C"
             android:textSize="16sp" />
     </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/input"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Yoki buyruqni yozing…"
+            android:imeOptions="actionSend"
+            android:inputType="text"
+            android:textColor="#FFECEFF1"
+            android:textColorHint="#FF78909C" />
+
+        <Button
+            android:id="@+id/btn_send"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bajar" />
+    </LinearLayout>
 
     <ImageButton
         android:id="@+id/mic"
@@ -69,6 +93,36 @@
         android:layout_marginTop="8dp"
         android:text="Doimiy tinglash («Yordamchi, …» deb chaqiring)"
         android:textColor="#FFECEFF1" />
+
+    <RadioGroup
+        android:id="@+id/lang"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:text="Tanish tili:"
+            android:textColor="#FFB0BEC5" />
+
+        <RadioButton
+            android:id="@+id/lang_uz"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="O\'zbekcha"
+            android:textColor="#FFECEFF1" />
+
+        <RadioButton
+            android:id="@+id/lang_ru"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="Ruscha"
+            android:textColor="#FFECEFF1" />
+    </RadioGroup>
 
     <LinearLayout
         android:layout_width="match_parent"

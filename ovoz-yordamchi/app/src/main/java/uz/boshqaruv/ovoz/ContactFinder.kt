@@ -16,7 +16,7 @@ class ContactFinder(private val context: Context) {
         if (digits.count(Char::isDigit) >= 3) return Contact(digits, digits)
         if (context.checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) return null
 
-        val queries = variants(CommandParser.normalize(target))
+        val queries = variants(CommandParser.normalize(target)).map(CommandParser::phonetic)
         var best: Contact? = null
         var bestScore = 0.0
         val cursor = context.contentResolver.query(
@@ -31,7 +31,7 @@ class ContactFinder(private val context: Context) {
             while (c.moveToNext()) {
                 val name = c.getString(0) ?: continue
                 val number = c.getString(1) ?: continue
-                val norm = CommandParser.normalize(name)
+                val norm = CommandParser.phonetic(CommandParser.normalize(name))
                 val score = queries.maxOf { q -> score(q, norm) }
                 if (score > bestScore) {
                     bestScore = score
@@ -63,6 +63,8 @@ class ContactFinder(private val context: Context) {
             // egalik: "akam" → "aka", "opam" → "opa", "dadam" → "dada", "ukamga" → "uka"
             if (last.length > 3 && last.endsWith("im")) out += (words.dropLast(1) + last.dropLast(2)).joinToString(" ")
             if (last.length > 3 && last.endsWith("m")) out += (words.dropLast(1) + last.dropLast(1)).joinToString(" ")
+            // ruscha: "mame" → "mam" ("Mama" bilan boshlanishi mos keladi)
+            if (last.length > 3 && (last.endsWith("e") || last.endsWith("u"))) out += (words.dropLast(1) + last.dropLast(1)).joinToString(" ")
             return out.toList()
         }
 
@@ -83,18 +85,6 @@ class ContactFinder(private val context: Context) {
             return 1.0 - d.toDouble() / maxOf(a.length, b.length)
         }
 
-        private fun levenshtein(a: String, b: String): Int {
-            var prev = IntArray(b.length + 1) { it }
-            for (i in 1..a.length) {
-                val cur = IntArray(b.length + 1)
-                cur[0] = i
-                for (j in 1..b.length) {
-                    val cost = if (a[i - 1] == b[j - 1]) 0 else 1
-                    cur[j] = minOf(cur[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost)
-                }
-                prev = cur
-            }
-            return prev[b.length]
-        }
+        private fun levenshtein(a: String, b: String) = CommandParser.levenshtein(a, b)
     }
 }
