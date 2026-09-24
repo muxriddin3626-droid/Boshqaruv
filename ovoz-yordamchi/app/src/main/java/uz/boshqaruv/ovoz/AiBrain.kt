@@ -105,7 +105,11 @@ class AiBrain(private val context: Context) {
                 .put("responseMimeType", "application/json")
                 .put("temperature", 0.2))
             .toString()
+        var busy = false
         for (model in GEMINI_MODELS) {
+            // Model band bo'lsa (503) bir marta biroz kutib qayta urinamiz, keyin keyingi modelga o'tamiz
+            for (attempt in 0..1) {
+            if (attempt > 0) Thread.sleep(1500)
             val conn = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent")
                 .openConnection() as HttpURLConnection
             try {
@@ -117,19 +121,28 @@ class AiBrain(private val context: Context) {
                 conn.setRequestProperty("x-goog-api-key", key)
                 conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                 val code = conn.responseCode
-                if (code == 404) continue // bu model endi yo'q — keyingisini sinaymiz
+                if (code == 404) break // bu model endi yo'q — keyingisini sinaymiz
                 if (code !in 200..299) {
                     val err = conn.errorStream?.bufferedReader()?.use { it.readText() }
-                    android.util.Log.w("AiBrain", "Gemini xatosi $code: $err")
-                    lastError = "Gemini xatosi $code: " + (geminiError(err) ?: "")
-                    return null
+                    android.util.Log.w("AiBrain", "Gemini xatosi $code ($model): $err")
+                    when (geminiRetry(code)) {
+                        Retry.SAME -> { busy = true; continue }
+                        Retry.NEXT_MODEL -> { busy = true; break }
+                        Retry.NO -> {
+                            lastError = "Gemini xatosi $code: " + (geminiError(err) ?: "")
+                            return null
+                        }
+                    }
                 }
                 val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
                 return geminiText(json)
             } finally {
                 conn.disconnect()
             }
+            }
         }
+        lastError = if (busy) "Gemini hozir band yoki bepul limit tugagan. Birozdan keyin qayta urinib ko'ring."
+        else "Gemini modeli topilmadi"
         return null
     }
 
@@ -153,7 +166,19 @@ class AiBrain(private val context: Context) {
     }
 
     companion object {
-        private val GEMINI_MODELS = listOf("gemini-flash-latest", "gemini-2.5-flash")
+        /** Bepul rejadagi modellar: biri band bo'lsa, keyingisi sinaladi. */
+        private val GEMINI_MODELS = listOf(
+            "gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-2.5-flash-lite"
+        )
+
+        enum class Retry { SAME, NEXT_MODEL, NO }
+
+        /** 503/500 — model vaqtincha band: shu modelni qayta; 429 — shu model limiti tugagan: keyingi model. */
+        fun geminiRetry(code: Int): Retry = when (code) {
+            500, 502, 503, 504 -> Retry.SAME
+            429 -> Retry.NEXT_MODEL
+            else -> Retry.NO
+        }
 
         /** Gemini xato javobidan qisqa sababni ajratadi: {"error":{"message":"API key not valid..."}} */
         fun geminiError(body: String?): String? = try {

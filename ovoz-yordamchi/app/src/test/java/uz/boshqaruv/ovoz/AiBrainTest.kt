@@ -48,4 +48,10 @@ class AiBrainTest {
             AiBrain.geminiError("""{"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT"}}"""))
         assertEquals("oddiy matn", AiBrain.geminiError("oddiy matn"))
     }
+
+    @Test fun bandBolsaQaytaUrinish() {
+        assertEquals(AiBrain.Retry.SAME, AiBrain.geminiRetry(503))
+        assertEquals(AiBrain.Retry.NEXT_MODEL, AiBrain.geminiRetry(429))
+        assertEquals(AiBrain.Retry.NO, AiBrain.geminiRetry(400))
+    }
 }
