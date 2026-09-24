@@ -30,4 +30,16 @@ class AiBrainTest {
         assertNull(AiBrain.parse("salom"))
         assertNull(AiBrain.parse("{buzilgan"))
     }
+
+    @Test fun geminiJavobi() {
+        val json = org.json.JSONObject(
+            """{"candidates":[{"content":{"role":"model","parts":[
+                {"text":"o'ylash","thought":true},
+                {"text":"{\"action\":\"music\",\"query\":\"Shahzoda\",\"reply\":\"Qo'yyapman\"}"}
+            ]}}]}"""
+        )
+        val text = AiBrain.geminiText(json)!!
+        assertEquals(Command.Music("Shahzoda"), AiBrain.parse(text)!!.command)
+        assertNull(AiBrain.geminiText(org.json.JSONObject("{}")))
+    }
 }

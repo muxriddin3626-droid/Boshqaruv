@@ -8,14 +8,17 @@ import com.anthropic.client.okhttp.AnthropicOkHttpClient
 import com.anthropic.core.JsonValue
 import com.anthropic.models.messages.MessageCreateParams
 import com.anthropic.models.messages.OutputConfig
+import org.json.JSONArray
 import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.Executors
 
 /**
- * Sun'iy intellekt (Claude): ovoz noto'g'ri tanilgan bo'lsa ham gapning ma'nosini tushunib,
+ * Sun'iy intellekt (Google Gemini — bepul, yoki Claude): ovoz noto'g'ri tanilgan bo'lsa ham gapning ma'nosini tushunib,
  * bajariladigan buyruqqa aylantiradi yoki oddiy savolga o'zbekcha javob beradi.
  */
 class AiBrain(private val context: Context) {
@@ -31,10 +34,10 @@ class AiBrain(private val context: Context) {
     private val history = ArrayDeque<Pair<String, String>>()
 
     val isEnabled: Boolean
-        get() = Prefs.aiEnabled(context) && Prefs.apiKey(context).isNotBlank()
+        get() = Prefs.aiEnabled(context) && Prefs.keyFor(context, Prefs.aiProvider(context)).isNotBlank()
 
     private fun client(): AnthropicClient {
-        val key = Prefs.apiKey(context).trim()
+        val key = Prefs.keyFor(context, Prefs.CLAUDE).trim()
         val existing = client
         if (existing != null && clientKey == key) return existing
         return AnthropicOkHttpClient.builder().apiKey(key).build().also {
@@ -50,7 +53,7 @@ class AiBrain(private val context: Context) {
             val result = try {
                 ask(said)
             } catch (e: Exception) {
-                android.util.Log.w("AiBrain", "Claude so'rovi bajarilmadi", e)
+                android.util.Log.w("AiBrain", "AI so'rovi bajarilmadi", e)
                 null
             }
             main.post { onResult(result) }
@@ -70,6 +73,58 @@ class AiBrain(private val context: Context) {
             said.forEachIndexed { i, s -> append(i + 1).append(". ").append(s).append('\n') }
         }
 
+        val text = if (Prefs.aiProvider(this.context) == Prefs.GEMINI) askGemini(prompt) else askClaude(prompt)
+        val result = parse(text ?: return null) ?: return null
+        result.reply?.let { reply ->
+            history.addLast(said.first() to reply)
+            while (history.size > 4) history.removeFirst()
+        }
+        return result
+    }
+
+    /**
+     * Google Gemini (AI Studio'ning bepul kaliti bilan). Model nomi vaqt o'tib o'zgarishi mumkin,
+     * shuning uchun avval doim eng yangi "flash" modelni ko'rsatuvchi nom, keyin aniq nom sinaladi.
+     */
+    private fun askGemini(prompt: String): String? {
+        val key = Prefs.keyFor(context, Prefs.GEMINI).trim()
+        val body = JSONObject()
+            .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", SYSTEM_PROMPT))))
+            .put("contents", JSONArray().put(
+                JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", prompt)))
+            ))
+            .put("generationConfig", JSONObject()
+                .put("responseMimeType", "application/json")
+                .put("temperature", 0.2))
+            .toString()
+        for (model in GEMINI_MODELS) {
+            val conn = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent")
+                .openConnection() as HttpURLConnection
+            try {
+                conn.requestMethod = "POST"
+                conn.connectTimeout = 10_000
+                conn.readTimeout = 30_000
+                conn.doOutput = true
+                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                conn.setRequestProperty("x-goog-api-key", key)
+                conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                val code = conn.responseCode
+                if (code == 404) continue // bu model endi yo'q — keyingisini sinaymiz
+                if (code !in 200..299) {
+                    val err = conn.errorStream?.bufferedReader()?.use { it.readText() }
+                    android.util.Log.w("AiBrain", "Gemini xatosi $code: $err")
+                    return null
+                }
+                val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                return geminiText(json)
+            } finally {
+                conn.disconnect()
+            }
+        }
+        return null
+    }
+
+    private fun askClaude(prompt: String): String? {
         val params = MessageCreateParams.builder()
             .model("claude-opus-5")
             .maxTokens(4000L)
@@ -85,16 +140,25 @@ class AiBrain(private val context: Context) {
         val response = client().messages().create(params)
         val stop = response.stopReason().map { it.toString() }.orElse("")
         if (stop.contains("refusal", ignoreCase = true)) return null
-        val text = response.content().mapNotNull { block -> block.text().orElse(null)?.text() }.joinToString("")
-        val result = parse(text) ?: return null
-        result.reply?.let { reply ->
-            history.addLast(said.first() to reply)
-            while (history.size > 4) history.removeFirst()
-        }
-        return result
+        return response.content().mapNotNull { block -> block.text().orElse(null)?.text() }.joinToString("")
     }
 
     companion object {
+        private val GEMINI_MODELS = listOf("gemini-flash-latest", "gemini-2.5-flash")
+
+        /** Gemini javobidan matnni ajratadi: candidates[0].content.parts[*].text */
+        fun geminiText(json: JSONObject): String? {
+            val parts = json.optJSONArray("candidates")?.optJSONObject(0)
+                ?.optJSONObject("content")?.optJSONArray("parts") ?: return null
+            val sb = StringBuilder()
+            for (i in 0 until parts.length()) {
+                val p = parts.optJSONObject(i) ?: continue
+                if (p.optBoolean("thought", false)) continue
+                sb.append(p.optString("text", ""))
+            }
+            return sb.toString().ifBlank { null }
+        }
+
         private val SYSTEM_PROMPT = """
             You are the brain of a voice assistant running on an Uzbek user's Android phone.
             You receive speech-recognition hypotheses of what the user said. Recognition of Uzbek is often

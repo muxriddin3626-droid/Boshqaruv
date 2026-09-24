@@ -22,8 +22,18 @@ object Prefs {
     /** Sun'iy intellekt (Claude) yoqilganmi va uning API kaliti. */
     fun aiEnabled(c: Context) = sp(c).getBoolean("ai", false)
     fun setAiEnabled(c: Context, v: Boolean) = sp(c).edit().putBoolean("ai", v).apply()
-    fun apiKey(c: Context): String = sp(c).getString("api_kalit", "") ?: ""
-    fun setApiKey(c: Context, v: String) = sp(c).edit().putString("api_kalit", v.trim()).apply()
+    const val GEMINI = "gemini"
+    const val CLAUDE = "claude"
+
+    /** Qaysi sun'iy intellekt: Gemini (bepul) yoki Claude. */
+    fun aiProvider(c: Context): String = sp(c).getString("ai_turi", GEMINI) ?: GEMINI
+    fun setAiProvider(c: Context, v: String) = sp(c).edit().putString("ai_turi", v).apply()
+
+    /** Har bir AI uchun o'z kaliti saqlanadi. */
+    fun keyFor(c: Context, provider: String): String =
+        sp(c).getString(if (provider == CLAUDE) "api_kalit" else "gemini_kalit", "") ?: ""
+    fun setKeyFor(c: Context, provider: String, v: String) =
+        sp(c).edit().putString(if (provider == CLAUDE) "api_kalit" else "gemini_kalit", v.trim()).apply()
 
     /** Hamma ilovalar ustida turadigan mikrofon tugmasi. */
     fun bubble(c: Context) = sp(c).getBoolean("tugma", false)

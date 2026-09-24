@@ -97,18 +97,53 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="Sun\'iy intellekt (Claude) — gapni ma\'nosidan tushunadi"
+        android:text="Sun\'iy intellekt — gapni ma\'nosidan tushunadi"
         android:textColor="#FFECEFF1" />
 
-    <EditText
-        android:id="@+id/api_key"
+    <RadioGroup
+        android:id="@+id/ai_provider"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Claude API kalit (sk-ant-…)"
-        android:importantForAutofill="no"
-        android:inputType="textPassword"
-        android:textColor="#FFECEFF1"
-        android:textColorHint="#FF78909C" />
+        android:orientation="horizontal">
+
+        <RadioButton
+            android:id="@+id/ai_gemini"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Gemini (bepul)"
+            android:textColor="#FFECEFF1" />
+
+        <RadioButton
+            android:id="@+id/ai_claude"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="Claude (pullik)"
+            android:textColor="#FFECEFF1" />
+    </RadioGroup>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/api_key"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Gemini API kalit (AIza…)"
+            android:importantForAutofill="no"
+            android:inputType="textPassword"
+            android:textColor="#FFECEFF1"
+            android:textColorHint="#FF78909C" />
+
+        <Button
+            android:id="@+id/btn_get_key"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Kalit olish" />
+    </LinearLayout>
 
     <Switch
         android:id="@+id/switch_calls"

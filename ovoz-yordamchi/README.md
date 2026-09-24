@@ -57,16 +57,25 @@ Yordamchi javoblarni quyidagi tartibda aytadi:
 - Google ilovasi → Sozlamalar → Ovoz → **Oflayn nutqni tanish**da o'zbek/rus tilini yuklab oling.
 - Ovoz ishlamasa, buyruqni pastdagi maydonga **yozib** "Bajar"ni bosing.
 
-## Sun'iy intellekt (Claude)
+## Sun'iy intellekt
 
 Ovoz noto'g'ri tanilsa ham (masalan, "telefonni sevitering oq"), sun'iy intellekt gapning
 ma'nosini tushunib, kerakli ishni bajaradi. Oddiy savollarga ("Toshkent qayerda?",
-"latifa aytib ber") ham o'zbekcha javob beradi.
+"latifa aytib ber") ham o'zbekcha javob beradi. Ikki xil tanlash mumkin:
 
-1. https://console.anthropic.com saytida ro'yxatdan o'ting → **API Keys** → yangi kalit yarating
-   (kalit `sk-ant-` bilan boshlanadi; so'rovlar uchun hisobingizdan to'lov olinadi).
-2. Ilovada kalitni **"Claude API kalit"** maydoniga qo'ying va **"Sun'iy intellekt"**ni yoqing.
-3. Internet bo'lmasa yoki kalit xato bo'lsa, yordamchi oddiy (AI'siz) usulda ishlashda davom etadi.
+**Gemini (Google) — bepul**
+1. Ilovada **"Gemini (bepul)"**ni tanlang va **"Kalit olish"** tugmasini bosing
+   (yoki https://aistudio.google.com/apikey saytini oching).
+2. Google hisobingiz bilan kiring → **"Create API key"** → kalitni nusxalang (`AIza...` bilan boshlanadi).
+3. Kalitni ilovadagi maydonga qo'ying va **"Sun'iy intellekt"**ni yoqing.
+
+Bepul rejada kuniga so'rovlar soni cheklangan (oddiy foydalanish uchun yetadi) va Google
+bepul rejadagi so'rovlarni o'z xizmatlarini yaxshilash uchun ishlatishi mumkin.
+
+**Claude (Anthropic) — pullik**
+Kalit https://console.anthropic.com saytidan olinadi, hisobni karta bilan to'ldirish kerak.
+
+Internet bo'lmasa, kalit xato bo'lsa yoki limit tugasa, yordamchi oddiy (AI'siz) usulda ishlashda davom etadi.
 
 ## Ekran ustidagi tugma
 

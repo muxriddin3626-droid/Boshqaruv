@@ -92,14 +92,35 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
             if (on && !Settings.canDrawOverlays(this)) askOverlayPermission() else syncService()
         }
 
-        // Sun'iy intellekt (Claude): kalit console.anthropic.com saytidan olinadi
+        // Sun'iy intellekt: Gemini (bepul kalit aistudio.google.com) yoki Claude (console.anthropic.com)
         val aiSwitch = findViewById<Switch>(R.id.switch_ai)
         val apiKey = findViewById<EditText>(R.id.api_key)
-        apiKey.setText(Prefs.apiKey(this))
+        val providerGroup = findViewById<RadioGroup>(R.id.ai_provider)
+        fun showKeyFor(provider: String) {
+            apiKey.setText(Prefs.keyFor(this, provider))
+            apiKey.hint = if (provider == Prefs.GEMINI) "Gemini API kalit (AIza…)" else "Claude API kalit (sk-ant-…)"
+        }
+        showKeyFor(Prefs.aiProvider(this))
+        providerGroup.check(if (Prefs.aiProvider(this) == Prefs.CLAUDE) R.id.ai_claude else R.id.ai_gemini)
+        providerGroup.setOnCheckedChangeListener { _, id ->
+            // Oldingi AI kalitini saqlab, tanlangan AI kalitini ko'rsatamiz
+            saveApiKey()
+            val provider = if (id == R.id.ai_claude) Prefs.CLAUDE else Prefs.GEMINI
+            Prefs.setAiProvider(this, provider)
+            showKeyFor(provider)
+        }
+        findViewById<Button>(R.id.btn_get_key).setOnClickListener {
+            val url = if (Prefs.aiProvider(this) == Prefs.CLAUDE) "https://console.anthropic.com/settings/keys"
+            else "https://aistudio.google.com/apikey"
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            } catch (e: Exception) {
+            }
+        }
         aiSwitch.isChecked = Prefs.aiEnabled(this)
         aiSwitch.setOnCheckedChangeListener { _, on ->
-            Prefs.setApiKey(this, apiKey.text.toString())
-            if (on && Prefs.apiKey(this).isBlank()) {
+            saveApiKey()
+            if (on && Prefs.keyFor(this, Prefs.aiProvider(this)).isBlank()) {
                 Toast.makeText(this, "Avval API kalitni kiriting", Toast.LENGTH_LONG).show()
                 aiSwitch.isChecked = false
                 return@setOnCheckedChangeListener
@@ -108,7 +129,7 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
             append(if (on) "ℹ Sun'iy intellekt yoqildi" else "ℹ Sun'iy intellekt o'chirildi")
         }
         apiKey.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) Prefs.setApiKey(this, apiKey.text.toString())
+            if (!hasFocus) saveApiKey()
         }
 
         findViewById<Button>(R.id.btn_permissions).setOnClickListener { askPermissions() }
@@ -170,6 +191,10 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
         } else {
             stopService(svc)
         }
+    }
+
+    private fun saveApiKey() {
+        Prefs.setKeyFor(this, Prefs.aiProvider(this), findViewById<EditText>(R.id.api_key).text.toString())
     }
 
     /**
@@ -234,7 +259,7 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
     }
 
     override fun onPause() {
-        Prefs.setApiKey(this, findViewById<EditText>(R.id.api_key).text.toString())
+        saveApiKey()
         assistant.stopListening()
         super.onPause()
     }
