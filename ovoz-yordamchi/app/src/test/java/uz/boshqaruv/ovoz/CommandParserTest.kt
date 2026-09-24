@@ -34,6 +34,11 @@ class CommandParserTest {
 
     @Test fun boshqa() {
         assertEquals(Command.FlashOn, p("fonarni yoq"))
+        assertEquals(Command.FlashOn, p("telefonni sevitering oq"))
+        assertEquals(Command.FlashOn, p("telefonni svetini yoq"))
+        assertEquals(Command.FlashOn, p("spichkani yoq"))
+        assertEquals(Command.FlashOff, p("svetni o'chir"))
+        assertEquals(Command.Call("svetaga"), p("Svetaga qo'ng'iroq qil"))
         assertEquals(Command.FlashOff, p("fonarni o'chir"))
         assertEquals(Command.Time, p("soat necha bo'ldi"))
         assertEquals(Command.OpenApp("telegram"), p("telegramni och"))

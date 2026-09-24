@@ -32,6 +32,7 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         status = findViewById(R.id.status)
+        findViewById<TextView>(R.id.title).text = "Ovozli yordamchi v" + packageManager.getPackageInfo(packageName, 0).versionName
         log = findViewById(R.id.log)
         scroll = findViewById(R.id.scroll)
         mic = findViewById(R.id.mic)

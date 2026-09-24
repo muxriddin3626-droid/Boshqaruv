@@ -80,7 +80,10 @@ object CommandParser {
     }
 
     // Kalit so'zlar talaffuz (phonetic) shaklida yozilgan. Bo'sh joyli kalitlar butun gapdan qidiriladi.
-    private val FLASH = listOf("fonar", "fanar", "chirok", "fanarik")
+    private val FLASH = listOf(
+        "fonar", "fanar", "chirok", "fanarik", "fonus", "svet", "sevit", "sivet", "sviet", "spichk", "yoritgich",
+        "yorug", "podsvet", "vspyshk", "flesh", "flash", "lampa", "lampochk"
+    )
     private val ALARM = listOf("budilnik", "budelnik", "uygot", "alarm", "buditel")
     private val TIMER = listOf("taymer", "taimer", "timer")
     private val MUSIC = listOf("muzik", "muzy", "musik", "muzk", "koshik", "ashula", "pesn", "trek", "kuy ", "kuyni", "radio", "playlist")
@@ -178,7 +181,8 @@ object CommandParser {
         }
 
         // Tartib muhim: "fonarni o'chir", "budilnik qo'y", "ovozni ko'tar" — qo'ng'iroq buyruqlari bilan adashmasin
-        if (t.has(FLASH)) {
+        // "Svetaga qo'ng'iroq qil" — ism, fonar emas
+        if (t.has(FLASH) && !t.has(CALL) && t.indexOf(SMS) < 0) {
             return if (t.has(listOf("ochir", "sondir", "yopi", "vykl"))) Command.FlashOff else Command.FlashOn
         }
         if (t.has(ALARM)) return parseAlarm(t)
@@ -258,6 +262,10 @@ object CommandParser {
         }
 
         if (t.has(STOP)) return Command.Stop
+        // "telefonni yoq", "...ni yoqib ber" kabi qisqa, noaniq buyruq — ko'pincha fonar so'raladi
+        if (tokens.size <= 4 && t.ph.any { it == "yok" || it == "yokib" || it == "yokgin" || it == "vkluchi" || it == "vklyuchi" }) {
+            return Command.FlashOn
+        }
         return Command.Unknown(raw)
     }
 
