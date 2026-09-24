@@ -27,6 +27,7 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
     private lateinit var mic: ImageButton
     private lateinit var callSwitch: Switch
     private lateinit var continuousSwitch: Switch
+    private lateinit var bubbleSwitch: Switch
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,6 +39,7 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
         mic = findViewById(R.id.mic)
         callSwitch = findViewById(R.id.switch_calls)
         continuousSwitch = findViewById(R.id.switch_continuous)
+        bubbleSwitch = findViewById(R.id.switch_bubble)
 
         assistant = VoiceAssistant(this, this)
 
@@ -84,6 +86,31 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
             if (on) askOverlayPermission()
         }
 
+        bubbleSwitch.isChecked = Prefs.bubble(this)
+        bubbleSwitch.setOnCheckedChangeListener { _, on ->
+            Prefs.setBubble(this, on)
+            if (on && !Settings.canDrawOverlays(this)) askOverlayPermission() else syncService()
+        }
+
+        // Sun'iy intellekt (Claude): kalit console.anthropic.com saytidan olinadi
+        val aiSwitch = findViewById<Switch>(R.id.switch_ai)
+        val apiKey = findViewById<EditText>(R.id.api_key)
+        apiKey.setText(Prefs.apiKey(this))
+        aiSwitch.isChecked = Prefs.aiEnabled(this)
+        aiSwitch.setOnCheckedChangeListener { _, on ->
+            Prefs.setApiKey(this, apiKey.text.toString())
+            if (on && Prefs.apiKey(this).isBlank()) {
+                Toast.makeText(this, "Avval API kalitni kiriting", Toast.LENGTH_LONG).show()
+                aiSwitch.isChecked = false
+                return@setOnCheckedChangeListener
+            }
+            Prefs.setAiEnabled(this, on)
+            append(if (on) "ℹ Sun'iy intellekt yoqildi" else "ℹ Sun'iy intellekt o'chirildi")
+        }
+        apiKey.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) Prefs.setApiKey(this, apiKey.text.toString())
+        }
+
         findViewById<Button>(R.id.btn_permissions).setOnClickListener { askPermissions() }
         findViewById<Button>(R.id.btn_default).setOnClickListener {
             try {
@@ -106,6 +133,9 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
         super.onResume()
         callSwitch.isChecked = Prefs.callControl(this)
         continuousSwitch.isChecked = Prefs.continuous(this)
+        bubbleSwitch.isChecked = Prefs.bubble(this)
+        // "Ustida ko'rsatish" ruxsati berilib qaytilganda tugmani chiqaramiz
+        if (Prefs.bubble(this) && Settings.canDrawOverlays(this)) syncService()
     }
 
     /** "Uy" tugmasini bosib turish (ASSIST) yoki ovozli buyruq tugmasi orqali ochilganmi. */
@@ -127,7 +157,7 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
     }
 
     private fun syncService() {
-        val want = Prefs.callControl(this) || Prefs.continuous(this)
+        val want = Prefs.callControl(this) || Prefs.continuous(this) || Prefs.bubble(this)
         val svc = Intent(this, AssistantService::class.java)
         if (want) {
             if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -204,6 +234,7 @@ class MainActivity : Activity(), VoiceAssistant.Listener {
     }
 
     override fun onPause() {
+        Prefs.setApiKey(this, findViewById<EditText>(R.id.api_key).text.toString())
         assistant.stopListening()
         super.onPause()
     }

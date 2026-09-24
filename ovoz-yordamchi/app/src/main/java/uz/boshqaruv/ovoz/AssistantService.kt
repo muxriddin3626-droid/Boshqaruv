@@ -28,6 +28,7 @@ class AssistantService : Service(), VoiceAssistant.Listener {
     private var callActive = false
     private var ringingNumber: String? = null
     private var manualListen = false
+    private lateinit var bubble: FloatingBubble
 
     private val continuous get() = Prefs.continuous(this)
 
@@ -79,6 +80,7 @@ class AssistantService : Service(), VoiceAssistant.Listener {
         super.onCreate()
         running = true
         assistant = VoiceAssistant(this, this)
+        bubble = FloatingBubble(this) { listenNow() }
         val filter = IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(phoneReceiver, filter, Context.RECEIVER_EXPORTED)
@@ -92,18 +94,19 @@ class AssistantService : Service(), VoiceAssistant.Listener {
             ACTION_STOP -> {
                 Prefs.setCallControl(this, false)
                 Prefs.setContinuous(this, false)
+                Prefs.setBubble(this, false)
                 stopSelf()
                 return START_NOT_STICKY
             }
             ACTION_LISTEN -> {
                 startInForeground()
-                manualListen = true
-                assistant.requireWakeWord = false
-                assistant.listen()
+                syncBubble()
+                listenNow()
                 return START_STICKY
             }
         }
         startInForeground()
+        syncBubble()
         scheduleListen(800)
         return START_STICKY
     }
@@ -115,6 +118,17 @@ class AssistantService : Service(), VoiceAssistant.Listener {
         } else {
             startForeground(NOTIF_ID, n)
         }
+    }
+
+    private fun listenNow() {
+        if (callActive) return
+        manualListen = true
+        assistant.requireWakeWord = false
+        assistant.listen()
+    }
+
+    private fun syncBubble() {
+        if (Prefs.bubble(this)) bubble.show() else bubble.hide()
     }
 
     private fun scheduleListen(delay: Long) {
@@ -130,7 +144,14 @@ class AssistantService : Service(), VoiceAssistant.Listener {
     }
 
     override fun onStatus(text: String) = updateNotification(text)
-    override fun onReply(text: String) = updateNotification(text)
+    override fun onReply(text: String) {
+        updateNotification(text)
+        bubble.showText(text)
+    }
+
+    override fun onHeard(text: String) = bubble.showText("🗣 $text")
+
+    override fun onListening(active: Boolean) = bubble.setListening(active)
 
     private fun updateNotification(text: String) {
         getSystemService(NotificationManager::class.java).notify(NOTIF_ID, buildNotification(text))
@@ -165,6 +186,7 @@ class AssistantService : Service(), VoiceAssistant.Listener {
 
     override fun onDestroy() {
         running = false
+        bubble.hide()
         main.removeCallbacksAndMessages(null)
         unregisterReceiver(phoneReceiver)
         assistant.release()

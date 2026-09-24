@@ -34,6 +34,7 @@ class Speaker(private val context: Context) {
     private var generation = 0
     /** Onlayn ovoz ishlamasa, bu sessiyada qayta urinmaslik uchun. */
     private var onlineFailed = false
+    private var probed = false
 
     init {
         tts = TextToSpeech(context.applicationContext) { status ->
@@ -56,6 +57,10 @@ class Speaker(private val context: Context) {
             t.setLanguage(Locale("ru", "RU")) >= TextToSpeech.LANG_AVAILABLE -> Local.RUSSIAN
             else -> Local.OTHER
         }
+        if (local != Local.UZBEK && !probed) {
+            probed = true
+            probeOtherEngines()
+        }
         t.setSpeechRate(0.95f)
         t.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(id: String?) {}
@@ -68,6 +73,37 @@ class Speaker(private val context: Context) {
             }
         })
         ttsReady = true
+    }
+
+    /**
+     * Asosiy ovoz dvigatelida o'zbekcha bo'lmasa — telefondagi boshqa dvigatellarni
+     * (masalan, alohida o'rnatilgan o'zbekcha TTS ilovasini) tekshiradi va topilsa o'shanga o'tadi.
+     */
+    private fun probeOtherEngines() {
+        val current = tts ?: return
+        val others = try {
+            current.engines.map { it.name }.filter { it != current.defaultEngine }
+        } catch (e: Exception) {
+            emptyList()
+        }
+        for (pkg in others) {
+            lateinit var probe: TextToSpeech
+            probe = TextToSpeech(context.applicationContext, { status ->
+                val hasUzbek = status == TextToSpeech.SUCCESS && try {
+                    probe.voices?.any { it.locale.language == "uz" } == true ||
+                        probe.isLanguageAvailable(Locale("uz", "UZ")) >= TextToSpeech.LANG_AVAILABLE
+                } catch (e: Exception) {
+                    false
+                }
+                if (hasUzbek && local != Local.UZBEK) {
+                    tts?.shutdown()
+                    tts = probe
+                    setupLocal()
+                } else {
+                    probe.shutdown()
+                }
+            }, pkg)
+        }
     }
 
     /** Qaysi ovoz ishlatilayotgani (ekranda ko'rsatish uchun). */

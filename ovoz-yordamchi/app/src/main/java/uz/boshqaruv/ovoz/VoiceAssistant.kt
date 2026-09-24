@@ -43,13 +43,15 @@ class VoiceAssistant(private val context: Context, private val listener: Listene
     private val contacts = ContactFinder(context)
     private var recognizer: SpeechRecognizer? = null
     val speaker = Speaker(context)
+    private val brain = AiBrain(context)
+    private var thinking = false
     private var pending: Pending? = null
     private var listening = false
 
     /** true bo'lsa, faqat "Yordamchi ..." bilan boshlangan gaplarga javob beradi (doimiy tinglash). */
     var requireWakeWord = false
 
-    val isBusy: Boolean get() = listening || pending != null
+    val isBusy: Boolean get() = listening || thinking || pending != null
 
     // ---------------- Tinglash ----------------
 
@@ -213,9 +215,24 @@ class VoiceAssistant(private val context: Context, private val listener: Listene
             else -> {}
         }
 
-        val cmd = texts.map { CommandParser.parse(it) }.firstOrNull { it !is Command.Unknown }
+        val local = texts.map { CommandParser.parse(it) }.firstOrNull { it !is Command.Unknown }
             ?: Command.Unknown(first)
-        execute(cmd)
+        if (!brain.isEnabled) {
+            execute(local)
+            return
+        }
+        // Sun'iy intellekt gapning ma'nosini tushunadi; ishlamasa — oddiy tahlilga qaytamiz
+        thinking = true
+        listener.onStatus("O'ylayapman…")
+        brain.interpret(texts) { r ->
+            thinking = false
+            when {
+                r?.command != null -> execute(r.command)
+                r?.reply != null -> say(r.reply)
+                local is Command.Unknown -> say("Sun'iy intellekt javob bermadi. Internet va API kalitni tekshiring.")
+                else -> execute(local)
+            }
+        }
     }
 
     private fun execute(cmd: Command) {

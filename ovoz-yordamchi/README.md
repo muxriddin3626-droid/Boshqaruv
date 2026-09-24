@@ -57,6 +57,23 @@ Yordamchi javoblarni quyidagi tartibda aytadi:
 - Google ilovasi → Sozlamalar → Ovoz → **Oflayn nutqni tanish**da o'zbek/rus tilini yuklab oling.
 - Ovoz ishlamasa, buyruqni pastdagi maydonga **yozib** "Bajar"ni bosing.
 
+## Sun'iy intellekt (Claude)
+
+Ovoz noto'g'ri tanilsa ham (masalan, "telefonni sevitering oq"), sun'iy intellekt gapning
+ma'nosini tushunib, kerakli ishni bajaradi. Oddiy savollarga ("Toshkent qayerda?",
+"latifa aytib ber") ham o'zbekcha javob beradi.
+
+1. https://console.anthropic.com saytida ro'yxatdan o'ting → **API Keys** → yangi kalit yarating
+   (kalit `sk-ant-` bilan boshlanadi; so'rovlar uchun hisobingizdan to'lov olinadi).
+2. Ilovada kalitni **"Claude API kalit"** maydoniga qo'ying va **"Sun'iy intellekt"**ni yoqing.
+3. Internet bo'lmasa yoki kalit xato bo'lsa, yordamchi oddiy (AI'siz) usulda ishlashda davom etadi.
+
+## Ekran ustidagi tugma
+
+**"Mikrofon tugmasi hamma ilovalar ustida tursin"**ni yoqing va "Boshqa ilovalar ustidan
+ko'rsatish" ruxsatini bering. Ekranda yashil mikrofon tugmasi paydo bo'ladi — uni istalgan
+joyga surib qo'yish mumkin. Bossangiz tinglaydi, javob tugma yonida yoziladi.
+
 ## Qanday chaqiriladi
 
 - **Ilovadagi mikrofon tugmasi** yoki bildirishnomadagi **"Gapirish"** tugmasi.
