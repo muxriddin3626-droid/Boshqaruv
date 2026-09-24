@@ -1,0 +1,54 @@
+name: Ovozli yordamchi APK
+
+on:
+  push:
+    branches: [ main, 'claude/telefon-ovoz-boshqarish-*' ]
+    paths:
+      - 'ovoz-yordamchi/**'
+      - '.github/workflows/ovoz-yordamchi-apk.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK o'rnatish
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Gradle o'rnatish
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.7
+
+      - name: Testlar
+        working-directory: ovoz-yordamchi
+        run: gradle testDebugUnitTest
+
+      - name: APK yig'ish
+        working-directory: ovoz-yordamchi
+        run: |
+          gradle assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk ovoz-yordamchi.apk
+
+      - name: APK'ni saqlash
+        uses: actions/upload-artifact@v4
+        with:
+          name: ovoz-yordamchi-apk
+          path: ovoz-yordamchi/ovoz-yordamchi.apk
+
+      - name: Telefondan yuklab olish uchun Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ovoz-yordamchi-latest
+          name: Ovozli yordamchi (oxirgi versiya)
+          prerelease: true
+          make_latest: false
+          files: ovoz-yordamchi/ovoz-yordamchi.apk
