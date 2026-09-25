@@ -1,0 +1,21 @@
+# Asosiy
+ccxt>=4.3
+pandas>=2.0
+numpy>=1.26
+PyYAML>=6.0
+python-dotenv>=1.0
+scikit-learn>=1.4
+joblib>=1.3
+gymnasium>=0.29
+
+# Tavsiya etiladi (C kutubxona kerak — README ga qarang). Yo'q bo'lsa fallback ishlaydi.
+TA-Lib>=0.4.28
+
+# Ixtiyoriy
+# transformers>=4.40      # FinBERT sentiment
+# torch>=2.2              # FinBERT / LSTM
+# openai>=1.30            # ChatGPT sentiment
+# stable-baselines3>=2.3  # RL (PPO) o'qitish
+
+# Test
+pytest>=8.0
