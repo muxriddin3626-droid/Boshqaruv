@@ -1,8 +1,8 @@
 # CandleBot — Yaponiya shamchalari asosidagi algoritmik savdo boti
 
 Python'da yozilgan, modulli (OOP) savdo boti: **ccxt** orqali real-vaqt OHLCV → **TA-Lib** shamcha
-patternlari → texnik indikatorlar → sentiment → ML ehtimollik → **qat'iy risk nazorati** → Testnet'da
-avtomatik buyruqlar.
+patternlari → texnik indikatorlar → sentiment → ML ehtimollik → **AI agent (Claude / ChatGPT)** →
+**qat'iy risk nazorati** → Testnet'da avtomatik buyruqlar.
 
 > ⚠️ **Ogohlantirish.** Bu loyiha ta'lim va tadqiqot uchun. Hech qanday strategiya foyda kafolatlamaydi.
 > Avval backtest, keyin kamida 2–4 hafta **testnet**, shundan keyingina (ongli ravishda) kichik summa bilan live.
@@ -13,7 +13,7 @@ avtomatik buyruqlar.
 
 ```
 trading-bot/
-├── main.py                        # CLI: backtest | train | check | run
+├── main.py                        # CLI: backtest | train | check | run | ai-test
 ├── config/config.yaml             # barcha sozlamalar (kalitlarsiz)
 ├── .env.example                   # API kalitlari shabloni
 ├── requirements.txt
@@ -28,6 +28,10 @@ trading-bot/
 │   │   ├── predictor.py           #    Scikit-Learn (HistGradientBoosting + TimeSeriesSplit)
 │   │   ├── rl_env.py              #    Gymnasium RL muhiti (+ PPO o'qitish)
 │   │   └── lstm_model.py          #    PyTorch LSTM (ixtiyoriy)
+│   ├── ai/
+│   │   ├── agent.py               # 8. AI Trading Agent (bozor holati -> LLM -> qaror)
+│   │   ├── llm.py                 #    Claude (Anthropic) va ChatGPT (OpenAI) mijozlari
+│   │   └── memory.py              #    qarorlar xotirasi: aniqlik statistikasi va "saboqlar"
 │   ├── strategy/signal_engine.py  # barcha ballarni yagona BUY/SELL/HOLD qaroriga birlashtirish
 │   ├── risk/manager.py            # 6. Risk Management Engine
 │   ├── execution/
@@ -35,8 +39,8 @@ trading-bot/
 │   │   └── order_manager.py       #    pozitsiya, state tiklash, savdo jurnali
 │   ├── core/trader.py             # real-vaqt orkestrator (asosiy sikl)
 │   ├── backtest/backtester.py     # jonli bot bilan AYNAN bir xil mantiqda backtest
-│   └── utils/logger.py
-└── tests/test_core.py             # 18 ta unit test (pytest)
+│   └── utils/                     # logger, Telegram notifier
+└── tests/                         # 27 ta unit test (pytest)
 ```
 
 ## 2. Arxitektura va ma'lumot oqimi
@@ -191,6 +195,50 @@ SL = 59 400, TP = 61 200. Haqiqiy xavf ≈ 0.04166 × 780 ≈ 32.5 USDT (0.33%) 
 * `OrderManager` — SL/TP software tomonidan har siklda (30s) tekshiriladi; holat `state/bot_state.json`ga
   atomar yoziladi, qayta ishga tushganda tiklanadi; har bir savdo `state/trades.csv` jurnaliga yoziladi.
 
+### 3.9 AI Trading Agent — `candlebot/ai/` (sun'iy intellekt o'zi savdo qiladi)
+
+Agent har yopilgan shamchada bozorni tajribali treyder kabi "o'qiydi" va qaror qabul qiladi:
+
+| Agent ko'radigan ma'lumot | Manba |
+|---|---|
+| Oxirgi 24 shamcha (OHLC + hajm nisbati), so'nggi 5 shamchadagi Yaponiya patternlari | Data + Pattern |
+| RSI, MACD, SMA/EMA, ATR, Bollinger, Support/Resistance darajalari | Technical |
+| **Katta taymfreymlar** (1h, 4h): trend, RSI, EMA200 ga masofa | qo'shimcha feed'lar |
+| Kvant signal ballari va ML ehtimolligi | Signal Engine |
+| So'nggi yangiliklar sarlavhalari + har birining sentiment bali | News monitor |
+| Ochiq pozitsiya, kapital, drawdown | Risk / Orders |
+| **O'z tarixi**: BUY/SELL aniqligi va oxirgi xato qarorlari ("saboqlar") | `DecisionMemory` |
+
+**Uzluksiz kuzatuv.** Bot har 30 soniyada narxni (SL/TP), har 5 daqiqada yangiliklarni tekshiradi.
+Pozitsiya ochiq turganda muhim yangi xabar chiqsa (|sentiment| ≥ 0.4), agent **favqulodda ko'rib chiqish**
+o'tkazadi va kerak bo'lsa shamcha yopilishini kutmasdan pozitsiyadan chiqadi (`AI_NEWS_EXIT`).
+
+**O'z xatolaridan o'rganish.** Har bir BUY/SELL qarori 4 shamchadan keyin baholanadi (narx komissiyadan
+ko'proq kerakli tomonga yurdimi). Aniqlik statistikasi va oxirgi xatolar keyingi promptga qo'shiladi.
+Xotira `state/ai_decisions.jsonl` da saqlanadi va bot qayta ishga tushganda ham yo'qolmaydi.
+
+**Ikki rejim** (`ai.mode`):
+* `decider` — AI yakuniy qarorni qabul qiladi (kvant signal unga faqat ma'lumot sifatida beriladi);
+* `confirm` — BUY faqat AI **va** kvant signal rozi bo'lganda (ehtiyotkorroq, kamroq savdo).
+
+**AI chegaralari (xavfsizlik).** AI faqat BUY / SELL / HOLD tanlaydi. Pozitsiya hajmi, SL/TP, kill-switch,
+kunlik limit va birja cheklovlari **RiskManager** qo'lida — AI ularni o'zgartira olmaydi. Qo'shimcha himoyalar:
+ishonch 65% dan past BUY bloklanadi, ruxsat etilmagan harakatlar (pozitsiya ochiq turganda BUY va h.k.) HOLD'ga
+aylanadi, LLM javob bermasa yoki buzuq javob qaytarsa bot kvant signalga (yoki HOLD'ga) o'tadi, kuniga
+`max_calls_per_day` dan ortiq chaqiruv qilinmaydi, bozor "jim" bo'lsa (|kvant ball| < 0.15 va pozitsiya yo'q)
+LLM umuman chaqirilmaydi.
+
+**Telegram.** `.env` da `TELEGRAM_BOT_TOKEN` va `TELEGRAM_CHAT_ID` bo'lsa, har bir savdo AI izohi bilan,
+shuningdek kill-switch va ishga tushish/to'xtash haqida xabar keladi.
+
+**"Odamdan yaxshiroq"mi?** Agent odamdan ustun bo'lgan joylari: 24/7 uxlamasdan kuzatadi, hissiyotsiz
+(qo'rquv/ochko'zlik yo'q), qoidalarni hech qachon buzmaydi, bir vaqtda o'nlab indikator, 3 ta taymfreym va barcha
+yangiliklarni o'qiydi, har bir qarorini yozib boradi. Lekin hech bir AI **foydani kafolatlamaydi**: bozor
+tasodifiy harakatlarga to'la, LLM ham xato qiladi. LLM qarorlarini tarixiy ma'lumotda halol backtest qilib ham
+bo'lmaydi (model o'sha davr yangiliklarini "eslab qolgan" bo'lishi mumkin). Shuning uchun uning sifatini
+faqat **oldinga qarab** (paper/testnet) o'lchash mumkin — `state/ai_decisions.jsonl` va `state/trades.csv` ni
+kvant rejim natijalari bilan solishtiring.
+
 ---
 
 ## 4. O'rnatish
@@ -260,8 +308,38 @@ Order 123456 BUY 0.04145850 @ 60124.10 (fee≈2.4945 USDT)
 To'xtatish: `Ctrl+C` (ochiq pozitsiya state faylida saqlanadi, keyingi ishga tushishda tiklanadi).
 Serverda uzluksiz ishlatish uchun `tmux`, `systemd` yoki `docker` dan foydalaning.
 
+**5a-qadam. AI agentni yoqish:**
+```bash
+# .env
+ANTHROPIC_API_KEY=...        # yoki OPENAI_API_KEY (config: ai.provider: openai, ai.model: gpt-4o)
+TELEGRAM_BOT_TOKEN=...       # ixtiyoriy
+TELEGRAM_CHAT_ID=...
+```
+```yaml
+# config/config.yaml
+ai:
+  enabled: true
+  provider: anthropic
+  model: claude-sonnet-5
+  mode: decider              # ehtiyotkorroq boshlash uchun: confirm
+```
+```bash
+python main.py ai-test --dry   # AI'ga nima yuborilishini ko'rish (LLM chaqirilmaydi)
+python main.py ai-test         # bitta haqiqiy AI qarori va uning izohi
+python main.py run             # AI o'zi kuzatadi va savdo qiladi
+```
+Log namunasi:
+```
+AI[ai] BUY (78%): 4h trend yuqorida, narx 59 800 support'idan bullish engulfing bilan qaytdi, RSI 34 dan ko'tarilmoqda. -> yakuniy: BUY
+📰 Yangilik (-0.60): Major exchange halts withdrawals after hack
+Favqulodda yangilik tahlili: AI[ai] SELL (82%): Birja buzilishi qisqa muddatda sotuvlarni kuchaytiradi, pozitsiyani yopamiz.
+```
+Har bir chaqiruv taxminan 3–5 ming token. 15m taymfreymda kuniga ko'pi bilan ~96 ta shamcha tahlili va
+`max_calls_per_day` (150) chegarasi bor — narxni provayderingiz tarifidan hisoblang.
+
 **6-qadam. Monitoring:** `logs/bot.log`, `state/trades.csv` (PnL, sabab: STOP_LOSS / TAKE_PROFIT /
-SIGNAL_EXIT / KILL_SWITCH).
+SIGNAL_EXIT / AI_EXIT / AI_NEWS_EXIT / KILL_SWITCH), `state/ai_decisions.jsonl` (AI qarorlari va natijalari),
+Telegram xabarlari.
 
 **Live rejim** faqat testnet'da barqaror natijadan keyin: `mode: live` **va** `.env`da
 `ALLOW_LIVE_TRADING=yes`. API kalitida **withdraw ruxsatini o'chiring** va IP whitelist qo'ying.
@@ -272,4 +350,4 @@ SIGNAL_EXIT / KILL_SWITCH).
 * Birja tomonida OCO / stop-loss order (bot o'chib qolsa ham himoya).
 * Futures (short) — `defaultType: future`, leverage va likvidatsiya narxi nazorati bilan.
 * Bir nechta simvol va portfel darajasidagi risk (korrelyatsiya).
-* Telegram orqali bildirishnomalar.
+* Telegram orqali botni boshqarish (/status, /stop buyruqlari).

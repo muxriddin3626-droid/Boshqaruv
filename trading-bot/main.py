@@ -4,13 +4,20 @@
     python main.py train    [--days 120]
     python main.py check                 # testnet ulanishi va balansni tekshirish
     python main.py run                   # config.mode bo'yicha: paper | testnet | live
+    python main.py ai-test [--dry]       # AI agent bozorni qanday ko'rishini va qarorini ko'rsatish
 """
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import sys
 
+import ccxt
+
+from candlebot.ai.agent import AITradingAgent, timeframe_summary
+from candlebot.ai.llm import build_llm
+from candlebot.ai.memory import DecisionMemory
 from candlebot.analysis.technical import TechnicalAnalyzer
 from candlebot.backtest.backtester import Backtester
 from candlebot.config import BotConfig, load_config
@@ -25,6 +32,7 @@ from candlebot.risk.manager import RiskManager
 from candlebot.sentiment.news import SentimentAnalyzer
 from candlebot.strategy.signal_engine import SignalEngine
 from candlebot.utils.logger import setup_logging
+from candlebot.utils.notifier import build_notifier
 
 log = logging.getLogger("candlebot")
 
@@ -106,6 +114,23 @@ def cmd_check(cfg: BotConfig, _args) -> None:
     print(f"Limitlar: {broker.limits}, taker fee: {broker.taker_fee}")
 
 
+def build_agent(cfg: BotConfig) -> AITradingAgent:
+    tf_sec = ccxt.Exchange.parse_timeframe(cfg.exchange.timeframe)
+    memory = DecisionMemory(cfg.ai.memory_file, horizon_seconds=cfg.ai.memory_horizon * tf_sec,
+                            cost=2 * (cfg.risk.fee_rate + cfg.risk.slippage))
+    return AITradingAgent(cfg.ai, build_llm(cfg.ai.provider, cfg.ai.model), memory)
+
+
+def build_sentiment(cfg: BotConfig) -> SentimentAnalyzer | None:
+    if cfg.ai.enabled:
+        # AI agent yangiliklarni doimiy kuzatadi
+        cfg.sentiment.enabled = True
+        cfg.sentiment.refresh_minutes = min(cfg.sentiment.refresh_minutes, cfg.ai.news_poll_minutes)
+    if not cfg.sentiment.enabled:
+        return None
+    return SentimentAnalyzer(cfg.sentiment, cfg.exchange.symbol.split("/")[0])
+
+
 def cmd_run(cfg: BotConfig, _args) -> None:
     cfg.validate()
     if cfg.mode == "paper":
@@ -120,11 +145,47 @@ def cmd_run(cfg: BotConfig, _args) -> None:
 
     orders = OrderManager(broker, cfg.state_file, cfg.trade_journal)
     equity = broker.equity(feed.last_price())
-    log.info("Rejim: %s | boshlang'ich equity: %.2f", cfg.mode.upper(), equity)
-    sentiment = SentimentAnalyzer(cfg.sentiment, cfg.exchange.symbol.split("/")[0]) if cfg.sentiment.enabled else None
+    log.info("Rejim: %s | AI: %s | boshlang'ich equity: %.2f", cfg.mode.upper(),
+             f"{cfg.ai.provider}/{cfg.ai.model} ({cfg.ai.mode})" if cfg.ai.enabled else "o'chiq", equity)
+
+    agent, higher_feeds = None, {}
+    if cfg.ai.enabled:
+        agent = build_agent(cfg)
+        higher_feeds = {tf: MarketDataFeed(feed.exchange, cfg.exchange.symbol, tf)
+                        for tf in cfg.ai.higher_timeframes if tf != cfg.exchange.timeframe}
     bot = TradingBot(feed, make_engine(cfg, load_predictor(cfg)), RiskManager(cfg.risk, equity), orders,
-                     sentiment, cfg.exchange.history_limit, cfg.loop_interval_sec)
+                     build_sentiment(cfg), cfg.exchange.history_limit, cfg.loop_interval_sec,
+                     agent=agent, higher_feeds=higher_feeds,
+                     notifier=build_notifier(cfg.notify.telegram_token, cfg.notify.telegram_chat_id))
     bot.run()
+
+
+def cmd_ai_test(cfg: BotConfig, args) -> None:
+    """Bir martalik: AI'ga yuboriladigan bozor holatini tuzish va (--dry bo'lmasa) qarorini olish."""
+    engine = make_engine(cfg, load_predictor(cfg))
+    if args.source == "synthetic":
+        df, higher = SyntheticDataFeed(n_bars=600, timeframe=cfg.exchange.timeframe).df, {}
+    else:
+        feed = public_feed(cfg)
+        df = feed.fetch_ohlcv(cfg.exchange.history_limit)
+        higher = {tf: timeframe_summary(engine.technical.compute(
+            MarketDataFeed(feed.exchange, cfg.exchange.symbol, tf).fetch_ohlcv(250)))
+            for tf in cfg.ai.higher_timeframes}
+    enriched = engine.enrich(df)
+    sentiment = build_sentiment(cfg) if args.source != "synthetic" else None
+    score = sentiment.get_score() if sentiment else None
+    sig = engine.evaluate(enriched, score)
+
+    agent = AITradingAgent(cfg.ai, llm=None, memory=DecisionMemory(cfg.ai.memory_file)) if args.dry \
+        else build_agent(cfg)
+    snapshot = agent.build_snapshot(enriched, sig, symbol=cfg.exchange.symbol, timeframe=cfg.exchange.timeframe,
+                                    equity=cfg.paper.initial_quote, higher_tf=higher,
+                                    news=sentiment.headlines() if sentiment else None, sentiment=score)
+    print("=== AI'ga yuboriladigan bozor holati ===")
+    print(json.dumps(snapshot, ensure_ascii=False, indent=2, default=str))
+    print(f"\nKvant signal: {sig}")
+    if not args.dry:
+        print(f"\n=== AI qarori ===\n{agent.decide(snapshot, sig.action, in_position=False)}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -142,11 +203,15 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--verbose", action="store_true", help="har bir order logini ko'rsatish")
     sub.add_parser("check")
     sub.add_parser("run")
+    p = sub.add_parser("ai-test")
+    p.add_argument("--source", choices=["synthetic", "exchange"], default="exchange")
+    p.add_argument("--dry", action="store_true", help="LLM chaqirmasdan faqat bozor holatini ko'rsatish")
     args = parser.parse_args(argv)
 
     cfg = load_config(args.config)
     setup_logging(cfg.log_level, "logs/bot.log" if args.command == "run" else None)
-    {"backtest": cmd_backtest, "train": cmd_train, "check": cmd_check, "run": cmd_run}[args.command](cfg, args)
+    {"backtest": cmd_backtest, "train": cmd_train, "check": cmd_check, "run": cmd_run,
+     "ai-test": cmd_ai_test}[args.command](cfg, args)
     return 0
 
 

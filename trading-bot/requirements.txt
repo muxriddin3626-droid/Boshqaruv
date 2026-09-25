@@ -11,10 +11,13 @@ gymnasium>=0.29
 # Tavsiya etiladi (C kutubxona kerak — README ga qarang). Yo'q bo'lsa fallback ishlaydi.
 TA-Lib>=0.4.28
 
+# AI agent (ai.provider ga qarab bittasi)
+anthropic>=0.40           # Claude
+openai>=1.30              # ChatGPT (sentiment provider=openai uchun ham)
+
 # Ixtiyoriy
 # transformers>=4.40      # FinBERT sentiment
 # torch>=2.2              # FinBERT / LSTM
-# openai>=1.30            # ChatGPT sentiment
 # stable-baselines3>=2.3  # RL (PPO) o'qitish
 
 # Test

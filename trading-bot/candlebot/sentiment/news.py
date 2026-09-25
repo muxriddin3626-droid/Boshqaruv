@@ -162,7 +162,9 @@ def build_model(cfg: SentimentConfig, asset: str) -> SentimentModel:
 
 # ------------------------------------------------------------------ analyzer
 class SentimentAnalyzer:
-    """Yangiliklarni oladi, filtrlaydi, baholaydi va keshlaydi."""
+    """Yangiliklarni doimiy kuzatadi: oladi, filtrlaydi, faqat YANGI xabarlarni baholaydi va saqlaydi."""
+
+    KEEP_HOURS = 48
 
     def __init__(self, cfg: SentimentConfig, asset: str = "BTC",
                  model: SentimentModel | None = None, fetcher: NewsFetcher | None = None):
@@ -170,32 +172,68 @@ class SentimentAnalyzer:
         self.model = model or build_model(cfg, asset)
         self.fetcher = fetcher or NewsFetcher(cfg.rss_feeds)
         self.keywords = [k.lower() for k in cfg.keywords]
-        self._cache: tuple[float, float] | None = None  # (vaqt, ball)
+        self.scored: list[tuple[NewsItem, float]] = []
+        self._seen: set[str] = set()
+        self._last_refresh = 0.0
 
-    def aggregate(self, items: list[NewsItem], now: datetime | None = None) -> float:
-        now = now or datetime.now(timezone.utc)
-        relevant = [it for it in items if any(k in it.text.lower() for k in self.keywords)]
-        if not relevant:
-            return 0.0
-        scores = self.model.score_texts([it.text for it in relevant])
+    def _relevant(self, items: list[NewsItem]) -> list[NewsItem]:
+        return [it for it in items if any(k in it.text.lower() for k in self.keywords)]
+
+    def _weighted(self, pairs: list[tuple[NewsItem, float]], now: datetime) -> float:
         num = den = 0.0
-        for it, s in zip(relevant, scores):
+        for it, s in pairs:
             age_h = max((now - it.published).total_seconds() / 3600, 0.0)
             w = math.exp(-math.log(2) * age_h / self.cfg.half_life_hours)
             num += w * s
             den += w
         return num / den if den else 0.0
 
+    def aggregate(self, items: list[NewsItem], now: datetime | None = None) -> float:
+        """Berilgan xabarlar ro'yxati uchun vaqt bo'yicha tortilgan ball (keshsiz)."""
+        relevant = self._relevant(items)
+        if not relevant:
+            return 0.0
+        scores = self.model.score_texts([it.text for it in relevant])
+        return self._weighted(list(zip(relevant, scores)), now or datetime.now(timezone.utc))
+
+    def refresh(self) -> list[tuple[NewsItem, float]]:
+        """Lentalarni o'qish; faqat oldin ko'rilmagan xabarlarni baholash. Yangi xabarlarni qaytaradi."""
+        self._last_refresh = time.time()
+        fresh = [it for it in self._relevant(self.fetcher.fetch()) if it.title not in self._seen]
+        new = list(zip(fresh, self.model.score_texts([it.text for it in fresh]))) if fresh else []
+        self._seen.update(it.title for it in fresh)
+        cutoff = datetime.now(timezone.utc).timestamp() - self.KEEP_HOURS * 3600
+        self.scored = [(it, sc) for it, sc in self.scored + new if it.published.timestamp() >= cutoff]
+        return new
+
+    def poll_new(self) -> list[tuple[NewsItem, float]]:
+        """Monitoring: `news_poll_minutes` o'tgan bo'lsa yangi xabarlarni qaytaradi.
+        Birinchi o'qish faqat "bazaviy chiziq" — eski xabarlar favqulodda signal bermaydi."""
+        first = self._last_refresh == 0.0
+        if not first and time.time() - self._last_refresh < self.cfg.refresh_minutes * 60:
+            return []
+        try:
+            new = self.refresh()
+        except Exception as exc:
+            log.warning("Yangiliklar o'qilmadi: %s", exc)
+            return []
+        return [] if first else new
+
+    def headlines(self, limit: int = 10) -> list[dict]:
+        now = datetime.now(timezone.utc)
+        recent = sorted(self.scored, key=lambda p: p[0].published, reverse=True)[:limit]
+        return [{"title": it.title[:200], "source": it.source.split("/")[2] if "//" in it.source else it.source,
+                 "age_hours": round((now - it.published).total_seconds() / 3600, 1), "sentiment": round(sc, 2)}
+                for it, sc in recent]
+
     def get_score(self) -> float:
         if not self.cfg.enabled:
             return 0.0
-        if self._cache and time.time() - self._cache[0] < self.cfg.refresh_minutes * 60:
-            return self._cache[1]
-        try:
-            score = self.aggregate(self.fetcher.fetch())
-        except Exception as exc:
-            log.warning("Sentiment hisoblanmadi: %s", exc)
-            score = self._cache[1] if self._cache else 0.0
-        self._cache = (time.time(), score)
-        log.info("Sentiment ball: %+.3f", score)
+        if time.time() - self._last_refresh >= self.cfg.refresh_minutes * 60:
+            try:
+                self.refresh()
+            except Exception as exc:
+                log.warning("Sentiment yangilanmadi: %s", exc)
+        score = self._weighted(self.scored, datetime.now(timezone.utc))
+        log.info("Sentiment ball: %+.3f (%d xabar)", score, len(self.scored))
         return score

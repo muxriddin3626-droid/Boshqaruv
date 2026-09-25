@@ -67,3 +67,24 @@ ml:
   enabled: false             # avval `python main.py train` bilan modelni o'qiting
   model_path: models/candle_predictor.joblib
   horizon: 3                 # necha shamcha oldinga bashorat
+
+# Sun'iy intellekt agenti: bozorni, patternlarni va yangiliklarni o'qib, o'zi qaror qiladi.
+# RiskManager (hajm, SL/TP, kill-switch) AI ustidan qat'iy nazoratchi bo'lib qoladi.
+ai:
+  enabled: false             # yoqish uchun: true + .env da ANTHROPIC_API_KEY yoki OPENAI_API_KEY
+  provider: anthropic        # anthropic (Claude) | openai (ChatGPT)
+  model: claude-sonnet-5     # openai uchun masalan: gpt-4o
+  mode: decider              # decider: AI hal qiladi | confirm: BUY faqat AI va kvant signal rozi bo'lsa
+  min_confidence_buy: 0.65
+  min_confidence_sell: 0.55
+  ask_threshold: 0.15        # bozor "jim" bo'lsa LLM chaqirilmaydi (xarajatni tejash)
+  max_calls_per_day: 150
+  fallback_to_quant: true
+  higher_timeframes: [1h, 4h]
+  memory_file: state/ai_decisions.jsonl
+  memory_horizon: 4
+  news_poll_minutes: 5
+  news_alert_threshold: 0.4
+
+# Telegram xabarnomalari: TELEGRAM_BOT_TOKEN va TELEGRAM_CHAT_ID .env da
+notify: {}

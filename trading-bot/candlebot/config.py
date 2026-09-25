@@ -89,6 +89,33 @@ class MLConfig:
 
 
 @dataclass
+class AIConfig:
+    enabled: bool = False
+    provider: str = "anthropic"          # anthropic | openai
+    model: str = "claude-sonnet-5"
+    mode: str = "decider"                # decider: AI hal qiladi | confirm: BUY uchun AI + kvant rozi
+    min_confidence_buy: float = 0.65
+    min_confidence_sell: float = 0.55
+    ask_threshold: float = 0.15          # |kvant ball| shundan past va pozitsiya yo'q -> LLM chaqirilmaydi
+    max_calls_per_day: int = 150
+    fallback_to_quant: bool = True       # LLM ishlamasa kvant signalga o'tish (aks holda HOLD)
+    higher_timeframes: list = field(default_factory=lambda: ["1h", "4h"])
+    candles_in_prompt: int = 24
+    news_in_prompt: int = 10
+    lessons_in_prompt: int = 5
+    memory_file: str = "state/ai_decisions.jsonl"
+    memory_horizon: int = 4              # qaror necha shamchadan keyin baholanadi
+    news_poll_minutes: int = 5           # yangiliklar necha daqiqada tekshiriladi
+    news_alert_threshold: float = 0.4    # |sentiment| shundan yuqori yangi xabar -> favqulodda ko'rib chiqish
+
+
+@dataclass
+class NotifyConfig:
+    telegram_token: str = ""
+    telegram_chat_id: str = ""
+
+
+@dataclass
 class BotConfig:
     mode: str = "paper"
     loop_interval_sec: int = 30
@@ -102,6 +129,8 @@ class BotConfig:
     technical: TechnicalConfig = field(default_factory=TechnicalConfig)
     sentiment: SentimentConfig = field(default_factory=SentimentConfig)
     ml: MLConfig = field(default_factory=MLConfig)
+    ai: AIConfig = field(default_factory=AIConfig)
+    notify: NotifyConfig = field(default_factory=NotifyConfig)
 
     def validate(self) -> None:
         if self.mode not in {"paper", "testnet", "live"}:
@@ -112,6 +141,14 @@ class BotConfig:
             )
         if self.mode in {"testnet", "live"} and not (self.exchange.api_key and self.exchange.api_secret):
             raise ValueError("testnet/live rejim uchun EXCHANGE_API_KEY va EXCHANGE_API_SECRET kerak (.env)")
+        if self.ai.enabled:
+            if self.ai.mode not in {"decider", "confirm"}:
+                raise ValueError("ai.mode: decider | confirm")
+            key = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}.get(self.ai.provider)
+            if key is None:
+                raise ValueError("ai.provider: anthropic | openai")
+            if not os.getenv(key):
+                raise ValueError(f"AI yoqilgan, lekin {key} .env da yo'q")
         r = self.risk
         if not 0 < r.risk_per_trade <= 0.05:
             raise ValueError("risk_per_trade 0 va 0.05 (5%) oralig'ida bo'lishi kerak")
@@ -150,4 +187,6 @@ def load_config(path: str | Path = "config/config.yaml", env_file: str | Path = 
     cfg.exchange.api_secret = os.getenv("EXCHANGE_API_SECRET", cfg.exchange.api_secret)
     cfg.exchange.api_password = os.getenv("EXCHANGE_API_PASSWORD", cfg.exchange.api_password)
     cfg.mode = os.getenv("BOT_MODE", cfg.mode)
+    cfg.notify.telegram_token = os.getenv("TELEGRAM_BOT_TOKEN", cfg.notify.telegram_token)
+    cfg.notify.telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID", cfg.notify.telegram_chat_id)
     return cfg
