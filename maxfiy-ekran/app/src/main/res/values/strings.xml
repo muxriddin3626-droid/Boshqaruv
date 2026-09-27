@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Maxfiy Ekran</string>
+    <string name="tile_label">Maxfiy ekran</string>
+    <string name="intro">Ekran ustiga qoraytiruvchi naqshli filtr qo\'yadi. Yorug\'lik pasayib, mayda chiziqlar tushgach, yondan va uzoqdan qaragan odam matnni o\'qiy olmaydi, siz esa to\'g\'ridan ko\'rasiz.</string>
+    <string name="perm_needed">1-qadam: \"Boshqa ilovalar ustida ko\'rsatish\" ruxsatini bering</string>
+    <string name="perm_button">Ruxsat berish</string>
+    <string name="perm_ok">Ruxsat berilgan ✓</string>
+    <string name="toggle">Maxfiylik filtri</string>
+    <string name="strength">Kuchi</string>
+    <string name="pattern">Naqsh</string>
+    <string name="pattern_dim">Faqat qoraytirish</string>
+    <string name="pattern_lines">Gorizontal chiziqlar (tavsiya)</string>
+    <string name="pattern_grid">Katakcha</string>
+    <string name="pattern_edges">Chetlari qorong\'i, markazi ochiq</string>
+    <string name="tips_title">Maslahatlar</string>
+    <string name="tips">• Samsung sozlamalarida \"Qo\'shimcha xira\" (Extra dim) va Qora rejimni yoqing — filtr bilan birga ancha yaxshi ishlaydi.\n• Tezkor panelga (yuqoridan pastga suring → qalam belgisi) \"Maxfiy ekran\" tugmasini qo\'shing.\n• Haqiqiy yon burchakdan 100% yashirish faqat ekran plyonkasi (privacy glass) yoki Samsung\'ning \"Privacy Display\" apparat funksiyasi bilan bo\'ladi.</string>
+    <string name="open_display">Samsung ekran sozlamalarini ochish</string>
+    <string name="notif_channel">Maxfiylik filtri</string>
+    <string name="notif_title">Maxfiy ekran yoqilgan</string>
+    <string name="notif_text">Yondan qaraganlarga ekran ko\'rinmaydi</string>
+    <string name="notif_off">O\'chirish</string>
+</resources>

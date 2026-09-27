@@ -1,0 +1,34 @@
+name: Maxfiy Ekran APK
+
+on:
+  push:
+    paths:
+      - 'maxfiy-ekran/**'
+      - '.github/workflows/maxfiy-ekran-apk.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: maxfiy-ekran
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: APK yig'ish
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: maxfiy-ekran-apk
+          path: maxfiy-ekran/app/build/outputs/apk/release/*.apk
