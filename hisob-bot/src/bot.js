@@ -207,7 +207,9 @@ async function handleNarx(ctx, argText) {
   if (!text) {
     const products = await db.listProducts(ctx.chat.id);
     if (products.length === 0) return ctx.reply("Hozircha mahsulotlar yo'q.");
-    return ctx.reply("Qaysi mahsulotga narx belgilamoqchisiz?", productsKeyboard(products, 'priceprod'));
+    const keyboard = productsKeyboard(products, 'priceprod');
+    keyboard.reply_markup.inline_keyboard.push([Markup.button.callback('🏷 Hammasiga', 'narxall')]);
+    return ctx.reply("Qaysi mahsulotga narx belgilamoqchisiz?", keyboard);
   }
   const match = text.match(/^(.+?)\s+(\d+)$/);
   if (!match) {
@@ -230,6 +232,15 @@ bot.action(/^priceprod:(\d+)$/, async (ctx) => {
   if (!product) return ctx.reply('Mahsulot topilmadi.');
   await db.setPendingAction(ctx.chat.id, 'set_price', product.id, product.name);
   ctx.reply(`"${product.name}" uchun yangi narxni kiriting (so'mda), masalan: 45000`);
+});
+
+bot.action('narxall', async (ctx) => {
+  await ctx.answerCbQuery();
+  await db.setPendingAction(ctx.chat.id, 'bulk_price', null, null);
+  ctx.reply(
+    "Har bir mahsulotning narxini alohida qatorga yozib, hammasini bitta xabar qilib yuboring, masalan:\n\n" +
+      'Megamir Finish 45000\nMegamir Satin 50000\nArzon rodban 25 kg 60000'
+  );
 });
 
 async function handleRoyxat(ctx) {
@@ -396,6 +407,38 @@ bot.on('text', async (ctx) => {
       const price = parseInt(text, 10);
       await db.setPrice(ctx.chat.id, productName, price);
       return ctx.reply(`"${productName}" narxi ${fmt(price)} so'm qilib belgilandi.`);
+    }
+    if (pending.type === 'bulk_price') {
+      await db.clearPendingAction(ctx.chat.id);
+      const priceLines = text
+        .split(/[\n;]+/)
+        .map((l) => l.trim())
+        .filter(Boolean);
+
+      const applied = [];
+      const badLines = [];
+      for (const line of priceLines) {
+        const match = line.match(/^(.+?)\s+(\d+)$/);
+        if (!match) {
+          badLines.push(line);
+          continue;
+        }
+        const [, productName2, priceStr] = match;
+        const price = parseInt(priceStr, 10);
+        await db.setPrice(ctx.chat.id, productName2.trim(), price);
+        applied.push(`• ${productName2.trim()}: ${fmt(price)} so'm`);
+      }
+
+      if (applied.length === 0) {
+        return ctx.reply(
+          "Hech qaysi qator tushunilmadi. Har bir qatorda mahsulot nomidan keyin narx (son) bo'lishi kerak, masalan \"Megamir Finish 45000\"."
+        );
+      }
+      let reply = `Narxlar belgilandi:\n${applied.join('\n')}`;
+      if (badLines.length > 0) {
+        reply += `\n\nTushunilmadi:\n${badLines.map((l) => `• ${l}`).join('\n')}`;
+      }
+      return sendLong(ctx, reply);
     }
   } else if (pending) {
     await db.clearPendingAction(ctx.chat.id);
