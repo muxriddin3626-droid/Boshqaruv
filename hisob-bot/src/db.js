@@ -69,12 +69,6 @@ async function getOrCreateProduct(chatId, name) {
   return findProduct(chatId, name);
 }
 
-async function setPrice(chatId, name, price) {
-  const product = await getOrCreateProduct(chatId, name);
-  await client.execute({ sql: 'UPDATE products SET price = ? WHERE id = ?', args: [price, product.id] });
-  return findProduct(chatId, name);
-}
-
 async function updateProductUnit(productId, unit) {
   await client.execute({ sql: 'UPDATE products SET unit = ? WHERE id = ?', args: [unit, productId] });
 }
@@ -273,7 +267,6 @@ module.exports = {
   ready,
   findProduct,
   getOrCreateProduct,
-  setPrice,
   updateProductUnit,
   addTransaction,
   deleteLastTransaction,
