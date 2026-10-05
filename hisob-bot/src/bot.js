@@ -87,8 +87,9 @@ function renderLines(list) {
   return list
     .map((r) => {
       const sum = r.total_qty * r.price;
-      const sumPart = r.price ? ` — ${fmt(sum)} so'm` : '';
-      return `• ${r.name}: ${fmt(r.total_qty)} ${r.unit}${sumPart}`;
+      const pricePart = r.price ? ` (narxi: ${fmt(r.price)} so'm)` : '';
+      const sumPart = r.price ? ` — jami: ${fmt(sum)} so'm` : '';
+      return `• ${r.name}: ${fmt(r.total_qty)} ${r.unit}${pricePart}${sumPart}`;
     })
     .join('\n');
 }
@@ -457,7 +458,7 @@ bot.on('text', async (ctx) => {
     let line = `• ${name}: +${fmt(qty)} ${unit} (jami: ${fmt(total)} ${unit})`;
     const price = priceByName[name.toLowerCase()];
     if (price) {
-      line += ` — ${fmt(total * price)} so'm`;
+      line += ` — narxi: ${fmt(price)} so'm, jami summa: ${fmt(total * price)} so'm`;
     }
     return line;
   });
