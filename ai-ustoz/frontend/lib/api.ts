@@ -4,6 +4,7 @@ import type {
   Flashcard,
   FlashcardReviewResult,
   LoginResult,
+  MyStats,
   OnboardingPayload,
   OnboardingResult,
   PendingFlashcardReview,
@@ -14,6 +15,10 @@ import type {
   Subject,
   SubjectChoice,
   SyncPushResult,
+  TestCatalog,
+  TestCreatePayload,
+  TestResult,
+  TestSession,
   VoiceMode,
   VoiceSessionResponse,
 } from "./types";
@@ -294,4 +299,56 @@ export function phoneDigits(raw: string): string | null {
   let digits = raw.replace(/\D/g, "");
   if (digits.length === 12 && digits.startsWith("998")) digits = digits.slice(3);
   return digits.length === 9 ? digits : null;
+}
+
+export async function fetchTestCatalog(): Promise<TestCatalog> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/tests/catalog`);
+  return (await assertOk(response, "Testlar ro'yxatini yuklab bo'lmadi")).json();
+}
+
+export async function createTest(token: string, payload: TestCreatePayload): Promise<TestSession> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/tests`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(await errorDetail(response, "Testni boshlab bo'lmadi"));
+  return response.json();
+}
+
+export async function fetchActiveTest(token: string): Promise<TestSession | null> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/tests/active`, { headers: authHeaders(token) });
+  return (await assertOk(response, "Faol testni tekshirib bo'lmadi")).json();
+}
+
+export async function fetchTest(token: string, attemptId: string): Promise<TestSession | TestResult> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/tests/${attemptId}`, { headers: authHeaders(token) });
+  return (await assertOk(response, "Testni yuklab bo'lmadi")).json();
+}
+
+export async function saveTestAnswer(
+  token: string,
+  attemptId: string,
+  questionId: string,
+  choice: number | null
+): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/tests/${attemptId}/answers`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify({ question_id: questionId, choice }),
+  });
+  if (!response.ok) throw new Error(await errorDetail(response, "Javobni saqlab bo'lmadi"));
+}
+
+export async function finishTest(token: string, attemptId: string): Promise<TestResult> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/tests/${attemptId}/finish`, {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+  return (await assertOk(response, "Testni yakunlab bo'lmadi")).json();
+}
+
+export async function fetchMyStats(token: string): Promise<MyStats> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/leaderboard/me`, { headers: authHeaders(token) });
+  return (await assertOk(response, "Natijalarni yuklab bo'lmadi")).json();
 }

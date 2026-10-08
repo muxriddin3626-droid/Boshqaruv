@@ -8,16 +8,18 @@ import ChatWindow from "@/components/chat/ChatWindow";
 import FlashcardDeck from "@/components/flashcards/FlashcardDeck";
 import VoiceSession from "@/components/voice/VoiceSession";
 import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
+import TestCenter from "@/components/tests/TestCenter";
 import TargetedDrill from "@/components/weakness/TargetedDrill";
 import WeaknessRadarChart from "@/components/weakness/WeaknessRadarChart";
 import { useOnlineSync } from "@/hooks/useOnlineSync";
 import { downloadLessonConspect } from "@/lib/api";
 import type { Subject } from "@/lib/types";
 
-type TabKey = "suhbat" | "flashcards" | "radar" | "audio";
+type TabKey = "suhbat" | "tests" | "flashcards" | "radar" | "audio";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "suhbat", label: "Suhbat" },
+  { key: "tests", label: "Testlar" },
   { key: "flashcards", label: "Flashcard'lar" },
   { key: "radar", label: "Zaif nuqtalar" },
   { key: "audio", label: "Audio kutubxona" },
@@ -64,6 +66,11 @@ export default function HomePage() {
     if (savedSubject === "kimyo" || savedSubject === "biologiya") setSubject(savedSubject);
     setIsTokenChecked(true);
   }, []);
+
+  function selectSubject(next: Subject) {
+    setSubject(next);
+    window.localStorage.setItem("ai_ustoz_subject", next);
+  }
 
   function handleLogout() {
     window.localStorage.removeItem("ai_ustoz_token");
@@ -124,7 +131,7 @@ export default function HomePage() {
           {(["kimyo", "biologiya"] as Subject[]).map((s) => (
             <button
               key={s}
-              onClick={() => setSubject(s)}
+              onClick={() => selectSubject(s)}
               className={`rounded-lg px-4 py-2 text-sm font-medium capitalize transition ${
                 subject === s ? "bg-neon-violet text-white" : "bg-surface text-gray-400"
               }`}
@@ -184,6 +191,12 @@ export default function HomePage() {
         <section className="flex-1 space-y-4 overflow-y-auto rounded-2xl border border-neon-cyan/20 bg-surface/40 p-4">
           <WeaknessRadarChart token={token} subject={subject} />
           <TargetedDrill token={token} subject={subject} />
+        </section>
+      )}
+
+      {activeTab === "tests" && (
+        <section className="flex-1 overflow-y-auto rounded-2xl border border-neon-cyan/20 bg-surface/40 p-4">
+          <TestCenter token={token} subject={subject} />
         </section>
       )}
 

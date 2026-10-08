@@ -390,3 +390,100 @@ class LeaderboardOut(BaseModel):
     rows: list[LeaderboardRowOut]
     my_rank: int
     my_xp: int
+
+
+class TestCreateIn(BaseModel):
+    kind: Literal["dtm_mock", "topic", "milliy_sertifikat"]
+    subject: SubjectSchema = SubjectSchema.KIMYO
+    topic: str | None = Field(default=None, max_length=150)
+    question_count: Literal[10, 20] = 10
+    first_subject: SubjectSchema | None = None
+    dtm_blocks: Literal["both", "first", "second"] = "both"
+
+
+class TestQuestionOut(BaseModel):
+    id: str
+    subject: SubjectSchema
+    topic: str
+    question: str
+    options: list[str]
+
+
+class TestSessionOut(BaseModel):
+    attempt_id: uuid.UUID
+    kind: str
+    subject: str
+    topic: str | None
+    status: Literal["active"]
+    questions: list[TestQuestionOut]
+    answers: dict[str, int]
+    deadline_at: datetime
+    server_now: datetime
+    max_score: float
+
+
+class TestAnswerIn(BaseModel):
+    question_id: str = Field(max_length=64)
+    choice: int | None = Field(default=None, ge=0, le=3)
+
+
+class SubjectScoreOut(BaseModel):
+    subject: SubjectSchema
+    correct: int
+    total: int
+    score: float
+    max_score: float
+
+
+class TopicScoreOut(BaseModel):
+    subject: SubjectSchema
+    category: str
+    topic: str
+    correct: int
+    total: int
+
+
+class ReviewItemOut(BaseModel):
+    question_id: str
+    subject: SubjectSchema
+    topic: str
+    question: str
+    options: list[str]
+    chosen: int | None
+    correct_index: int
+    explanation: str
+
+
+class TestResultOut(BaseModel):
+    attempt_id: uuid.UUID
+    kind: str
+    subject: str
+    status: Literal["finished"]
+    score: float
+    max_score: float
+    percent: float
+    correct_count: int
+    total: int
+    xp_earned: int
+    duration_seconds: int
+    per_subject: list[SubjectScoreOut]
+    per_topic: list[TopicScoreOut]
+    review: list[ReviewItemOut]
+    ms_level: str | None
+    ms_is_official: bool
+
+
+class CatalogTopicOut(BaseModel):
+    category: str
+    topic: str
+
+
+class TestCatalogOut(BaseModel):
+    topics: dict[str, list[CatalogTopicOut]]
+    dtm_questions_per_subject: int
+    dtm_first_weight: float
+    dtm_second_weight: float
+    dtm_seconds_per_question: int
+    ms_question_count: int
+    ms_seconds_per_question: int
+    ms_is_official: bool

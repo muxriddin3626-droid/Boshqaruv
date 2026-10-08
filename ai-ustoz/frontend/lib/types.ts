@@ -156,3 +156,88 @@ export interface LoginResult {
   full_name: string;
   subjects: SubjectChoice;
 }
+
+export type TestKind = "dtm_mock" | "topic" | "milliy_sertifikat";
+
+export interface CatalogTopic {
+  category: string;
+  topic: string;
+}
+
+export interface TestCatalog {
+  topics: Record<Subject, CatalogTopic[]>;
+  dtm_questions_per_subject: number;
+  dtm_first_weight: number;
+  dtm_second_weight: number;
+  dtm_seconds_per_question: number;
+  ms_question_count: number;
+  ms_seconds_per_question: number;
+  ms_is_official: boolean;
+}
+
+export interface TestCreatePayload {
+  kind: TestKind;
+  subject?: Subject;
+  topic?: string;
+  question_count?: 10 | 20;
+  first_subject?: Subject;
+  dtm_blocks?: "both" | "first" | "second";
+}
+
+export interface TestQuestion {
+  id: string;
+  subject: Subject;
+  topic: string;
+  question: string;
+  options: string[];
+}
+
+export interface TestSession {
+  attempt_id: string;
+  kind: TestKind;
+  subject: string;
+  topic: string | null;
+  status: "active";
+  questions: TestQuestion[];
+  answers: Record<string, number>;
+  deadline_at: string;
+  server_now: string;
+  max_score: number;
+}
+
+export interface TestReviewItem {
+  question_id: string;
+  subject: Subject;
+  topic: string;
+  question: string;
+  options: string[];
+  chosen: number | null;
+  correct_index: number;
+  explanation: string;
+}
+
+export interface TestResult {
+  attempt_id: string;
+  kind: TestKind;
+  subject: string;
+  status: "finished";
+  score: number;
+  max_score: number;
+  percent: number;
+  correct_count: number;
+  total: number;
+  xp_earned: number;
+  duration_seconds: number;
+  per_subject: { subject: Subject; correct: number; total: number; score: number; max_score: number }[];
+  per_topic: { subject: Subject; category: string; topic: string; correct: number; total: number }[];
+  review: TestReviewItem[];
+  ms_level: string | null;
+  ms_is_official: boolean;
+}
+
+export interface MyStats {
+  xp_total: number;
+  week_xp: number;
+  streak: number;
+  longest_streak: number;
+}
