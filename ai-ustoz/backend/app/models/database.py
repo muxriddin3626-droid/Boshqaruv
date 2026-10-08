@@ -64,6 +64,8 @@ class User(Base):
     self_level: Mapped[str | None] = mapped_column(String(20), nullable=True)
     exam_month: Mapped[date | None] = mapped_column(Date, nullable=True)
     daily_study_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    study_months: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    study_days_per_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
     onboarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(13), unique=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -393,3 +395,17 @@ class Duel(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class StudyPlan(Base):
+    """Shaxsiy haftalik o'quv reja (bitta o'quvchiga bitta)."""
+
+    __tablename__ = "study_plans"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    settings: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    plan: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    completed: Mapped[dict] = mapped_column(JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

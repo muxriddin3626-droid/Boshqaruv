@@ -419,3 +419,21 @@ drop trigger if exists trg_exam_status_updated_at on student_exam_status;
 create trigger trg_exam_status_updated_at
     before update on student_exam_status
     for each row execute function set_updated_at();
+
+-- -----------------------------------------------------------------------------
+-- STUDY_PLANS — kirish so'rovnomasidan (sinf, necha oy, haftada necha kun,
+-- kunlik vaqt) tuzilgan shaxsiy haftalik o'quv reja. `plan` — haftalar va
+-- mavzular, `completed` — mavzu testidan o'tilgan mavzular ("fan|mavzu" -> natija).
+-- -----------------------------------------------------------------------------
+alter table users add column if not exists study_months smallint check (study_months between 1 and 24);
+alter table users add column if not exists study_days_per_week smallint check (study_days_per_week between 1 and 7);
+
+create table if not exists study_plans (
+    user_id     uuid primary key references users(id) on delete cascade,
+    start_date  date not null,
+    settings    jsonb not null,
+    plan        jsonb not null,
+    completed   jsonb not null default '{}'::jsonb,
+    created_at  timestamptz not null default now(),
+    updated_at  timestamptz not null default now()
+);

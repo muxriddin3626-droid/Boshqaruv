@@ -16,6 +16,7 @@ from app.api.routes import (
     games,
     leaderboard,
     onboarding,
+    plan,
     progress,
     research,
     sync,
@@ -53,6 +54,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(onboarding.router)
+app.include_router(plan.router)
 app.include_router(leaderboard.router)
 app.include_router(tests.router)
 app.include_router(games.router)

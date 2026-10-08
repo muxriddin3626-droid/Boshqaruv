@@ -16,17 +16,16 @@ import type {
 
 import { AuthShell as Shell, PhoneInput, inputClass } from "../auth/AuthShell";
 import MarkdownRenderer from "../chat/MarkdownRenderer";
+import PlanSettingsFields, { STUDY_MONTHS, monthsUntil } from "../plan/PlanSettingsFields";
 
 const DONT_KNOW = -1;
-const STEP_TITLES = ["Tanishaylik", "Maqsadingiz", "Hozirgi darajangiz", "Vaqt", "Kirish testi"];
+const STEP_TITLES = ["Tanishaylik", "Maqsadingiz", "Hozirgi darajangiz", "Vaqt va reja", "Kirish testi"];
 const GRADES = [5, 6, 7, 8, 9, 10, 11];
 const CERT_LEVELS: CertLevel[] = ["A+", "A", "B+", "B", "C+", "C"];
-const DAILY_MINUTES = [
-  { value: 30, label: "30 daqiqa" },
-  { value: 60, label: "1 soat" },
-  { value: 120, label: "2 soat" },
-  { value: 180, label: "3+ soat" },
-];
+function closestMonths(monthsLeft: number): number {
+  return STUDY_MONTHS.filter((months) => months <= monthsLeft).at(-1) ?? STUDY_MONTHS[0];
+}
+
 const SUBJECT_LABELS: Record<Subject, string> = { kimyo: "Kimyo", biologiya: "Biologiya" };
 
 interface FormState {
@@ -44,6 +43,8 @@ interface FormState {
   examMonth: string;
   examMonthUnknown: boolean;
   dailyMinutes: number | null;
+  studyMonths: number | null;
+  daysPerWeek: number | null;
 }
 
 const INITIAL_FORM: FormState = {
@@ -61,6 +62,8 @@ const INITIAL_FORM: FormState = {
   examMonth: "",
   examMonthUnknown: false,
   dailyMinutes: null,
+  studyMonths: null,
+  daysPerWeek: null,
 };
 
 function Chip({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: ReactNode }) {
@@ -137,12 +140,16 @@ export default function OnboardingWizard({
       form.subjects !== null,
     form.targetExam !== null && isScoreValid,
     form.selfLevel !== null,
-    form.dailyMinutes !== null && (form.examMonthUnknown || form.examMonth !== ""),
+    form.dailyMinutes !== null &&
+      form.studyMonths !== null &&
+      form.daysPerWeek !== null &&
+      (form.examMonthUnknown || form.examMonth !== ""),
     questions !== null && questions.every((q) => answers[q.id] !== undefined),
   ][step];
 
   async function handleSubmit() {
-    if (!digits || !form.subjects || !form.targetExam || !form.selfLevel || form.dailyMinutes === null) return;
+    if (!digits || !form.subjects || !form.targetExam || !form.selfLevel) return;
+    if (form.dailyMinutes === null || form.studyMonths === null || form.daysPerWeek === null) return;
     const payload: OnboardingPayload = {
       full_name: form.fullName.trim(),
       phone: `+998${digits}`,
@@ -157,6 +164,8 @@ export default function OnboardingWizard({
       self_level: form.selfLevel,
       exam_month: !form.examMonthUnknown && form.examMonth ? `${form.examMonth}-01` : null,
       daily_study_minutes: form.dailyMinutes,
+      study_months: form.studyMonths,
+      study_days_per_week: form.daysPerWeek,
       placement_answers: answers,
     };
 
@@ -195,9 +204,13 @@ export default function OnboardingWizard({
             </div>
           ))}
         </div>
+        <div className="rounded-xl border border-neon-cyan/30 bg-neon-cyan/5 px-4 py-3 text-sm text-gray-200" data-testid="plan-ready">
+          <p className="font-semibold text-white">O&apos;quv rejangiz tayyor: {result.plan_weeks} hafta</p>
+          {result.first_topic && <p>Birinchi dars: &quot;{result.first_topic}&quot;</p>}
+        </div>
         <p className="text-sm text-gray-400">
-          AI Ustoz zaif bo&apos;limlaringizni aniqladi va darsni aynan o&apos;sha joydan boshlaydi. Natijalar
-          &quot;Zaif nuqtalar&quot; bo&apos;limida.
+          Reja sinfingiz, vaqtingiz va kirish testi natijasiga qarab tuzildi: zaif bo&apos;limlarga ko&apos;proq vaqt
+          ajratildi. AI Ustoz har kuni darsni rejadagi mavzudan boshlaydi — &quot;Reja&quot; bo&apos;limida ko&apos;rasiz.
         </p>
         <button
           onClick={() => onComplete(result.access_token, preferredSubject)}
@@ -380,7 +393,16 @@ export default function OnboardingWizard({
               type="month"
               value={form.examMonth}
               disabled={form.examMonthUnknown}
-              onChange={(e) => update("examMonth", e.target.value)}
+              onChange={(e) => {
+                const examMonth = e.target.value;
+                const left = monthsUntil(examMonth);
+                // Imtihongacha qolgan muddatga eng yaqin variantni taklif qilamiz (o'quvchi o'zgartira oladi).
+                setForm((prev) => ({
+                  ...prev,
+                  examMonth,
+                  studyMonths: prev.studyMonths ?? (left ? closestMonths(left) : null),
+                }));
+              }}
               className={`${inputClass} disabled:opacity-40`}
             />
             <label className="flex items-center gap-2 text-sm text-gray-400">
@@ -393,19 +415,13 @@ export default function OnboardingWizard({
               Hali aniq emas
             </label>
           </Field>
-          <Field label="Kuniga qancha vaqt ajrata olasiz?">
-            <div className="flex flex-wrap gap-2">
-              {DAILY_MINUTES.map((option) => (
-                <Chip
-                  key={option.value}
-                  selected={form.dailyMinutes === option.value}
-                  onClick={() => update("dailyMinutes", option.value)}
-                >
-                  {option.label}
-                </Chip>
-              ))}
-            </div>
-          </Field>
+          <PlanSettingsFields
+            value={{ months: form.studyMonths, days: form.daysPerWeek, minutes: form.dailyMinutes }}
+            examMonthsLeft={!form.examMonthUnknown && form.examMonth ? monthsUntil(form.examMonth) : null}
+            onChange={(next) =>
+              setForm((prev) => ({ ...prev, studyMonths: next.months, daysPerWeek: next.days, dailyMinutes: next.minutes }))
+            }
+          />
         </>
       )}
 

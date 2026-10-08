@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.database import QuizAttempt, QuizQuestion, TestResult, User
 from app.services import question_bank_service as bank
-from app.services import xp_service
+from app.services import study_plan_service, xp_service
 from app.services.quiz_catalog import (
     DTM_FIRST_SUBJECT_WEIGHT,
     DTM_QUESTIONS_PER_SUBJECT,
@@ -200,6 +200,7 @@ async def finish_test(db: AsyncSession, user: User, attempt: QuizAttempt, now: d
         ],
     }
     xp_service.award(user, attempt, xp, now)
+    await study_plan_service.record_test_result(db, user.id, attempt, now)
 
     for subject, stats in per_subject.items():
         db.add(

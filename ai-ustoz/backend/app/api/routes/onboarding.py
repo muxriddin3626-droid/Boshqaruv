@@ -42,7 +42,7 @@ async def complete_onboarding(
         ) from exc
 
     try:
-        user, summary = await onboarding_service.complete_onboarding(db, payload)
+        user, summary, plan = await onboarding_service.complete_onboarding(db, payload)
     except onboarding_service.PhoneAlreadyRegisteredError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -54,4 +54,6 @@ async def complete_onboarding(
         access_token=create_access_token(user.id),
         user_id=user.id,
         placement=[PlacementResultOut(**item) for item in summary],
+        plan_weeks=plan.plan["total_weeks"],
+        first_topic=next((t["topic"] for t in plan.plan["topics"] if t["first_week"] is not None), None),
     )

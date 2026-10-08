@@ -6,13 +6,47 @@ Bu servis Postgres'dagi uzoq muddatli holatni o'qiydi/yozadi va uni
 "Kecha shu joyda to'xtagandik" xotirasi ishlaydi.
 """
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.database import Lesson, Progress, User, WeakSpot
-from app.prompts.system_prompt import StudentContext
+from app.prompts.system_prompt import PlanFocus, StudentContext
 from app.prompts.system_prompt import WeakSpot as WeakSpotDTO
+from app.services import study_plan_service as plans
+from app.services.xp_service import tashkent_today
+
+
+async def get_plan_focus(db: AsyncSession, user_id: uuid.UUID, subject: str) -> PlanFocus | None:
+    """O'quv rejadan shu fan bo'yicha bugungi mavzu va dars tuzilishi."""
+    plan = await plans.load_plan(db, user_id)
+    if plan is None:
+        return None
+    subject_topics = [t for t in plan.plan["topics"] if t["subject"] == subject]
+    if not subject_topics:
+        return None
+    today = tashkent_today(datetime.now(timezone.utc))
+    completed = plan.completed or {}
+    status = plans.plan_status({**plan.plan, "topics": subject_topics}, completed, plan.start_date, today)
+    remaining = [t for t in subject_topics if plans.topic_key(subject, t["topic"]) not in completed]
+    current = remaining[0] if remaining else None
+    return PlanFocus(
+        current_week=status["current_week"],
+        total_weeks=plan.plan["total_weeks"],
+        days_per_week=plan.plan["days_per_week"],
+        daily_minutes=plan.plan["daily_minutes"],
+        status=status["status"],
+        behind_weeks=status["behind_weeks"],
+        completed_count=status["completed_count"],
+        topic_count=len(subject_topics),
+        lesson_outline=plans.lesson_outline(plan.plan["daily_minutes"]),
+        topic=current["topic"] if current else None,
+        category=current["category"] if current else None,
+        topic_grade=current["grade"] if current else None,
+        topic_is_new=bool(current and current["is_new"]),
+        next_topic=remaining[1]["topic"] if len(remaining) > 1 else None,
+    )
 
 
 async def get_student_context(db: AsyncSession, user_id: uuid.UUID, subject: str) -> StudentContext:
@@ -55,6 +89,7 @@ async def get_student_context(db: AsyncSession, user_id: uuid.UUID, subject: str
         self_level=user.self_level,
         exam_month=user.exam_month,
         daily_study_minutes=user.daily_study_minutes,
+        plan=await get_plan_focus(db, user_id, subject),
     )
 
 

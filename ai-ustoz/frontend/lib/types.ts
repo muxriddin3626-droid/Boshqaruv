@@ -142,6 +142,8 @@ export interface OnboardingPayload {
   self_level: SelfLevel;
   exam_month: string | null;
   daily_study_minutes: number;
+  study_months: number;
+  study_days_per_week: number;
   placement_answers: Record<string, number>;
 }
 
@@ -149,6 +151,8 @@ export interface OnboardingResult {
   access_token: string;
   user_id: string;
   placement: { subject: Subject; correct: number; total: number }[];
+  plan_weeks: number;
+  first_topic: string | null;
 }
 
 export interface LoginResult {
@@ -372,4 +376,51 @@ export interface Leaderboard {
   rows: LeaderboardRow[];
   my_rank: number;
   my_xp: number;
+}
+
+export interface PlanSettingsPayload {
+  study_months: number;
+  study_days_per_week: number;
+  daily_study_minutes: number;
+}
+
+export interface PlanTopic {
+  subject: Subject;
+  category: string;
+  topic: string;
+  grade: number;
+  is_new: boolean;
+  minutes: number;
+  first_week: number | null;
+  last_week: number | null;
+  completed: boolean;
+  percent: number | null;
+}
+
+export interface PlanWeek {
+  week: number;
+  kind: "study" | "revision";
+  items: { subject: Subject; topic: string; minutes: number; completed: boolean }[];
+}
+
+export interface StudyPlan {
+  study_months: number;
+  effective_months: number;
+  days_per_week: number;
+  daily_minutes: number;
+  weekly_minutes: number;
+  start_date: string;
+  exam_month: string | null;
+  total_weeks: number;
+  current_week: number;
+  status: "on_track" | "behind" | "ahead" | "done";
+  behind_weeks: number;
+  is_tight: boolean;
+  suggested_daily_minutes: number | null;
+  completed_count: number;
+  topic_count: number;
+  current: PlanTopic | null;
+  lesson_outline: { label: string; minutes: number }[];
+  topics: PlanTopic[];
+  weeks: PlanWeek[];
 }

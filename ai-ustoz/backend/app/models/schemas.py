@@ -330,6 +330,8 @@ class OnboardingIn(BaseModel):
     self_level: Literal["boshlangich", "orta", "yuqori"]
     exam_month: date | None = None
     daily_study_minutes: int = Field(ge=0, le=1440)
+    study_months: int = Field(default=6, ge=1, le=24)
+    study_days_per_week: int = Field(default=5, ge=1, le=7)
     placement_answers: dict[str, int] = Field(default_factory=dict, max_length=50)
 
     @field_validator("phone")
@@ -348,6 +350,8 @@ class OnboardingOut(BaseModel):
     access_token: str
     user_id: uuid.UUID
     placement: list[PlacementResultOut]
+    plan_weeks: int
+    first_topic: str | None
 
 
 class LoginIn(BaseModel):
@@ -637,3 +641,62 @@ class DuelAnswerOut(BaseModel):
     correct_index: int
     explanation: str
     duel: DuelOut
+
+
+class PlanSettingsIn(BaseModel):
+    study_months: int = Field(ge=1, le=24)
+    study_days_per_week: int = Field(ge=1, le=7)
+    daily_study_minutes: int = Field(ge=15, le=600)
+
+
+class PlanTopicOut(BaseModel):
+    subject: SubjectSchema
+    category: str
+    topic: str
+    grade: int
+    is_new: bool
+    minutes: int
+    first_week: int | None
+    last_week: int | None
+    completed: bool
+    percent: int | None
+
+
+class PlanWeekItemOut(BaseModel):
+    subject: SubjectSchema
+    topic: str
+    minutes: int
+    completed: bool
+
+
+class PlanWeekOut(BaseModel):
+    week: int
+    kind: Literal["study", "revision"]
+    items: list[PlanWeekItemOut]
+
+
+class LessonPartOut(BaseModel):
+    label: str
+    minutes: int
+
+
+class PlanOut(BaseModel):
+    study_months: int
+    effective_months: int
+    days_per_week: int
+    daily_minutes: int
+    weekly_minutes: int
+    start_date: date
+    exam_month: date | None
+    total_weeks: int
+    current_week: int
+    status: Literal["on_track", "behind", "ahead", "done"]
+    behind_weeks: int
+    is_tight: bool
+    suggested_daily_minutes: int | None
+    completed_count: int
+    topic_count: int
+    current: PlanTopicOut | None
+    lesson_outline: list[LessonPartOut]
+    topics: list[PlanTopicOut]
+    weeks: list[PlanWeekOut]

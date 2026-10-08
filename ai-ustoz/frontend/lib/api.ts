@@ -22,8 +22,10 @@ import type {
   PendingFlashcardReview,
   PendingTestResult,
   PlacementQuestion,
+  PlanSettingsPayload,
   ProgressResponse,
   RadarPoint,
+  StudyPlan,
   Subject,
   SubjectChoice,
   SyncPushResult,
@@ -424,3 +426,20 @@ export const answerDuel = (token: string, id: string, questionId: string, choice
   duelRequest<DuelAnswerResult>(token, `/${id}/answer`, "POST", { question_id: questionId, choice }, "Javob yuborilmadi");
 export const cancelDuel = (token: string, id: string) =>
   duelRequest<DuelState>(token, `/${id}/cancel`, "POST", undefined, "Bekor qilib bo'lmadi");
+
+/** Reja hali tuzilmagan bo'lsa (eski akkaunt) — null. */
+export async function fetchPlan(token: string): Promise<StudyPlan | null> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/plan`, { headers: authHeaders(token) });
+  if (response.status === 404) return null;
+  return (await assertOk(response, "O'quv rejani yuklab bo'lmadi")).json();
+}
+
+export async function updatePlan(token: string, payload: PlanSettingsPayload): Promise<StudyPlan> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/plan`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(await errorDetail(response, "Rejani saqlab bo'lmadi"));
+  return response.json();
+}

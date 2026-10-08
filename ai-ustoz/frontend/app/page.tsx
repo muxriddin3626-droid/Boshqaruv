@@ -5,10 +5,11 @@ import { useEffect, useState } from "react";
 import AudioLibrary from "@/components/audio/AudioLibrary";
 import GameHub from "@/components/games/GameHub";
 import LoginForm from "@/components/auth/LoginForm";
-import ChatWindow from "@/components/chat/ChatWindow";
+import ChatWindow, { type LessonRequest } from "@/components/chat/ChatWindow";
 import FlashcardDeck from "@/components/flashcards/FlashcardDeck";
 import VoiceSession from "@/components/voice/VoiceSession";
 import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
+import StudyPlanView from "@/components/plan/StudyPlanView";
 import LeaderboardView from "@/components/progress/LeaderboardView";
 import StatsBadge from "@/components/progress/StatsBadge";
 import TestCenter from "@/components/tests/TestCenter";
@@ -18,10 +19,11 @@ import { useOnlineSync } from "@/hooks/useOnlineSync";
 import { downloadLessonConspect } from "@/lib/api";
 import type { Subject } from "@/lib/types";
 
-type TabKey = "suhbat" | "tests" | "games" | "reyting" | "flashcards" | "radar" | "audio";
+type TabKey = "suhbat" | "reja" | "tests" | "games" | "reyting" | "flashcards" | "radar" | "audio";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "suhbat", label: "Suhbat" },
+  { key: "reja", label: "Reja" },
   { key: "tests", label: "Testlar" },
   { key: "games", label: "O'yinlar" },
   { key: "reyting", label: "Reyting" },
@@ -43,6 +45,7 @@ export default function HomePage() {
   const [subject, setSubject] = useState<Subject>("kimyo");
   const [activeTab, setActiveTab] = useState<TabKey>("suhbat");
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [lessonRequest, setLessonRequest] = useState<LessonRequest | null>(null);
 
   // `token`ni useState initializer'ida emas, useEffect'da o'qiymiz: server
   // render paytida `window` mavjud emas, shuning uchun agar client'ning
@@ -75,6 +78,12 @@ export default function HomePage() {
   function selectSubject(next: Subject) {
     setSubject(next);
     window.localStorage.setItem("ai_ustoz_subject", next);
+  }
+
+  function startLesson(lessonSubject: Subject, topic: string) {
+    selectSubject(lessonSubject);
+    setLessonRequest({ id: Date.now(), topic });
+    setActiveTab("suhbat");
   }
 
   function handleLogout() {
@@ -184,8 +193,19 @@ export default function HomePage() {
             <VoiceSession token={token} subject={subject} />
           </div>
           <div className="rounded-2xl border border-neon-cyan/20 bg-surface/40 p-4 md:col-span-2">
-            <ChatWindow token={token} subject={subject} />
+            <ChatWindow
+              token={token}
+              subject={subject}
+              lessonRequest={lessonRequest}
+              onLessonRequestHandled={() => setLessonRequest(null)}
+            />
           </div>
+        </section>
+      )}
+
+      {activeTab === "reja" && (
+        <section className="flex-1 overflow-y-auto rounded-2xl border border-neon-cyan/20 bg-surface/40 p-4">
+          <StudyPlanView token={token} onStartLesson={startLesson} onOpenTests={() => setActiveTab("tests")} />
         </section>
       )}
 

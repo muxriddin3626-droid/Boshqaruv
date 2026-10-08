@@ -15,9 +15,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
-from app.models.database import TestResult, User
+from app.models.database import StudyPlan, TestResult, User
 from app.models.schemas import OnboardingIn
+from app.services import study_plan_service
 from app.services.weakness_service import recalculate_radar
+from app.services.xp_service import tashkent_today
 
 PLACEMENT_QUESTIONS: list[dict] = [
     {
@@ -146,8 +148,8 @@ def grade_placement(subject: str, answers: dict[str, int]) -> dict:
     return {"correct": correct, "total": total, "topic_breakdown": dict(breakdown)}
 
 
-async def complete_onboarding(db: AsyncSession, payload: OnboardingIn) -> tuple[User, list[dict]]:
-    """Profilni yaratadi, kirish testini saqlaydi va radarni hisoblaydi."""
+async def complete_onboarding(db: AsyncSession, payload: OnboardingIn) -> tuple[User, list[dict], StudyPlan]:
+    """Profilni yaratadi, kirish testini saqlaydi, radarni hisoblaydi va o'quv rejani tuzadi."""
     if (await db.execute(select(User.id).where(User.phone == payload.phone))).first():
         raise PhoneAlreadyRegisteredError
 
@@ -165,6 +167,8 @@ async def complete_onboarding(db: AsyncSession, payload: OnboardingIn) -> tuple[
         self_level=payload.self_level,
         exam_month=payload.exam_month.replace(day=1) if payload.exam_month else None,
         daily_study_minutes=payload.daily_study_minutes,
+        study_months=payload.study_months,
+        study_days_per_week=payload.study_days_per_week,
         onboarded_at=datetime.now(timezone.utc),
     )
     db.add(user)
@@ -195,5 +199,7 @@ async def complete_onboarding(db: AsyncSession, payload: OnboardingIn) -> tuple[
 
     for subject in subjects:
         await recalculate_radar(db, user.id, subject)
+    # Reja kirish testi natijasidan keyin tuziladi — zaif bo'limlarga ko'proq vaqt ajratiladi.
+    plan = await study_plan_service.rebuild_plan(db, user, tashkent_today(datetime.now(timezone.utc)))
 
-    return user, summary
+    return user, summary, plan

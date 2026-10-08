@@ -17,6 +17,26 @@ class WeakSpot:
 
 
 @dataclass
+class PlanFocus:
+    """O'quv rejadan shu fan bo'yicha bugungi dars (study_plan_service hisoblaydi)."""
+
+    current_week: int
+    total_weeks: int
+    days_per_week: int
+    daily_minutes: int
+    status: str  # "on_track" | "behind" | "ahead" | "done"
+    behind_weeks: int
+    completed_count: int
+    topic_count: int
+    lesson_outline: list[tuple[str, int]]
+    topic: str | None = None
+    category: str | None = None
+    topic_grade: int | None = None
+    topic_is_new: bool = False
+    next_topic: str | None = None
+
+
+@dataclass
 class StudentContext:
     full_name: str
     subject: str  # "Kimyo" | "Biologiya"
@@ -33,6 +53,7 @@ class StudentContext:
     self_level: str | None = None  # "boshlangich" | "orta" | "yuqori"
     exam_month: date | None = None
     daily_study_minutes: int | None = None
+    plan: PlanFocus | None = None
 
 
 EXAM_LABELS = {"dtm": "DTM (BMBA)", "milliy_sertifikat": "Milliy Sertifikat", "ikkalasi": "DTM va Milliy Sertifikat"}
@@ -71,6 +92,74 @@ def format_goal_block(ctx: "StudentContext", today: date) -> str:
         + "\nDars sur'ati va hajmini shunga moslashtir: vaqt kam bo'lsa — eng ko'p tushadigan "
         "mavzular va tez takrorlash; vaqt ko'p bo'lsa — asosdan, mustahkam poydevor bilan. "
         "Kunlik vaqtiga sig'adigan hajmda topshiriq ber.\n"
+    )
+
+
+PLAN_STATUS_LINES = {
+    "on_track": "Rejaga mos ketyapti — shu sur'atni saqla.",
+    "ahead": "Rejadan OLDINDA — maqtab qo'y, lekin chuqurroq masalalar bilan mustahkamla.",
+}
+
+
+def format_plan_block(ctx: "StudentContext") -> str:
+    plan = ctx.plan
+    if plan is None:
+        return ""
+    lines = [
+        f"- Reja: {plan.total_weeks} hafta, hozir {min(plan.current_week, plan.total_weeks)}-hafta. "
+        f"Haftada {plan.days_per_week} kun, kuniga {plan.daily_minutes} daqiqa. "
+        f"O'tilgan mavzular: {plan.completed_count}/{plan.topic_count}."
+    ]
+    if plan.status == "done" or plan.topic is None:
+        lines.append(
+            "- Bu fan bo'yicha rejadagi barcha mavzular o'tilgan. Endi umumiy takrorlash, aralash "
+            "DTM/Milliy Sertifikat sinov testlari va eng zaif bo'limlar ustida ishla."
+        )
+    else:
+        lines.append(f'- BUGUNGI MAVZU: "{plan.topic}" ({plan.category}, maktabda {plan.topic_grade}-sinfda o\'tiladi).')
+        if plan.topic_is_new:
+            lines.append(
+                "- Bu mavzu o'quvchining sinfidan YUQORI — maktabda hali o'tmagan. Noldan, eng oddiy "
+                "tushuncha va kundalik hayotiy misollardan boshla, keyin DTM darajasiga olib chiq."
+            )
+        else:
+            lines.append(
+                "- Bu mavzuni maktabda o'tgan — qisqa eslatib, tezda DTM darajasidagi masalalarga o't."
+            )
+        if plan.status == "behind":
+            lines.append(
+                f"- Rejadan {plan.behind_weeks} hafta ORQADA. Buni qisqa eslatib qo'y (tanbeh bilan, lekin "
+                "motivatsiya bilan) va bugun mavzuni yakunlashga harakat qil."
+            )
+        elif plan.status in PLAN_STATUS_LINES:
+            lines.append(f"- {PLAN_STATUS_LINES[plan.status]}")
+        if plan.next_topic:
+            lines.append(f'- Keyingi mavzu: "{plan.next_topic}".')
+    outline = ", ".join(f"{label} ~{minutes} daq" for label, minutes in plan.lesson_outline)
+    return (
+        "O'QUV REJA (dars shu reja bo'yicha o'tiladi):\n"
+        + "\n".join(lines)
+        + f"\nBIR KUNLIK DARS TUZILISHI ({plan.daily_minutes} daqiqa): {outline}.\n"
+        "O'quvchi darsni boshlasa yoki nima qilishni so'rasa — aynan BUGUNGI MAVZUdan boshla va "
+        "shu tuzilishga amal qil, hajmni kunlik vaqtiga sig'dir. Boshqa mavzuda savol bersa — javob "
+        "ber, keyin rejaga qaytar. Mavzuni o'zlashtirgach, \"Reja\" bo'limidagi mavzu testini "
+        "topshirishni ayt: 70% va undan yuqori natija bilan reja keyingi mavzuga o'tadi.\n"
+    )
+
+
+def format_grade_block(ctx: "StudentContext") -> str:
+    """Yoshiga qarab tushuntirish uslubi (o'quvchilar 10-17 yosh)."""
+    if ctx.is_graduate or ctx.current_grade >= 10:
+        return "TUSHUNTIRISH USLUBI: abituriyent darajasida — to'liq DTM murakkabligida, tezroq sur'atda.\n"
+    if ctx.current_grade <= 8:
+        return (
+            f"TUSHUNTIRISH USLUBI: o'quvchi {ctx.current_grade}-sinfda (yoshi kichik). Sodda til, qisqa "
+            "jumlalar, kundalik hayotdan misollar; bitta xabarda bitta yangi tushuncha. Atamalarni "
+            "birinchi marta ishlatganda albatta izohla.\n"
+        )
+    return (
+        "TUSHUNTIRISH USLUBI: 9-sinf — maktab darsligi tilida, lekin DTM masalalariga bosqichma-bosqich "
+        "olib chiq.\n"
     )
 
 
@@ -216,6 +305,8 @@ JORIY O'QUVCHI HAQIDA MA'LUMOT:
 - {avg_score_block}
 
 {goal_block}
+{format_plan_block(ctx)}
+{format_grade_block(ctx)}
 O'QUVCHINING DOIMIY XATO QILADIGAN MAVZULARI (weak_spots):
 {format_weak_spots(ctx.weak_spots)}
 
