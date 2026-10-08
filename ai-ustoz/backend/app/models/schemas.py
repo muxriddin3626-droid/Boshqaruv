@@ -583,3 +583,57 @@ class MatchingMatchOut(BaseModel):
     time_is_up: bool
     xp_earned: int
     explanation: str | None
+
+
+class DuelCreateIn(BaseModel):
+    subject: SubjectSchema
+
+
+class DuelJoinIn(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    code: str = Field(min_length=6, max_length=6)
+
+
+class DuelPlayerOut(BaseModel):
+    name: str
+    answered: int
+    correct: int
+    finished: bool
+    seconds: float | None
+
+
+class DuelQuestionOut(BaseModel):
+    id: str
+    topic: str
+    question: str
+    options: list[str]
+    correct_index: int | None  # faqat duel tugagandan keyin
+
+
+class DuelOut(BaseModel):
+    id: uuid.UUID
+    code: str
+    subject: SubjectSchema
+    status: Literal["waiting", "active", "finished", "cancelled", "expired"]
+    is_host: bool
+    me: DuelPlayerOut
+    opponent: DuelPlayerOut | None
+    questions: list[DuelQuestionOut]
+    my_answers: dict[str, int]
+    deadline_at: datetime | None
+    server_now: datetime
+    result: Literal["win", "loss", "draw"] | None
+    xp_earned: int
+
+
+class DuelAnswerIn(BaseModel):
+    question_id: str = Field(max_length=64)
+    choice: int = Field(ge=0, le=3)
+
+
+class DuelAnswerOut(BaseModel):
+    correct: bool
+    correct_index: int
+    explanation: str
+    duel: DuelOut

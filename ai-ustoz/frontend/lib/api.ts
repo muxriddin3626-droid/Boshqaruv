@@ -4,6 +4,8 @@ import type {
   BlitzResult,
   BlitzStart,
   DrillResponse,
+  DuelAnswerResult,
+  DuelState,
   Flashcard,
   FlashcardReviewResult,
   LoginResult,
@@ -392,3 +394,24 @@ export const startMatching = (token: string, subject: Subject) =>
   postGame<MatchingStart>(token, "/matching", { subject }, "O'yinni boshlab bo'lmadi");
 export const matchPair = (token: string, id: string, left: number, right: number) =>
   postGame<MatchingResult>(token, `/matching/${id}/match`, { left, right }, "Javob yuborilmadi");
+
+async function duelRequest<T>(token: string, path: string, method: "GET" | "POST", body: unknown, fallback: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/duels${path}`, {
+    method,
+    headers: authHeaders(token),
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error(await errorDetail(response, fallback));
+  return response.json();
+}
+
+export const createDuel = (token: string, subject: Subject) =>
+  duelRequest<DuelState>(token, "", "POST", { subject }, "Duel yaratib bo'lmadi");
+export const joinDuel = (token: string, code: string) =>
+  duelRequest<DuelState>(token, "/join", "POST", { code }, "Duelga qo'shilib bo'lmadi");
+export const fetchDuel = (token: string, id: string) =>
+  duelRequest<DuelState>(token, `/${id}`, "GET", undefined, "Duel holatini olib bo'lmadi");
+export const answerDuel = (token: string, id: string, questionId: string, choice: number) =>
+  duelRequest<DuelAnswerResult>(token, `/${id}/answer`, "POST", { question_id: questionId, choice }, "Javob yuborilmadi");
+export const cancelDuel = (token: string, id: string) =>
+  duelRequest<DuelState>(token, `/${id}/cancel`, "POST", undefined, "Bekor qilib bo'lmadi");

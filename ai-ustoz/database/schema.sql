@@ -371,6 +371,29 @@ create table if not exists quiz_attempts (
 create index if not exists idx_quiz_attempts_user on quiz_attempts(user_id, started_at desc);
 create index if not exists idx_quiz_attempts_finished on quiz_attempts(finished_at) where status = 'finished';
 
+-- -----------------------------------------------------------------------------
+-- DUELS — do'st bilan duel: ikkala o'yinchiga bir xil savollar. Har o'yinchining
+-- javoblari o'z quiz_attempts qatorida (kind='duel', state.duel_id).
+-- -----------------------------------------------------------------------------
+create table if not exists duels (
+    id              uuid primary key default uuid_generate_v4(),
+    code            varchar(6) not null,
+    subject         varchar(20) not null check (subject in ('kimyo', 'biologiya')),
+    host_id         uuid not null references users(id) on delete cascade,
+    guest_id        uuid references users(id) on delete cascade,
+    question_ids    jsonb not null,
+    status          varchar(10) not null default 'waiting'
+                        check (status in ('waiting', 'active', 'finished', 'cancelled', 'expired')),
+    winner_id       uuid references users(id) on delete set null,
+    created_at      timestamptz not null default now(),
+    started_at      timestamptz,
+    deadline_at     timestamptz,
+    finished_at     timestamptz
+);
+
+-- Kod faqat kutilayotgan/davom etayotgan duellar orasida noyob (tugaganlari qayta ishlatiladi).
+create unique index if not exists idx_duels_open_code on duels(code) where status in ('waiting', 'active');
+
 -- =============================================================================
 -- Eslatma: `updated_at` maydonini avtomatik yangilash uchun trigger
 -- =============================================================================

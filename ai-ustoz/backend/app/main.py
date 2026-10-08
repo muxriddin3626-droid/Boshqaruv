@@ -10,6 +10,7 @@ from app.api.routes import (
     auth,
     chat,
     conspect,
+    duels,
     exam_feedback,
     flashcards,
     games,
@@ -55,6 +56,7 @@ app.include_router(onboarding.router)
 app.include_router(leaderboard.router)
 app.include_router(tests.router)
 app.include_router(games.router)
+app.include_router(duels.router)
 app.include_router(chat.router)
 app.include_router(voice.router)
 app.include_router(progress.router)

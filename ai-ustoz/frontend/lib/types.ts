@@ -313,3 +313,43 @@ export interface MatchingResult {
   xp_earned: number;
   explanation: string | null;
 }
+
+export interface DuelPlayer {
+  name: string;
+  answered: number;
+  correct: number;
+  finished: boolean;
+  seconds: number | null;
+}
+
+export interface DuelQuestion {
+  id: string;
+  topic: string;
+  question: string;
+  options: string[];
+  /** Faqat duel tugagandan keyin keladi. */
+  correct_index: number | null;
+}
+
+export interface DuelState {
+  id: string;
+  code: string;
+  subject: Subject;
+  status: "waiting" | "active" | "finished" | "cancelled" | "expired";
+  is_host: boolean;
+  me: DuelPlayer;
+  opponent: DuelPlayer | null;
+  questions: DuelQuestion[];
+  my_answers: Record<string, number>;
+  deadline_at: string | null;
+  server_now: string;
+  result: "win" | "loss" | "draw" | null;
+  xp_earned: number;
+}
+
+export interface DuelAnswerResult {
+  correct: boolean;
+  correct_index: number;
+  explanation: string;
+  duel: DuelState;
+}

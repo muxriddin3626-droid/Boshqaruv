@@ -5,10 +5,11 @@ import { useState } from "react";
 import type { Subject } from "@/lib/types";
 
 import Blitz from "./Blitz";
+import Duel from "./Duel";
 import Matching from "./Matching";
 import Millionaire from "./Millionaire";
 
-type GameKey = "millioner" | "blitz" | "matching";
+type GameKey = "millioner" | "blitz" | "matching" | "duel";
 
 const GAMES: { key: GameKey; title: string; description: string; accent: string }[] = [
   {
@@ -29,6 +30,12 @@ const GAMES: { key: GameKey; title: string; description: string; accent: string 
     description: "Atamani ta'rifi bilan juftla: element ↔ belgi, organoid ↔ vazifasi.",
     accent: "from-pink-400/20 to-violet-500/10 border-pink-500/30",
   },
+  {
+    key: "duel",
+    title: "Do'st bilan duel",
+    description: "Kod yarat, do'stingga yubor: bir xil 10 savol, kim ko'proq va tezroq topadi?",
+    accent: "from-orange-400/20 to-pink-500/10 border-orange-500/30",
+  },
 ];
 
 export default function GameHub({ token, subject }: { token: string; subject: Subject }) {
@@ -38,6 +45,7 @@ export default function GameHub({ token, subject }: { token: string; subject: Su
   if (active === "millioner") return <Millionaire token={token} subject={subject} onExit={exit} />;
   if (active === "blitz") return <Blitz token={token} subject={subject} onExit={exit} />;
   if (active === "matching") return <Matching token={token} subject={subject} onExit={exit} />;
+  if (active === "duel") return <Duel token={token} subject={subject} onExit={exit} />;
 
   return (
     <div className="mx-auto grid max-w-2xl gap-3 sm:grid-cols-2">
