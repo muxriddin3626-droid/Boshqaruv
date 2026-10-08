@@ -80,6 +80,17 @@ Kompyuteringiz va telefoningiz **bir xil Wi-Fi tarmog'ida** bo'lsa:
   Parol bazada faqat **scrypt xeshi** ko'rinishida saqlanadi.
 - Bitta raqamga 15 daqiqa ichida **5 ta noto'g'ri urinishdan** keyin kirish
   vaqtincha bloklanadi (Redis orqali).
+- **IP bo'yicha** ham cheklov bor: bitta IP'dan 15 daqiqada 30 ta noto'g'ri
+  kirish urinishi (ko'p raqamni navbatma-navbat sinashga qarshi) va soatiga
+  30 ta yangi akkaunt. Limitlar ataylab yumshoq — mobil operatorlar va maktab
+  Wi-Fi'larida ko'p o'quvchi bitta IP'dan chiqadi. `.env` da sozlanadi
+  (`LOGIN_MAX_FAILURES_PER_IP`, `REGISTRATIONS_PER_IP_PER_HOUR`).
+- **Productionda muhim:** backend nginx yoki hosting proksisi (Render,
+  Railway va h.k.) ortida tursa, `TRUSTED_PROXY_COUNT=1` qo'ying — aks holda
+  barcha foydalanuvchilar proksining bitta IP'si ostida ko'rinadi va bir-birini
+  bloklab qo'yadi. Proksi yo'q bo'lsa `0` qoldiring (aks holda IP'ni
+  soxtalashtirish mumkin). Uvicorn `--no-proxy-headers` bilan ishga
+  tushirilishi shart (Dockerfile'da bor).
 - Token **30 kun** amal qiladi (`JWT_EXPIRE_DAYS`), keyin qayta kirish kerak.
 - O'quvchi parolni unutsa — administrator yangi parol o'rnatadi (bloklash
   ham olib tashlanadi):
@@ -210,7 +221,7 @@ Har birining mantiqiy oqimi `docs/ARCHITECTURE.md`da batafsil yozilgan.
 cd backend
 cp .env.example .env   # OPENAI_API_KEY, DATABASE_URL (Supabase) ni to'ldiring
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --no-proxy-headers
 ```
 
 ### 2. Database

@@ -27,6 +27,15 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_days: int = 30
 
+    # Rate limiting (IP bo'yicha). Limitlar ataylab yumshoq: mobil operatorlar
+    # (CGNAT) va maktab Wi-Fi'larida ko'p o'quvchi bitta IP'dan chiqadi.
+    login_max_failures_per_ip: int = 30  # 15 daqiqada, faqat noto'g'ri urinishlar sanaladi
+    registrations_per_ip_per_hour: int = 30
+    # Backend oldida nechta ishonchli reverse proxy turibdi (nginx, Render, Railway...).
+    # 0 — proksi yo'q, IP to'g'ridan-to'g'ri ulanishdan olinadi va X-Forwarded-For
+    # e'tiborga olinmaydi (aks holda uni soxtalashtirib cheklovni chetlab o'tish mumkin).
+    trusted_proxy_count: int = 0
+
     # App
     environment: str = "development"
     cors_origins: str = "http://localhost:3000"
