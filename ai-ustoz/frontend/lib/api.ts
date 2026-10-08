@@ -3,6 +3,7 @@ import type {
   DrillResponse,
   Flashcard,
   FlashcardReviewResult,
+  LoginResult,
   OnboardingPayload,
   OnboardingResult,
   PendingFlashcardReview,
@@ -258,11 +259,39 @@ export async function fetchPlacementTest(subjects: SubjectChoice): Promise<Place
   return (await assertOk(response, "Kirish testini yuklab bo'lmadi")).json();
 }
 
+/** Backend `detail` xabarini (masalan "raqam band") foydalanuvchiga ko'rsatish uchun ajratib oladi. */
+async function errorDetail(response: Response, fallback: string): Promise<string> {
+  try {
+    const body = await response.json();
+    return typeof body.detail === "string" ? body.detail : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function submitOnboarding(payload: OnboardingPayload): Promise<OnboardingResult> {
   const response = await fetch(`${API_BASE_URL}/api/v1/onboarding`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return (await assertOk(response, "So'rovnomani yuborib bo'lmadi")).json();
+  if (!response.ok) throw new Error(await errorDetail(response, "So'rovnomani yuborib bo'lmadi"));
+  return response.json();
+}
+
+export async function loginWithPhone(phone: string, password: string): Promise<LoginResult> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone, password }),
+  });
+  if (!response.ok) throw new Error(await errorDetail(response, "Kirib bo'lmadi. Qayta urinib ko'ring."));
+  return response.json();
+}
+
+/** "90 123-45-67", "+998901234567" -> "901234567"; noto'g'ri bo'lsa null. */
+export function phoneDigits(raw: string): string | null {
+  let digits = raw.replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("998")) digits = digits.slice(3);
+  return digits.length === 9 ? digits : null;
 }

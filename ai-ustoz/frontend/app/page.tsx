@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import AudioLibrary from "@/components/audio/AudioLibrary";
+import LoginForm from "@/components/auth/LoginForm";
 import ChatWindow from "@/components/chat/ChatWindow";
 import FlashcardDeck from "@/components/flashcards/FlashcardDeck";
 import VoiceSession from "@/components/voice/VoiceSession";
@@ -45,6 +46,7 @@ export default function HomePage() {
   // o'rnatiladi.
   const [token, setToken] = useState("");
   const [isTokenChecked, setIsTokenChecked] = useState(false);
+  const [authMode, setAuthMode] = useState<"register" | "login">("register");
 
   useEffect(() => {
     // Mobil qurilmalarda Developer Tools/Console ochish qulay bo'lmagani
@@ -63,6 +65,14 @@ export default function HomePage() {
     setIsTokenChecked(true);
   }, []);
 
+  function handleLogout() {
+    window.localStorage.removeItem("ai_ustoz_token");
+    window.localStorage.removeItem("ai_ustoz_subject");
+    setAuthMode("login");
+    setActiveTab("suhbat");
+    setToken("");
+  }
+
   function handleOnboarded(newToken: string, preferredSubject: Subject) {
     window.localStorage.setItem("ai_ustoz_token", newToken);
     window.localStorage.setItem("ai_ustoz_subject", preferredSubject);
@@ -77,7 +87,11 @@ export default function HomePage() {
   }
 
   if (!token) {
-    return <OnboardingWizard onComplete={handleOnboarded} />;
+    return authMode === "login" ? (
+      <LoginForm onLoggedIn={handleOnboarded} onSwitchToRegister={() => setAuthMode("register")} />
+    ) : (
+      <OnboardingWizard onComplete={handleOnboarded} onSwitchToLogin={() => setAuthMode("login")} />
+    );
   }
 
   async function handleDownloadConspect() {
@@ -118,6 +132,12 @@ export default function HomePage() {
               {s}
             </button>
           ))}
+          <button
+            onClick={handleLogout}
+            className="rounded-lg border border-gray-700 px-3 py-2 text-sm text-gray-400 hover:text-white"
+          >
+            Chiqish
+          </button>
         </div>
       </header>
 

@@ -65,6 +65,8 @@ class User(Base):
     exam_month: Mapped[date | None] = mapped_column(Date, nullable=True)
     daily_study_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     onboarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(13), unique=True, nullable=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     progress_entries: Mapped[list["Progress"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     weak_spots: Mapped[list["WeakSpot"]] = relationship(back_populates="user", cascade="all, delete-orphan")

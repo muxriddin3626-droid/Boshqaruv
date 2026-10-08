@@ -29,7 +29,9 @@ Bir necha daqiqadan so'ng:
 1. Brauzerda **`http://localhost:3000`** ni oching — yangi foydalanuvchi
    uchun **kirish so'rovnomasi** chiqadi (ism, sinf, fan, maqsad imtihon va
    ball, hozirgi daraja, imtihon sanasi, kunlik vaqt + 10 ta savollik kirish
-   testi). Yakunlanganda akkaunt avtomatik yaratiladi va ilova ochiladi.
+   testi). Birinchi bosqichda **telefon raqam va parol** so'raladi —
+   keyingi safar istalgan qurilmadan "Kirish" sahifasida shu bilan kiriladi.
+   Yakunlanganda akkaunt avtomatik yaratiladi va ilova ochiladi.
 2. So'rovnomasiz tezkor kirish kerak bo'lsa (masalan, avtomatik testlar
    uchun) — tayyor test foydalanuvchi tokenini yarating:
    ```bash
@@ -71,6 +73,19 @@ Kompyuteringiz va telefoningiz **bir xil Wi-Fi tarmog'ida** bo'lsa:
 > frontend uchun faqat lokal sinov yo'li (production'da ishlatilmasin).
 > Audio Lecture Engine (Modul 8) uchun Supabase Storage kerak — bo'lmasa
 > shu modul bundan tashqari hammasi ishlayveradi.
+
+### Login va parolni tiklash
+
+- Kirish: telefon raqam (`+998` formatiga avtomatik keltiriladi) + parol.
+  Parol bazada faqat **scrypt xeshi** ko'rinishida saqlanadi.
+- Bitta raqamga 15 daqiqa ichida **5 ta noto'g'ri urinishdan** keyin kirish
+  vaqtincha bloklanadi (Redis orqali).
+- Token **30 kun** amal qiladi (`JWT_EXPIRE_DAYS`), keyin qayta kirish kerak.
+- O'quvchi parolni unutsa — administrator yangi parol o'rnatadi (bloklash
+  ham olib tashlanadi):
+  ```bash
+  docker compose exec backend python scripts/reset_password.py --phone 901234567 --password yangiParol123
+  ```
 
 ## Loyiha strukturasi
 

@@ -10,8 +10,11 @@ yoziladi — shu orqali Weakness Radar birinchi kundanoq to'ladi.
 from collections import defaultdict
 from datetime import datetime, timezone
 
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import hash_password
 from app.models.database import TestResult, User
 from app.models.schemas import OnboardingIn
 from app.services.weakness_service import recalculate_radar
@@ -109,6 +112,10 @@ PLACEMENT_QUESTIONS: list[dict] = [
 ]
 
 
+class PhoneAlreadyRegisteredError(Exception):
+    """Bu telefon raqam bilan akkaunt allaqachon mavjud."""
+
+
 def expand_subjects(choice: str) -> list[str]:
     return ["kimyo", "biologiya"] if choice == "ikkalasi" else [choice]
 
@@ -141,8 +148,13 @@ def grade_placement(subject: str, answers: dict[str, int]) -> dict:
 
 async def complete_onboarding(db: AsyncSession, payload: OnboardingIn) -> tuple[User, list[dict]]:
     """Profilni yaratadi, kirish testini saqlaydi va radarni hisoblaydi."""
+    if (await db.execute(select(User.id).where(User.phone == payload.phone))).first():
+        raise PhoneAlreadyRegisteredError
+
     user = User(
         full_name=payload.full_name,
+        phone=payload.phone,
+        password_hash=hash_password(payload.password),
         current_grade=11 if payload.is_graduate else payload.current_grade,
         is_graduate=payload.is_graduate,
         subjects=payload.subjects,
@@ -156,7 +168,11 @@ async def complete_onboarding(db: AsyncSession, payload: OnboardingIn) -> tuple[
         onboarded_at=datetime.now(timezone.utc),
     )
     db.add(user)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError as exc:  # parallel so'rovda xuddi shu raqam bir vaqtda band qilinsa
+        await db.rollback()
+        raise PhoneAlreadyRegisteredError from exc
 
     subjects = expand_subjects(payload.subjects)
     summary: list[dict] = []

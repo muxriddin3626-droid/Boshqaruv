@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import (
     audio,
+    auth,
     chat,
     conspect,
     exam_feedback,
@@ -46,6 +47,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(onboarding.router)
 app.include_router(chat.router)
 app.include_router(voice.router)

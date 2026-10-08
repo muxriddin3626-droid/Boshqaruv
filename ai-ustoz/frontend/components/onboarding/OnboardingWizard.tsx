@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
-import { fetchPlacementTest, submitOnboarding } from "@/lib/api";
+import { fetchPlacementTest, phoneDigits, submitOnboarding } from "@/lib/api";
 import type {
   CertLevel,
   OnboardingPayload,
@@ -14,6 +14,7 @@ import type {
   TargetExam,
 } from "@/lib/types";
 
+import { AuthShell as Shell, PhoneInput, inputClass } from "../auth/AuthShell";
 import MarkdownRenderer from "../chat/MarkdownRenderer";
 
 const DONT_KNOW = -1;
@@ -30,6 +31,8 @@ const SUBJECT_LABELS: Record<Subject, string> = { kimyo: "Kimyo", biologiya: "Bi
 
 interface FormState {
   fullName: string;
+  phone: string;
+  password: string;
   grade: number | null;
   isGraduate: boolean;
   subjects: SubjectChoice | null;
@@ -45,6 +48,8 @@ interface FormState {
 
 const INITIAL_FORM: FormState = {
   fullName: "",
+  phone: "",
+  password: "",
   grade: null,
   isGraduate: false,
   subjects: null,
@@ -84,9 +89,6 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-const inputClass =
-  "w-full rounded-xl border border-gray-700 bg-black/30 px-4 py-2.5 text-sm text-white outline-none focus:border-neon-cyan";
-
 /**
  * Kirish so'rovnomasi: yangi o'quvchi profilini yig'adi, qisqa kirish testini
  * o'tkazadi va oxirida backendda akkaunt yaratib, kirish tokenini qaytaradi.
@@ -95,8 +97,10 @@ const inputClass =
  */
 export default function OnboardingWizard({
   onComplete,
+  onSwitchToLogin,
 }: {
   onComplete: (token: string, preferredSubject: Subject) => void;
+  onSwitchToLogin: () => void;
 }) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
@@ -112,6 +116,7 @@ export default function OnboardingWizard({
   const needsScore = form.targetExam === "dtm" || form.targetExam === "ikkalasi";
   const needsCertLevel = form.targetExam === "milliy_sertifikat" || form.targetExam === "ikkalasi";
   const scoreNumber = form.targetScore === "" ? null : Number(form.targetScore);
+  const digits = phoneDigits(form.phone);
   const isScoreValid = scoreNumber === null || (Number.isInteger(scoreNumber) && scoreNumber >= 0 && scoreNumber <= 189);
 
   useEffect(() => {
@@ -125,7 +130,11 @@ export default function OnboardingWizard({
   }, [step, form.subjects]);
 
   const canContinue = [
-    form.fullName.trim().length >= 2 && (form.grade !== null || form.isGraduate) && form.subjects !== null,
+    form.fullName.trim().length >= 2 &&
+      digits !== null &&
+      form.password.length >= 6 &&
+      (form.grade !== null || form.isGraduate) &&
+      form.subjects !== null,
     form.targetExam !== null && isScoreValid,
     form.selfLevel !== null,
     form.dailyMinutes !== null && (form.examMonthUnknown || form.examMonth !== ""),
@@ -133,9 +142,11 @@ export default function OnboardingWizard({
   ][step];
 
   async function handleSubmit() {
-    if (!form.subjects || !form.targetExam || !form.selfLevel || form.dailyMinutes === null) return;
+    if (!digits || !form.subjects || !form.targetExam || !form.selfLevel || form.dailyMinutes === null) return;
     const payload: OnboardingPayload = {
       full_name: form.fullName.trim(),
+      phone: `+998${digits}`,
+      password: form.password,
       current_grade: form.isGraduate ? 11 : (form.grade ?? 11),
       is_graduate: form.isGraduate,
       subjects: form.subjects,
@@ -153,8 +164,8 @@ export default function OnboardingWizard({
     setError(null);
     try {
       setResult(await submitOnboarding(payload));
-    } catch {
-      setError("Ma'lumotlarni saqlab bo'lmadi. Qayta urinib ko'ring.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ma'lumotlarni saqlab bo'lmadi. Qayta urinib ko'ring.");
     } finally {
       setIsSubmitting(false);
     }
@@ -216,12 +227,31 @@ export default function OnboardingWizard({
 
       {step === 0 && (
         <>
+          <p className="text-sm text-gray-400">
+            Akkauntingiz bormi?{" "}
+            <button type="button" onClick={onSwitchToLogin} className="text-neon-cyan underline">
+              Kirish
+            </button>
+          </p>
           <Field label="Ismingiz">
             <input
               value={form.fullName}
               onChange={(e) => update("fullName", e.target.value)}
               placeholder="Masalan: Dilnoza Karimova"
               maxLength={100}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Telefon raqamingiz" hint="Keyingi safar shu raqam bilan kirasiz.">
+            <PhoneInput value={form.phone} onChange={(value) => update("phone", value)} />
+          </Field>
+          <Field label="Parol o'ylab toping" hint="Kamida 6 ta belgi.">
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={form.password}
+              onChange={(e) => update("password", e.target.value)}
+              maxLength={128}
               className={inputClass}
             />
           </Field>
@@ -424,7 +454,16 @@ export default function OnboardingWizard({
         </div>
       )}
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && (
+        <div className="space-y-1">
+          <p className="text-sm text-red-400">{error}</p>
+          {step === 4 && (
+            <button type="button" onClick={() => setStep(0)} className="text-sm text-neon-cyan underline">
+              Telefon raqamni o&apos;zgartirish
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-2">
         {step > 0 && (
@@ -446,18 +485,5 @@ export default function OnboardingWizard({
         </button>
       </div>
     </Shell>
-  );
-}
-
-function Shell({ children }: { children: ReactNode }) {
-  return (
-    <main className="flex min-h-screen items-start justify-center p-4 sm:items-center">
-      <div className="w-full max-w-lg space-y-5 rounded-2xl border border-neon-violet/20 bg-surface/60 p-5 sm:p-6">
-        <h1 className="text-lg font-bold text-white">
-          AI <span className="text-neon-cyan">Ustoz</span>
-        </h1>
-        {children}
-      </div>
-    </main>
   );
 }

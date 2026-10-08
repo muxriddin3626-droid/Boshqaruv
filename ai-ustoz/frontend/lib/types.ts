@@ -130,6 +130,8 @@ export interface PlacementQuestion {
 
 export interface OnboardingPayload {
   full_name: string;
+  phone: string;
+  password: string;
   current_grade: number;
   is_graduate: boolean;
   subjects: SubjectChoice;
@@ -147,4 +149,10 @@ export interface OnboardingResult {
   access_token: string;
   user_id: string;
   placement: { subject: Subject; correct: number; total: number }[];
+}
+
+export interface LoginResult {
+  access_token: string;
+  full_name: string;
+  subjects: SubjectChoice;
 }

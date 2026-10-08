@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     # Auth
     jwt_secret: str
     jwt_algorithm: str = "HS256"
+    jwt_expire_days: int = 30
 
     # App
     environment: str = "development"

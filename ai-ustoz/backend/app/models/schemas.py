@@ -4,7 +4,9 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.core.security import normalize_uz_phone
 
 
 class SubjectSchema(str, Enum):
@@ -316,6 +318,8 @@ class OnboardingIn(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     full_name: str = Field(min_length=2, max_length=100)
+    phone: str = Field(max_length=30)
+    password: str = Field(min_length=6, max_length=128)
     current_grade: int = Field(ge=5, le=11)
     is_graduate: bool = False
     subjects: Literal["kimyo", "biologiya", "ikkalasi"]
@@ -328,6 +332,11 @@ class OnboardingIn(BaseModel):
     daily_study_minutes: int = Field(ge=0, le=1440)
     placement_answers: dict[str, int] = Field(default_factory=dict, max_length=50)
 
+    @field_validator("phone")
+    @classmethod
+    def _normalize_phone(cls, value: str) -> str:
+        return normalize_uz_phone(value)
+
 
 class PlacementResultOut(BaseModel):
     subject: SubjectSchema
@@ -339,3 +348,21 @@ class OnboardingOut(BaseModel):
     access_token: str
     user_id: uuid.UUID
     placement: list[PlacementResultOut]
+
+
+class LoginIn(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    phone: str = Field(max_length=30)
+    password: str = Field(min_length=1, max_length=128)
+
+    @field_validator("phone")
+    @classmethod
+    def _normalize_phone(cls, value: str) -> str:
+        return normalize_uz_phone(value)
+
+
+class LoginOut(BaseModel):
+    access_token: str
+    full_name: str
+    subjects: Literal["kimyo", "biologiya", "ikkalasi"]

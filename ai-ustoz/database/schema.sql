@@ -48,6 +48,11 @@ alter table users add column if not exists daily_study_minutes integer
     check (daily_study_minutes between 0 and 1440);
 alter table users add column if not exists onboarded_at timestamptz;
 
+-- Login: telefon raqam (+998XXXXXXXXX formatida) va parolning scrypt xeshi.
+-- Parolning o'zi hech qachon saqlanmaydi.
+alter table users add column if not exists phone varchar(13) unique;
+alter table users add column if not exists password_hash varchar(255);
+
 -- -----------------------------------------------------------------------------
 -- LESSONS — DTM dasturi bo'yicha mavzular ro'yxati (sinf va fan kesimida tartiblangan)
 -- -----------------------------------------------------------------------------
