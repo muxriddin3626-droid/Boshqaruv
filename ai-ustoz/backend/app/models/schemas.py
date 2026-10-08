@@ -487,3 +487,99 @@ class TestCatalogOut(BaseModel):
     ms_question_count: int
     ms_seconds_per_question: int
     ms_is_official: bool
+
+
+class GameStartIn(BaseModel):
+    subject: SubjectSchema
+
+
+class MillionerQuestionOut(BaseModel):
+    id: str
+    topic: str
+    question: str
+    options: list[str]
+    removed: list[int]
+
+
+class MillionerStateOut(BaseModel):
+    attempt_id: uuid.UUID
+    status: Literal["active", "finished"]
+    level: int
+    prize_ladder: list[int]
+    safe_levels: list[int]
+    lifelines: dict[str, bool]
+    question: MillionerQuestionOut | None
+    prize: int
+    won: bool
+    xp_earned: int
+
+
+class MillionerAnswerIn(BaseModel):
+    choice: int = Field(ge=0, le=3)
+
+
+class MillionerAnswerOut(BaseModel):
+    correct: bool
+    correct_index: int
+    explanation: str
+    game: MillionerStateOut
+
+
+class BlitzStatementOut(BaseModel):
+    id: str
+    topic: str
+    text: str
+
+
+class BlitzStartOut(BaseModel):
+    attempt_id: uuid.UUID
+    statements: list[BlitzStatementOut]
+    deadline_at: datetime
+    server_now: datetime
+
+
+class BlitzAnswerIn(BaseModel):
+    question_id: str = Field(max_length=64)
+    is_true: bool
+
+
+class BlitzAnswerOut(BaseModel):
+    correct: bool
+    statement_is_true: bool
+    points: int
+    combo: int
+    multiplier: int
+    score: float
+
+
+class BlitzResultOut(BaseModel):
+    score: float
+    correct: int
+    wrong: int
+    best_combo: int
+    xp_earned: int
+
+
+class MatchingStartOut(BaseModel):
+    attempt_id: uuid.UUID
+    title: str
+    topic: str
+    left: list[str]
+    right: list[str]
+    deadline_at: datetime
+    server_now: datetime
+
+
+class MatchingMatchIn(BaseModel):
+    left: int = Field(ge=0, le=20)
+    right: int = Field(ge=0, le=20)
+
+
+class MatchingMatchOut(BaseModel):
+    correct: bool
+    matched: list[list[int]]
+    mistakes: int
+    finished: bool
+    time_is_up: bool
+    xp_earned: int
+    explanation: str | None

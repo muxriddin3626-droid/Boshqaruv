@@ -258,3 +258,10 @@ def spread_over_topics(topics: list[tuple[str, str]], count: int, difficulty: in
     shuffled = random.sample(topics, len(topics))
     per_topic = Counter(shuffled[i % len(shuffled)] for i in range(count))
     return [Slot(category, topic, difficulty, n) for (category, topic), n in per_topic.items()]
+
+
+async def load_by_ids(db: AsyncSession, question_ids: list[str]) -> list[QuizQuestion]:
+    """Savollarni berilgan tartibda bitta so'rov bilan yuklaydi."""
+    ids = [uuid.UUID(qid) for qid in question_ids]
+    by_id = {q.id: q for q in (await db.execute(select(QuizQuestion).where(QuizQuestion.id.in_(ids)))).scalars().all()}
+    return [by_id[qid] for qid in ids if qid in by_id]

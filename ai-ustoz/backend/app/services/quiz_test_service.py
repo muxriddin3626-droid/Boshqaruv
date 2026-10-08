@@ -4,7 +4,6 @@ Testlar: DTM sinov testi, mavzu bo'yicha test va Milliy Sertifikat uslubidagi ma
 Vaqt serverda nazorat qilinadi (`deadline_at`), javoblar har bosilganda saqlanadi
 (sahifa yangilansa test davom etadi), baholash va javob kaliti faqat serverda.
 """
-import uuid
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -129,9 +128,7 @@ async def _close_previous_tests(db: AsyncSession, user: User, now: datetime) -> 
 
 
 async def load_questions(db: AsyncSession, attempt: QuizAttempt) -> list[QuizQuestion]:
-    ids = [uuid.UUID(qid) for qid in attempt.question_ids]
-    by_id = {q.id: q for q in (await db.execute(select(QuizQuestion).where(QuizQuestion.id.in_(ids)))).scalars().all()}
-    return [by_id[qid] for qid in ids if qid in by_id]
+    return await bank.load_by_ids(db, attempt.question_ids)
 
 
 def is_expired(attempt: QuizAttempt, now: datetime) -> bool:

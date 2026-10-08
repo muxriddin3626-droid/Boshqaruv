@@ -1,9 +1,16 @@
 import type {
   AudioLecture,
+  BlitzAnswerResult,
+  BlitzResult,
+  BlitzStart,
   DrillResponse,
   Flashcard,
   FlashcardReviewResult,
   LoginResult,
+  MatchingResult,
+  MatchingStart,
+  MillionerAnswerResult,
+  MillionerState,
   MyStats,
   OnboardingPayload,
   OnboardingResult,
@@ -352,3 +359,36 @@ export async function fetchMyStats(token: string): Promise<MyStats> {
   const response = await fetch(`${API_BASE_URL}/api/v1/leaderboard/me`, { headers: authHeaders(token) });
   return (await assertOk(response, "Natijalarni yuklab bo'lmadi")).json();
 }
+
+async function postGame<T>(token: string, path: string, body: unknown, fallback: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/games${path}`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error(await errorDetail(response, fallback));
+  return response.json();
+}
+
+export const startMillioner = (token: string, subject: Subject) =>
+  postGame<MillionerState>(token, "/millioner", { subject }, "O'yinni boshlab bo'lmadi");
+export const answerMillioner = (token: string, id: string, choice: number) =>
+  postGame<MillionerAnswerResult>(token, `/millioner/${id}/answer`, { choice }, "Javobni yuborib bo'lmadi");
+export const millionerFifty = (token: string, id: string) =>
+  postGame<MillionerState>(token, `/millioner/${id}/fifty`, undefined, "50/50 ishlamadi");
+export const millionerHint = (token: string, id: string) =>
+  postGame<{ hint: string }>(token, `/millioner/${id}/hint`, undefined, "Maslahat olib bo'lmadi");
+export const walkAwayMillioner = (token: string, id: string) =>
+  postGame<MillionerState>(token, `/millioner/${id}/walk-away`, undefined, "Xatolik yuz berdi");
+
+export const startBlitz = (token: string, subject: Subject) =>
+  postGame<BlitzStart>(token, "/blitz", { subject }, "O'yinni boshlab bo'lmadi");
+export const answerBlitz = (token: string, id: string, questionId: string, isTrue: boolean) =>
+  postGame<BlitzAnswerResult>(token, `/blitz/${id}/answer`, { question_id: questionId, is_true: isTrue }, "Javob yuborilmadi");
+export const finishBlitz = (token: string, id: string) =>
+  postGame<BlitzResult>(token, `/blitz/${id}/finish`, undefined, "Natijani olib bo'lmadi");
+
+export const startMatching = (token: string, subject: Subject) =>
+  postGame<MatchingStart>(token, "/matching", { subject }, "O'yinni boshlab bo'lmadi");
+export const matchPair = (token: string, id: string, left: number, right: number) =>
+  postGame<MatchingResult>(token, `/matching/${id}/match`, { left, right }, "Javob yuborilmadi");

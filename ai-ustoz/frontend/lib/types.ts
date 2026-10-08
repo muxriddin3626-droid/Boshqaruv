@@ -241,3 +241,75 @@ export interface MyStats {
   streak: number;
   longest_streak: number;
 }
+
+export interface MillionerQuestion {
+  id: string;
+  topic: string;
+  question: string;
+  options: string[];
+  removed: number[];
+}
+
+export interface MillionerState {
+  attempt_id: string;
+  status: "active" | "finished";
+  level: number;
+  prize_ladder: number[];
+  safe_levels: number[];
+  lifelines: { fifty: boolean; hint: boolean };
+  question: MillionerQuestion | null;
+  prize: number;
+  won: boolean;
+  xp_earned: number;
+}
+
+export interface MillionerAnswerResult {
+  correct: boolean;
+  correct_index: number;
+  explanation: string;
+  game: MillionerState;
+}
+
+export interface BlitzStart {
+  attempt_id: string;
+  statements: { id: string; topic: string; text: string }[];
+  deadline_at: string;
+  server_now: string;
+}
+
+export interface BlitzAnswerResult {
+  correct: boolean;
+  statement_is_true: boolean;
+  points: number;
+  combo: number;
+  multiplier: number;
+  score: number;
+}
+
+export interface BlitzResult {
+  score: number;
+  correct: number;
+  wrong: number;
+  best_combo: number;
+  xp_earned: number;
+}
+
+export interface MatchingStart {
+  attempt_id: string;
+  title: string;
+  topic: string;
+  left: string[];
+  right: string[];
+  deadline_at: string;
+  server_now: string;
+}
+
+export interface MatchingResult {
+  correct: boolean;
+  matched: [number, number][];
+  mistakes: number;
+  finished: boolean;
+  time_is_up: boolean;
+  xp_earned: number;
+  explanation: string | null;
+}

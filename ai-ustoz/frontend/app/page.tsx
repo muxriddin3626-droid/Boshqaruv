@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import AudioLibrary from "@/components/audio/AudioLibrary";
+import GameHub from "@/components/games/GameHub";
 import LoginForm from "@/components/auth/LoginForm";
 import ChatWindow from "@/components/chat/ChatWindow";
 import FlashcardDeck from "@/components/flashcards/FlashcardDeck";
@@ -15,11 +16,12 @@ import { useOnlineSync } from "@/hooks/useOnlineSync";
 import { downloadLessonConspect } from "@/lib/api";
 import type { Subject } from "@/lib/types";
 
-type TabKey = "suhbat" | "tests" | "flashcards" | "radar" | "audio";
+type TabKey = "suhbat" | "tests" | "games" | "flashcards" | "radar" | "audio";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "suhbat", label: "Suhbat" },
   { key: "tests", label: "Testlar" },
+  { key: "games", label: "O'yinlar" },
   { key: "flashcards", label: "Flashcard'lar" },
   { key: "radar", label: "Zaif nuqtalar" },
   { key: "audio", label: "Audio kutubxona" },
@@ -197,6 +199,12 @@ export default function HomePage() {
       {activeTab === "tests" && (
         <section className="flex-1 overflow-y-auto rounded-2xl border border-neon-cyan/20 bg-surface/40 p-4">
           <TestCenter token={token} subject={subject} />
+        </section>
+      )}
+
+      {activeTab === "games" && (
+        <section className="flex-1 overflow-y-auto rounded-2xl border border-neon-pink/20 bg-surface/40 p-4">
+          <GameHub token={token} subject={subject} />
         </section>
       )}
 
