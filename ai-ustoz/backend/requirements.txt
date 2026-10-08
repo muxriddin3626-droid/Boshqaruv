@@ -17,3 +17,4 @@ python-multipart==0.0.20
 apscheduler==3.10.4
 mutagen==1.47.0
 pypdf==5.1.0
+tzdata==2025.2

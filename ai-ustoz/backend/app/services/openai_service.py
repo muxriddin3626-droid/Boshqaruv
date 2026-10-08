@@ -102,7 +102,7 @@ async def create_realtime_voice_session(
         return response.json()
 
 
-async def _generate_json(system_instruction: str, user_content: str) -> dict[str, Any]:
+async def _generate_json(system_instruction: str, user_content: str, temperature: float = 0.4) -> dict[str, Any]:
     """OpenAI'dan qat'iy JSON formatdagi javob so'raydigan umumiy yordamchi funksiya."""
     response = await client.chat.completions.create(
         model=settings.openai_chat_model,
@@ -110,7 +110,7 @@ async def _generate_json(system_instruction: str, user_content: str) -> dict[str
             {"role": "system", "content": system_instruction},
             {"role": "user", "content": user_content},
         ],
-        temperature=0.4,
+        temperature=temperature,
         response_format={"type": "json_object"},
     )
     return json.loads(response.choices[0].message.content)
@@ -298,3 +298,84 @@ async def text_to_speech(text: str, voice: str = "onyx") -> bytes:
         input=text,
     )
     return response.read()
+
+
+QUIZ_STYLE_RULES = (
+    "O'zbekiston umumta'lim maktab darsliklari va DTM standartiga mos atamalar bilan, "
+    "o'zbek (lotin) tilida yoz. Formulalarni KaTeX formatida yoz ($H_2SO_4$). "
+    "Kimyoviy reaksiyalar to'liq tenglashtirilgan bo'lsin. Faqat bitta aniq to'g'ri javob bo'lsin — "
+    "bahsli, ikki xil talqin qilinadigan yoki darslikdan tashqari faktlarga oid savol tuzma."
+)
+
+DIFFICULTY_LABELS = {
+    1: "juda oson (asosiy ta'rif va atamalar)",
+    2: "oson (bitta qoidani qo'llash)",
+    3: "o'rtacha (DTM'ning odatiy savoli)",
+    4: "qiyin (bir necha bosqichli hisob yoki mantiq)",
+    5: "juda qiyin (DTM'ning eng qiyin savollari darajasi)",
+}
+
+_QUIZ_SCHEMAS = {
+    "mcq": (
+        '{"items": [{"question": "...", "options": ["...", "...", "...", "..."], "correct_index": 0, '
+        '"explanation": "nega bu javob to\'g\'ri (1-3 gap)", '
+        '"hint": "javobni aytmasdan yo\'l ko\'rsatuvchi qisqa maslahat"}]}. '
+        "Har savolda aniq 4 ta, bir-biridan farqli variant bo'lsin."
+    ),
+    "true_false": (
+        '{"items": [{"statement": "...", "is_true": true, "explanation": "..."}]}. '
+        "Taxminan yarmi to'g'ri, yarmi noto'g'ri tasdiq bo'lsin; noto'g'rilari ishonarli, "
+        "lekin aniq noto'g'ri bo'lsin. Har tasdiq bir gapdan iborat, qisqa."
+    ),
+    "matching": (
+        '{"items": [{"title": "nimani nima bilan juftlash kerak", '
+        '"pairs": [{"left": "...", "right": "..."}], "explanation": "..."}]}. '
+        "Har to'plamda aniq 6 ta juft bo'lsin. Har bir chap tomonga faqat BITTA o'ng tomon mos kelsin, "
+        "o'ng tomonlar bir-biridan aniq farq qilsin (masalan: element - belgisi, organoid - vazifasi)."
+    ),
+}
+
+
+async def generate_quiz_items(subject: str, topic: str, qtype: str, count: int, difficulty: int) -> list[dict]:
+    """Savollar banki uchun yangi savollar tuzadi (keyin `solve_quiz_items` bilan tekshiriladi)."""
+    system_instruction = (
+        "Sen DTM va Milliy Sertifikat uchun test tuzuvchi tajribali kimyo va biologiya o'qituvchisisan. "
+        f"{QUIZ_STYLE_RULES} Faqat quyidagi JSON formatda javob ber: {_QUIZ_SCHEMAS[qtype]}"
+    )
+    user_content = (
+        f"Fan: {subject}\nMavzu: {topic}\nQiyinlik: {DIFFICULTY_LABELS[difficulty]}\n"
+        f"Shu mavzudan {count} ta bir-biriga o'xshamagan element tuz."
+    )
+    result = await _generate_json(system_instruction, user_content, temperature=0.8)
+    items = result.get("items", [])
+    return items if isinstance(items, list) else []
+
+
+async def solve_quiz_items(subject: str, qtype: str, items: list[dict]) -> dict[int, Any]:
+    """
+    Savollarni javob kalitisiz, mustaqil yechadi. Natija tuzuvchi kaliti bilan
+    solishtiriladi: mos kelmagan savol bankka qo'shilmaydi.
+    Qaytaradi: {n: javob} — mcq uchun variant indeksi, true_false uchun bool,
+    matching uchun har bir chap elementga mos o'ng indekslar ro'yxati.
+    """
+    answer_formats = {
+        "mcq": '{"answers": [{"n": 0, "choice": 2}]} — choice: to\'g\'ri variant indeksi (0 dan boshlab)',
+        "true_false": '{"answers": [{"n": 0, "is_true": true}]}',
+        "matching": '{"answers": [{"n": 0, "matches": [3, 0, 5, 1, 2, 4]}]} — har bir chap elementga mos o\'ng element indeksi',
+    }
+    system_instruction = (
+        "Sen kimyo va biologiya bo'yicha qat'iy imtihon tekshiruvchisisan. Har bir topshiriqni "
+        "diqqat bilan, bosqichma-bosqich o'ylab yech va faqat yakuniy javoblarni qaytar. "
+        f"Faqat JSON: {answer_formats[qtype]}"
+    )
+    user_content = f"Fan: {subject}\nTopshiriqlar:\n{json.dumps(items, ensure_ascii=False)}"
+    result = await _generate_json(system_instruction, user_content, temperature=0)
+
+    solved: dict[int, Any] = {}
+    for answer in result.get("answers", []):
+        if not isinstance(answer, dict) or not isinstance(answer.get("n"), int):
+            continue
+        key = {"mcq": "choice", "true_false": "is_true", "matching": "matches"}[qtype]
+        if key in answer:
+            solved[answer["n"]] = answer[key]
+    return solved

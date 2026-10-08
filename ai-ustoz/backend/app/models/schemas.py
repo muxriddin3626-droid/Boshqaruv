@@ -366,3 +366,27 @@ class LoginOut(BaseModel):
     access_token: str
     full_name: str
     subjects: Literal["kimyo", "biologiya", "ikkalasi"]
+
+
+class LeaderboardRowOut(BaseModel):
+    rank: int
+    name: str
+    grade: int
+    xp: int
+    streak: int
+    is_me: bool
+
+
+class MyStatsOut(BaseModel):
+    xp_total: int
+    week_xp: int
+    streak: int
+    longest_streak: int
+
+
+class LeaderboardOut(BaseModel):
+    period: Literal["week", "all"]
+    scope: Literal["all", "grade"]
+    rows: list[LeaderboardRowOut]
+    my_rank: int
+    my_xp: int

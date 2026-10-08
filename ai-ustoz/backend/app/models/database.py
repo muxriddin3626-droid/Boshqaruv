@@ -67,6 +67,10 @@ class User(Base):
     onboarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(13), unique=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    xp_total: Mapped[int] = mapped_column(Integer, default=0)
+    current_streak: Mapped[int] = mapped_column(Integer, default=0)
+    longest_streak: Mapped[int] = mapped_column(Integer, default=0)
+    last_active_on: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     progress_entries: Mapped[list["Progress"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     weak_spots: Mapped[list["WeakSpot"]] = relationship(back_populates="user", cascade="all, delete-orphan")
@@ -328,3 +332,45 @@ class UserAudioLecture(Base):
     duration_seconds: Mapped[int] = mapped_column(Integer, default=0)
     is_saved: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class QuizQuestion(Base):
+    """AI tuzgan va mustaqil yechib tekshirilgan savol (testlar va o'yinlar uchun umumiy bank)."""
+
+    __tablename__ = "quiz_questions"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    subject: Mapped[str] = mapped_column(String(20), nullable=False)
+    category: Mapped[str] = mapped_column(String(100), nullable=False)
+    topic: Mapped[str] = mapped_column(String(150), nullable=False)
+    difficulty: Mapped[int] = mapped_column(Integer, nullable=False)
+    qtype: Mapped[str] = mapped_column(String(20), nullable=False)
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    options: Mapped[list] = mapped_column(JSONB, nullable=False)
+    correct_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    explanation: Mapped[str] = mapped_column(Text, default="")
+    hint: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    source: Mapped[str] = mapped_column(String(20), default="ai_verified")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class QuizAttempt(Base):
+    """Bitta test yoki o'yin urinishi. Javob kaliti faqat serverda saqlanadi."""
+
+    __tablename__ = "quiz_attempts"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    subject: Mapped[str] = mapped_column(String(20), nullable=False)
+    question_ids: Mapped[list] = mapped_column(JSONB, default=list)
+    answers: Mapped[dict] = mapped_column(JSONB, default=dict)
+    state: Mapped[dict] = mapped_column(JSONB, default=dict)
+    score: Mapped[float] = mapped_column(Float, default=0)
+    max_score: Mapped[float] = mapped_column(Float, default=0)
+    xp_earned: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(12), default="active")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

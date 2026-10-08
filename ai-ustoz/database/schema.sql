@@ -314,6 +314,64 @@ create table if not exists user_audio_lectures (
 create index if not exists idx_audio_lectures_user on user_audio_lectures(user_id, subject, created_at desc);
 
 -- =============================================================================
+-- TESTLAR, O'YINLAR VA REYTING
+-- =============================================================================
+
+-- XP va kunlik ketma-ketlik (streak). Streak Toshkent vaqti bo'yicha hisoblanadi.
+alter table users add column if not exists xp_total integer not null default 0;
+alter table users add column if not exists current_streak integer not null default 0;
+alter table users add column if not exists longest_streak integer not null default 0;
+alter table users add column if not exists last_active_on date;
+
+-- -----------------------------------------------------------------------------
+-- QUIZ_QUESTIONS — AI tuzgan va mustaqil yechib tekshirilgan savollar banki.
+-- Bir marta tekshirilgan savol qayta ishlatiladi (tezlik, narx, duelda bir xil savollar).
+-- -----------------------------------------------------------------------------
+create table if not exists quiz_questions (
+    id              uuid primary key default uuid_generate_v4(),
+    subject         varchar(20) not null check (subject in ('kimyo', 'biologiya')),
+    category        varchar(100) not null,   -- yirik bo'lim (Weakness Radar o'qi), masalan "Organik kimyo"
+    topic           varchar(150) not null,   -- mayda mavzu, masalan "Uglevodorodlar"
+    difficulty      smallint not null check (difficulty between 1 and 5),
+    qtype           varchar(20) not null check (qtype in ('mcq', 'true_false', 'matching')),
+    question        text not null,
+    -- mcq: 4 ta variant matni; true_false: ["To'g'ri", "Noto'g'ri"]; matching: [{"left", "right"}, ...]
+    options         jsonb not null,
+    correct_index   smallint,                -- matching uchun null (to'g'ri juftlar options ichida)
+    explanation     text not null default '',
+    hint            text,                    -- Millioner "Ustozdan maslahat" uchun
+    content_hash    varchar(64) not null unique,
+    source          varchar(20) not null default 'ai_verified',
+    created_at      timestamptz not null default now()
+);
+
+create index if not exists idx_quiz_questions_pick on quiz_questions(subject, qtype, topic, difficulty);
+
+-- -----------------------------------------------------------------------------
+-- QUIZ_ATTEMPTS — har bir test yoki o'yin urinishi. Javob kaliti faqat serverda.
+-- -----------------------------------------------------------------------------
+create table if not exists quiz_attempts (
+    id              uuid primary key default uuid_generate_v4(),
+    user_id         uuid not null references users(id) on delete cascade,
+    kind            varchar(20) not null check (kind in
+                        ('dtm_mock', 'topic', 'milliy_sertifikat', 'millioner', 'blitz', 'matching', 'duel')),
+    subject         varchar(20) not null check (subject in ('kimyo', 'biologiya', 'ikkalasi')),
+    question_ids    jsonb not null default '[]',
+    answers         jsonb not null default '{}',   -- {question_id: tanlangan variant}
+    state           jsonb not null default '{}',   -- o'yin holati (bosqich, yordamlar, kombo, ...)
+    score           numeric(8, 1) not null default 0,
+    max_score       numeric(8, 1) not null default 0,
+    xp_earned       integer not null default 0,
+    status          varchar(12) not null default 'active' check (status in ('active', 'finished')),
+    started_at      timestamptz not null default now(),
+    deadline_at     timestamptz,                   -- vaqt cheklovi serverda tekshiriladi
+    finished_at     timestamptz
+);
+
+create index if not exists idx_quiz_attempts_user on quiz_attempts(user_id, started_at desc);
+create index if not exists idx_quiz_attempts_finished on quiz_attempts(finished_at) where status = 'finished';
+
+-- =============================================================================
 -- Eslatma: `updated_at` maydonini avtomatik yangilash uchun trigger
 -- =============================================================================
 create or replace function set_updated_at()

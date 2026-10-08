@@ -12,6 +12,7 @@ from app.api.routes import (
     conspect,
     exam_feedback,
     flashcards,
+    leaderboard,
     onboarding,
     progress,
     research,
@@ -49,6 +50,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(onboarding.router)
+app.include_router(leaderboard.router)
 app.include_router(chat.router)
 app.include_router(voice.router)
 app.include_router(progress.router)
