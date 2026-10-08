@@ -1,7 +1,10 @@
 "use client";
 
-import { useId, type ReactNode } from "react";
+import { useId, useMemo, type ReactNode } from "react";
 
+import { layoutCallouts } from "@/lib/visuals/callouts";
+
+import { MaterialDefs, ShapeFilters } from "./anatomy/materials";
 import { VisualFrame } from "./VisualFrame";
 
 /** Chizmaning bitta qismi: a'zo, suyak, tomir, organoid... */
@@ -10,8 +13,10 @@ export interface DiagramPart {
   name: string;
   /** AI yozishi mumkin bo'lgan boshqa nomlar (kichik harf, qismi bo'lsa ham mos keladi). */
   aliases: string[];
-  /** Raqamli belgining joyi. */
-  marker: [number, number];
+  /** Qismning ustidagi nuqta — chetdagi raqam shu yerga ingichka chiziq bilan ulanadi. */
+  anchor: [number, number];
+  /** Raqam qaysi chetda tursin (berilmasa — langar chizma o'rtasidan qaysi tomonda bo'lsa). */
+  side?: "left" | "right";
   shape: ReactNode;
 }
 
@@ -55,9 +60,14 @@ export function highlightedParts(parts: DiagramPart[], highlight: string[]): Set
  * pastda legenda. `highlight` berilsa — o'sha qism yonadi, qolganlari xiralashadi.
  */
 export default function LabeledDiagram({ spec, highlight, testId }: { spec: DiagramSpec; highlight: string[]; testId?: string }) {
-  const glowId = `glow-${useId().replace(/:/g, "")}`;
+  const uid = useId().replace(/:/g, "");
+  const glowId = `glow-${uid}`;
+  const shadowId = `shadow-${uid}`;
   const lit = highlightedParts(spec.parts, highlight);
   const dim = lit.size > 0;
+  const layout = useMemo(() => layoutCallouts(spec.parts, spec.viewBox), [spec]);
+  const numberOf = new Map(spec.parts.map((part, i) => [part.id, i + 1]));
+  const { radius } = layout;
   return (
     <VisualFrame
       title={spec.title}
@@ -75,41 +85,51 @@ export default function LabeledDiagram({ spec, highlight, testId }: { spec: Diag
       }
     >
       <svg
-        viewBox={spec.viewBox}
+        viewBox={layout.viewBox.join(" ")}
         className="mx-auto w-full"
         style={spec.maxWidth ? { maxWidth: spec.maxWidth } : undefined}
         role="img"
         aria-label={`${spec.title}: ${spec.parts.map((part) => part.name).join(", ")}`}
         data-testid={testId}
       >
-        <defs>
-          <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
+        <MaterialDefs />
+        <ShapeFilters shadowId={shadowId} glowId={glowId} region={layout.viewBox} />
         {spec.base}
         {spec.parts.map((part, i) =>
           part.shape ? (
             // Xiralik tashqi guruhda: ichki "chizilish" animatsiyasi (opacity 1 bilan tugaydi) uni bosib ketmasin.
-            <g key={part.id} opacity={dim && !lit.has(part.id) ? 0.25 : 1} filter={lit.has(part.id) ? `url(#${glowId})` : undefined}>
+            <g
+              key={part.id}
+              opacity={dim && !lit.has(part.id) ? 0.22 : 1}
+              filter={lit.has(part.id) ? `url(#${glowId})` : `url(#${shadowId})`}
+            >
               <g className={`visual-pop ${lit.has(part.id) ? "cell-highlight" : ""}`} style={{ animationDelay: `${i * 110}ms` }}>
                 {part.shape}
               </g>
             </g>
           ) : null
         )}
-        {spec.parts.map((part, i) => (
-          <g key={`m-${part.id}`} transform={`translate(${part.marker[0]} ${part.marker[1]})`}>
-            <circle r={7} fill={lit.has(part.id) ? "#22d3ee" : "#111827"} stroke="#e5e7eb" strokeWidth={0.8} />
-            <text textAnchor="middle" dy={3} fontSize={8} fontWeight={700} fill={lit.has(part.id) ? "#000" : "#fff"}>
-              {i + 1}
-            </text>
-          </g>
-        ))}
+        {layout.callouts.map((callout) => {
+          const isLit = lit.has(callout.id);
+          const [mx, my] = callout.marker;
+          const [ax, ay] = callout.anchor;
+          const startX = callout.side === "left" ? mx + radius : mx - radius;
+          return (
+            <g key={`c-${callout.id}`} opacity={dim && !isLit ? 0.45 : 1}>
+              <path
+                d={`M${startX} ${my} L${callout.elbowX} ${my} L${ax} ${ay}`}
+                fill="none"
+                stroke={isLit ? "#22d3ee" : "rgba(229,231,235,0.55)"}
+                strokeWidth={radius * 0.12}
+              />
+              <circle cx={ax} cy={ay} r={radius * 0.22} fill={isLit ? "#22d3ee" : "#e5e7eb"} />
+              <circle cx={mx} cy={my} r={radius} fill={isLit ? "#22d3ee" : "#111827"} stroke={isLit ? "#22d3ee" : "#e5e7eb"} strokeWidth={radius * 0.1} />
+              <text x={mx} y={my} dy={radius * 0.38} textAnchor="middle" fontSize={radius * 1.1} fontWeight={700} fill={isLit ? "#000" : "#fff"}>
+                {numberOf.get(callout.id)}
+              </text>
+            </g>
+          );
+        })}
       </svg>
     </VisualFrame>
   );
