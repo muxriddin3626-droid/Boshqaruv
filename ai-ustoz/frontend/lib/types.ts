@@ -114,3 +114,37 @@ export interface AudioLecture {
   is_saved: boolean;
   created_at: string;
 }
+
+export type SubjectChoice = Subject | "ikkalasi";
+export type TargetExam = "dtm" | "milliy_sertifikat" | "ikkalasi";
+export type CertLevel = "A+" | "A" | "B+" | "B" | "C+" | "C";
+export type SelfLevel = "boshlangich" | "orta" | "yuqori";
+
+export interface PlacementQuestion {
+  id: string;
+  subject: Subject;
+  category: string;
+  question: string;
+  options: string[];
+}
+
+export interface OnboardingPayload {
+  full_name: string;
+  current_grade: number;
+  is_graduate: boolean;
+  subjects: SubjectChoice;
+  target_exam: TargetExam;
+  target_score: number | null;
+  target_cert_level: CertLevel | null;
+  target_university: string | null;
+  self_level: SelfLevel;
+  exam_month: string | null;
+  daily_study_minutes: number;
+  placement_answers: Record<string, number>;
+}
+
+export interface OnboardingResult {
+  access_token: string;
+  user_id: string;
+  placement: { subject: Subject; correct: number; total: number }[];
+}

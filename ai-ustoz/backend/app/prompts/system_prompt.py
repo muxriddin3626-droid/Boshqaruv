@@ -6,6 +6,7 @@ asosida OpenAI modeliga yuboriladigan system promptni yig'ib beradi. Xarakter �
 qattiqqo'l, satirik, lekin g'amxo'r o'zbek xususiy repetitori.
 """
 from dataclasses import dataclass, field
+from datetime import date
 
 
 @dataclass
@@ -25,6 +26,52 @@ class StudentContext:
     weak_spots: list[WeakSpot] = field(default_factory=list)
     average_score: float | None = None  # so'nggi testlar o'rtacha foizi
     target_score: int = 189  # DTM/BMBA maksimal ball
+    is_graduate: bool = False
+    target_exam: str | None = None  # "dtm" | "milliy_sertifikat" | "ikkalasi"
+    target_cert_level: str | None = None  # Milliy Sertifikat maqsad darajasi, masalan "A+"
+    target_university: str | None = None
+    self_level: str | None = None  # "boshlangich" | "orta" | "yuqori"
+    exam_month: date | None = None
+    daily_study_minutes: int | None = None
+
+
+EXAM_LABELS = {"dtm": "DTM (BMBA)", "milliy_sertifikat": "Milliy Sertifikat", "ikkalasi": "DTM va Milliy Sertifikat"}
+SELF_LEVEL_LABELS = {"boshlangich": "boshlang'ich", "orta": "o'rta", "yuqori": "yuqori"}
+
+
+def months_until(exam_month: date, today: date) -> int:
+    return (exam_month.year - today.year) * 12 + (exam_month.month - today.month)
+
+
+def format_goal_block(ctx: "StudentContext", today: date) -> str:
+    lines: list[str] = []
+    if ctx.target_exam:
+        lines.append(f"- Tayyorlanayotgan imtihon: {EXAM_LABELS.get(ctx.target_exam, ctx.target_exam)}")
+    if ctx.target_exam in ("milliy_sertifikat", "ikkalasi") and ctx.target_cert_level:
+        lines.append(f"- Milliy Sertifikatdan maqsad daraja: {ctx.target_cert_level}")
+    if ctx.target_university:
+        lines.append(f"- Maqsad OTM/yo'nalish: {ctx.target_university}")
+    if ctx.self_level:
+        lines.append(f"- O'zini baholashi: {SELF_LEVEL_LABELS.get(ctx.self_level, ctx.self_level)} daraja")
+    if ctx.exam_month:
+        months_left = months_until(ctx.exam_month, today)
+        if months_left < 0:
+            lines.append("- Imtihon sanasi o'tib ketgan — keyingi imtihon sanasini so'rab, rejani yangila.")
+        elif months_left == 0:
+            lines.append("- Imtihon SHU OYDA. Faqat takrorlash va eng ko'p tushadigan mavzular.")
+        else:
+            lines.append(f"- Imtihongacha taxminan {months_left} oy qoldi.")
+    if ctx.daily_study_minutes:
+        lines.append(f"- Kuniga shug'ullanishga ajratadigan vaqti: {ctx.daily_study_minutes} daqiqa.")
+    if not lines:
+        return ""
+    return (
+        "MAQSAD VA REJA (kirish so'rovnomasidan):\n"
+        + "\n".join(lines)
+        + "\nDars sur'ati va hajmini shunga moslashtir: vaqt kam bo'lsa — eng ko'p tushadigan "
+        "mavzular va tez takrorlash; vaqt ko'p bo'lsa — asosdan, mustahkam poydevor bilan. "
+        "Kunlik vaqtiga sig'adigan hajmda topshiriq ber.\n"
+    )
 
 
 BASE_PERSONA = """\
@@ -133,8 +180,13 @@ def format_weak_spots(weak_spots: list[WeakSpot]) -> str:
     return "\n".join(lines)
 
 
-def build_system_prompt(ctx: StudentContext) -> str:
+def build_system_prompt(ctx: StudentContext, today: date | None = None) -> str:
     """StudentContext asosida to'liq system promptni yig'ib qaytaradi."""
+    goal_block = format_goal_block(ctx, today or date.today())
+    grade_label = f"{ctx.current_grade} (maktabni tugatgan abituriyent)" if ctx.is_graduate else str(ctx.current_grade)
+    score_line = (
+        "" if ctx.target_exam == "milliy_sertifikat" else f"- Maqsad ball: {ctx.target_score} (DTM/BMBA)\n"
+    )
     progress_block = (
         f'Kecha/oldingi safar "{ctx.last_lesson_title}" mavzusida, '
         f'"{ctx.last_lesson_step}" bosqichida to\'xtagan edik.'
@@ -154,11 +206,11 @@ def build_system_prompt(ctx: StudentContext) -> str:
 JORIY O'QUVCHI HAQIDA MA'LUMOT:
 - Ism: {ctx.full_name}
 - Fan: {ctx.subject}
-- Sinf: {ctx.current_grade}
-- Maqsad ball: {ctx.target_score} (DTM/BMBA)
-- {progress_block}
+- Sinf: {grade_label}
+{score_line}- {progress_block}
 - {avg_score_block}
 
+{goal_block}
 O'QUVCHINING DOIMIY XATO QILADIGAN MAVZULARI (weak_spots):
 {format_weak_spots(ctx.weak_spots)}
 

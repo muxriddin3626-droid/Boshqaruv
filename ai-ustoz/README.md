@@ -26,14 +26,16 @@ docker compose up --build
 
 Bir necha daqiqadan so'ng:
 
-1. **Test foydalanuvchi va kirish tokeni yarating** (yangi terminalda):
+1. Brauzerda **`http://localhost:3000`** ni oching — yangi foydalanuvchi
+   uchun **kirish so'rovnomasi** chiqadi (ism, sinf, fan, maqsad imtihon va
+   ball, hozirgi daraja, imtihon sanasi, kunlik vaqt + 10 ta savollik kirish
+   testi). Yakunlanganda akkaunt avtomatik yaratiladi va ilova ochiladi.
+2. So'rovnomasiz tezkor kirish kerak bo'lsa (masalan, avtomatik testlar
+   uchun) — tayyor test foydalanuvchi tokenini yarating:
    ```bash
    docker compose exec backend python scripts/seed_test_user.py
    ```
-   Skript ikki variant chiqaradi: brauzer konsoli uchun buyruq va tayyor
-   `http://localhost:3000/?token=...` havola.
-2. Shu havolani (yoki `http://localhost:3000`ni ochib, konsol buyrug'ini)
-   brauzeringizda ishlating — ilova ochiladi.
+   Skript chiqargan `http://localhost:3000/?token=...` havolasini oching.
 
 Shundan so'ng barcha bo'limlar (Suhbat, Flashcard'lar, Zaif nuqtalar, Audio
 kutubxona) haqiqiy ma'lumotlar bazasi bilan ishlaydi. `OPENAI_API_KEY` to'g'ri
@@ -53,15 +55,9 @@ Kompyuteringiz va telefoningiz **bir xil Wi-Fi tarmog'ida** bo'lsa:
    HOST_IP=192.168.X.X docker compose up --build
    ```
    (`192.168.X.X` — 1-qadamda topgan IP'ingiz)
-3. Test foydalanuvchi/token'ni shu safar `--host` bilan yarating (yangi
-   terminalda):
-   ```bash
-   docker compose exec backend python scripts/seed_test_user.py --host 192.168.X.X
-   ```
-4. Skript chiqargan **`http://192.168.X.X:3000/?token=...`** havolasini
-   telefoningizga yuboring (Telegram/SMS/AirDrop — qanday qulay bo'lsa) va
-   telefon brauzerida oching — DevTools kerak emas, sahifa ochilishi bilan
-   token avtomatik saqlanadi.
+3. Telefon brauzerida **`http://192.168.X.X:3000`** ni oching va kirish
+   so'rovnomasini to'ldiring. (Yoki `seed_test_user.py --host 192.168.X.X`
+   chiqargan `?token=...` havolasi bilan so'rovnomasiz kiring.)
 
 > **Muhim cheklov:** brauzerlar (Chrome, Safari) mikrofon (`getUserMedia`)
 > va Service Worker (PWA)ni faqat **HTTPS yoki `localhost`** ostida ishga

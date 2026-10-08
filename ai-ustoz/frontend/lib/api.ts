@@ -3,11 +3,15 @@ import type {
   DrillResponse,
   Flashcard,
   FlashcardReviewResult,
+  OnboardingPayload,
+  OnboardingResult,
   PendingFlashcardReview,
   PendingTestResult,
+  PlacementQuestion,
   ProgressResponse,
   RadarPoint,
   Subject,
+  SubjectChoice,
   SyncPushResult,
   VoiceMode,
   VoiceSessionResponse,
@@ -247,4 +251,18 @@ export async function deleteAudioLecture(token: string, lectureId: string): Prom
     headers: authHeaders(token),
   });
   await assertOk(response, "Audio ma'ruzani o'chirib bo'lmadi");
+}
+
+export async function fetchPlacementTest(subjects: SubjectChoice): Promise<PlacementQuestion[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/onboarding/placement-test?subjects=${subjects}`);
+  return (await assertOk(response, "Kirish testini yuklab bo'lmadi")).json();
+}
+
+export async function submitOnboarding(payload: OnboardingPayload): Promise<OnboardingResult> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/onboarding`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return (await assertOk(response, "So'rovnomani yuborib bo'lmadi")).json();
 }

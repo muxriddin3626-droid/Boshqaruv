@@ -2,8 +2,9 @@
 import uuid
 from datetime import date, datetime
 from enum import Enum
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SubjectSchema(str, Enum):
@@ -301,3 +302,40 @@ class AudioLectureOut(BaseModel):
 
 class AudioLectureUpdateIn(BaseModel):
     is_saved: bool
+
+
+class PlacementQuestionOut(BaseModel):
+    id: str
+    subject: SubjectSchema
+    category: str
+    question: str
+    options: list[str]
+
+
+class OnboardingIn(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    full_name: str = Field(min_length=2, max_length=100)
+    current_grade: int = Field(ge=5, le=11)
+    is_graduate: bool = False
+    subjects: Literal["kimyo", "biologiya", "ikkalasi"]
+    target_exam: Literal["dtm", "milliy_sertifikat", "ikkalasi"]
+    target_score: int | None = Field(default=None, ge=0, le=189)
+    target_cert_level: Literal["A+", "A", "B+", "B", "C+", "C"] | None = None
+    target_university: str | None = Field(default=None, max_length=255)
+    self_level: Literal["boshlangich", "orta", "yuqori"]
+    exam_month: date | None = None
+    daily_study_minutes: int = Field(ge=0, le=1440)
+    placement_answers: dict[str, int] = Field(default_factory=dict, max_length=50)
+
+
+class PlacementResultOut(BaseModel):
+    subject: SubjectSchema
+    correct: int
+    total: int
+
+
+class OnboardingOut(BaseModel):
+    access_token: str
+    user_id: uuid.UUID
+    placement: list[PlacementResultOut]

@@ -15,6 +15,10 @@ from app.core.config import get_settings
 settings = get_settings()
 
 
+def create_access_token(user_id: uuid.UUID) -> str:
+    return jwt.encode({"sub": str(user_id)}, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+
 async def get_current_user_id(authorization: str = Header(...)) -> uuid.UUID:
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Authorization header noto'g'ri formatda")

@@ -31,6 +31,23 @@ create table if not exists users (
     created_at      timestamptz not null default now()
 );
 
+-- Kirish so'rovnomasi (onboarding) javoblari. `alter ... if not exists` shaklida,
+-- shunda bu fayl mavjud bazada qayta ishga tushirilganda ham ustunlar qo'shiladi.
+alter table users add column if not exists is_graduate boolean not null default false;
+alter table users add column if not exists subjects varchar(20) not null default 'ikkalasi'
+    check (subjects in ('kimyo', 'biologiya', 'ikkalasi'));
+alter table users add column if not exists target_exam varchar(30)
+    check (target_exam in ('dtm', 'milliy_sertifikat', 'ikkalasi'));
+alter table users add column if not exists target_cert_level varchar(2)
+    check (target_cert_level in ('A+', 'A', 'B+', 'B', 'C+', 'C'));
+alter table users add column if not exists target_university varchar(255);
+alter table users add column if not exists self_level varchar(20)
+    check (self_level in ('boshlangich', 'orta', 'yuqori'));
+alter table users add column if not exists exam_month date;          -- imtihon oyi (oyning 1-kuni)
+alter table users add column if not exists daily_study_minutes integer
+    check (daily_study_minutes between 0 and 1440);
+alter table users add column if not exists onboarded_at timestamptz;
+
 -- -----------------------------------------------------------------------------
 -- LESSONS — DTM dasturi bo'yicha mavzular ro'yxati (sinf va fan kesimida tartiblangan)
 -- -----------------------------------------------------------------------------

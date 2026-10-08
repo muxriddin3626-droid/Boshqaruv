@@ -14,6 +14,30 @@ import {
 import { fetchWeaknessRadar } from "@/lib/api";
 import type { RadarPoint, Subject } from "@/lib/types";
 
+interface AngleTickProps {
+  x?: number | string;
+  y?: number | string;
+  textAnchor?: "start" | "middle" | "end" | "inherit";
+  payload?: { value: string };
+}
+
+// Uzun bo'lim nomlari (masalan "Hujayra biologiyasi") tor ekranda grafik
+// chetidan chiqib ketmasligi uchun har bir so'z alohida qatorga yoziladi.
+function WrappedAngleTick({ x = 0, y = 0, textAnchor = "middle", payload }: AngleTickProps) {
+  const words = (payload?.value ?? "").split(" ");
+  const lineHeight = 13;
+  const startDy = -((words.length - 1) * lineHeight) / 2;
+  return (
+    <text x={x} y={y} textAnchor={textAnchor} fill="#e5e7eb" fontSize={11}>
+      {words.map((word, index) => (
+        <tspan key={index} x={x} dy={index === 0 ? startDy : lineHeight}>
+          {word}
+        </tspan>
+      ))}
+    </text>
+  );
+}
+
 /**
  * MODUL 3: Weakness Radar — o'quvchining fan bo'limlari (masalan "Genetika",
  * "Organik kimyo") bo'yicha bilim darajasini Radar Chart ko'rinishida
@@ -60,9 +84,9 @@ export default function WeaknessRadarChart({ token, subject }: { token: string; 
   return (
     <div className="h-80 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <RadarChart data={chartData} outerRadius="75%">
+        <RadarChart data={chartData} outerRadius="65%" margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
           <PolarGrid stroke="rgba(168, 85, 247, 0.25)" />
-          <PolarAngleAxis dataKey="category" tick={{ fill: "#e5e7eb", fontSize: 12 }} />
+          <PolarAngleAxis dataKey="category" tick={<WrappedAngleTick />} />
           <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: "#6b7280", fontSize: 10 }} />
           <Radar
             name="O'zlashtirish %"

@@ -6,6 +6,7 @@ import AudioLibrary from "@/components/audio/AudioLibrary";
 import ChatWindow from "@/components/chat/ChatWindow";
 import FlashcardDeck from "@/components/flashcards/FlashcardDeck";
 import VoiceSession from "@/components/voice/VoiceSession";
+import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
 import TargetedDrill from "@/components/weakness/TargetedDrill";
 import WeaknessRadarChart from "@/components/weakness/WeaknessRadarChart";
 import { useOnlineSync } from "@/hooks/useOnlineSync";
@@ -25,9 +26,10 @@ const TABS: { key: TabKey; label: string }[] = [
  * Asosiy sahifa: fan tanlash + 3 ta bo'lim (Suhbat/Ovoz, Flashcard'lar,
  * Weakness Radar) va PDF konspekt tugmasi bir joyda.
  *
- * NOTE: `token` bu yerda Supabase Auth sessiyasidan olinishi kerak
- * (masalan, `supabase.auth.getSession()`). Bu skeletonda soddalik uchun
- * localStorage'dan o'qiladi — production'da to'liq auth oqimi bilan almashtiring.
+ * Token bo'lmasa (yangi foydalanuvchi) — kirish so'rovnomasi ko'rsatiladi; u
+ * oxirida akkaunt yaratib token qaytaradi. Token localStorage'da saqlanadi.
+ * NOTE: production'da Supabase Auth bilan to'liq login oqimi ham kerak
+ * (hozir boshqa qurilmadan shu akkauntga qayta kirish imkoni yo'q).
  */
 export default function HomePage() {
   const [subject, setSubject] = useState<Subject>("kimyo");
@@ -56,8 +58,17 @@ export default function HomePage() {
     }
 
     setToken(urlToken ?? window.localStorage.getItem("ai_ustoz_token") ?? "");
+    const savedSubject = window.localStorage.getItem("ai_ustoz_subject");
+    if (savedSubject === "kimyo" || savedSubject === "biologiya") setSubject(savedSubject);
     setIsTokenChecked(true);
   }, []);
+
+  function handleOnboarded(newToken: string, preferredSubject: Subject) {
+    window.localStorage.setItem("ai_ustoz_token", newToken);
+    window.localStorage.setItem("ai_ustoz_subject", preferredSubject);
+    setSubject(preferredSubject);
+    setToken(newToken);
+  }
 
   const { isOnline, isSyncing } = useOnlineSync(token);
 
@@ -66,15 +77,7 @@ export default function HomePage() {
   }
 
   if (!token) {
-    return (
-      <main className="flex h-screen items-center justify-center text-center text-gray-400">
-        <p>
-          Tizimga kirish tokeni topilmadi. Supabase Auth orqali login qiling va tokenni
-          <code className="mx-1 rounded bg-surface px-2 py-1">ai_ustoz_token</code>
-          nomi bilan localStorage&apos;ga saqlang.
-        </p>
-      </main>
-    );
+    return <OnboardingWizard onComplete={handleOnboarded} />;
   }
 
   async function handleDownloadConspect() {

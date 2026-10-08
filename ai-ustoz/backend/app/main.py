@@ -5,7 +5,19 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import audio, chat, conspect, exam_feedback, flashcards, progress, research, sync, voice, weakness
+from app.api.routes import (
+    audio,
+    chat,
+    conspect,
+    exam_feedback,
+    flashcards,
+    onboarding,
+    progress,
+    research,
+    sync,
+    voice,
+    weakness,
+)
 from app.core.config import get_settings
 from app.services.scheduler import shutdown_scheduler, start_scheduler
 
@@ -34,6 +46,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(onboarding.router)
 app.include_router(chat.router)
 app.include_router(voice.router)
 app.include_router(progress.router)

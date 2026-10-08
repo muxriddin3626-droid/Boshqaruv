@@ -7,7 +7,7 @@ orqali sinxronlashtiring.
 """
 import enum
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
@@ -55,6 +55,16 @@ class User(Base):
     current_grade: Mapped[int] = mapped_column(Integer, default=9)
     target_score: Mapped[int] = mapped_column(Integer, default=189)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    is_graduate: Mapped[bool] = mapped_column(Boolean, default=False)
+    subjects: Mapped[str] = mapped_column(String(20), default="ikkalasi")
+    target_exam: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    target_cert_level: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    target_university: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    self_level: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    exam_month: Mapped[date | None] = mapped_column(Date, nullable=True)
+    daily_study_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    onboarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     progress_entries: Mapped[list["Progress"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     weak_spots: Mapped[list["WeakSpot"]] = relationship(back_populates="user", cascade="all, delete-orphan")

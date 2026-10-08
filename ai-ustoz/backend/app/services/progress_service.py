@@ -48,6 +48,13 @@ async def get_student_context(db: AsyncSession, user_id: uuid.UUID, subject: str
         ],
         average_score=progress.average_score if progress else None,
         target_score=user.target_score,
+        is_graduate=user.is_graduate,
+        target_exam=user.target_exam,
+        target_cert_level=user.target_cert_level,
+        target_university=user.target_university,
+        self_level=user.self_level,
+        exam_month=user.exam_month,
+        daily_study_minutes=user.daily_study_minutes,
     )
 
 
