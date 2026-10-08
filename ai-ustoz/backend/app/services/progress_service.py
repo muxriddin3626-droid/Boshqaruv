@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.database import Lesson, Progress, User, WeakSpot
 from app.prompts.system_prompt import PlanFocus, StudentContext
 from app.prompts.system_prompt import WeakSpot as WeakSpotDTO
-from app.services import homework_service
+from app.services import homework_service, lecture_service
 from app.services import study_plan_service as plans
 from app.services.xp_service import tashkent_today
 
@@ -47,7 +47,13 @@ async def get_plan_focus(db: AsyncSession, user_id: uuid.UUID, subject: str) -> 
         topic_grade=current["grade"] if current else None,
         topic_is_new=bool(current and current["is_new"]),
         next_topic=remaining[1]["topic"] if len(remaining) > 1 else None,
+        lecture_status=await _lecture_status(db, user_id, subject, current["topic"]) if current else None,
     )
+
+
+async def _lecture_status(db: AsyncSession, user_id: uuid.UUID, subject: str, topic: str) -> str | None:
+    user = await db.get(User, user_id)
+    return await lecture_service.topic_status(db, user, subject, topic) if user else None
 
 
 async def get_student_context(db: AsyncSession, user_id: uuid.UUID, subject: str) -> StudentContext:

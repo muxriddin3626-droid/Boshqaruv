@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { mediaUrl } from "@/lib/api";
 import type { AudioLecture } from "@/lib/types";
 
 const SPEED_OPTIONS = [1, 1.25, 1.5, 1.75, 2];
@@ -62,7 +63,7 @@ export default function AudioPlayer({ lecture }: { lecture: AudioLecture }) {
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio
         ref={audioRef}
-        src={lecture.audio_url}
+        src={mediaUrl(lecture.audio_url)}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onEnded={() => setIsPlaying(false)}

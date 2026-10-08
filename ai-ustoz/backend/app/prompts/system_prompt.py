@@ -34,6 +34,7 @@ class PlanFocus:
     topic_grade: int | None = None
     topic_is_new: bool = False
     next_topic: str | None = None
+    lecture_status: str | None = None  # "completed" | "started" | None — shu mavzu audio ma'ruzasi
 
 
 @dataclass
@@ -138,6 +139,18 @@ def format_plan_block(ctx: "StudentContext") -> str:
         else:
             lines.append(
                 "- Bu mavzuni maktabda o'tgan — qisqa eslatib, tezda DTM darajasidagi masalalarga o't."
+            )
+        if plan.lecture_status == "completed":
+            lines.append(
+                "- O'quvchi bu mavzuning audio ma'ruzasini oxirigacha TINGLAGAN. Nazariyani qaytadan uzun "
+                "gapirma — 2-3 savol bilan tushunganini tekshir va tezroq masalalarga o't."
+            )
+        elif plan.lecture_status == "started":
+            lines.append("- Bu mavzu ma'ruzasini tinglashni boshlagan, lekin oxirigacha eshitmagan — tugatishni eslat.")
+        else:
+            lines.append(
+                "- Bu mavzu ma'ruzasini hali tinglamagan. Nazariyaga ko'proq vaqt ajrat yoki \"Ma'ruzalar\" "
+                "bo'limidagi audio ma'ruzani (yo'lda ham eshitsa bo'ladi) tinglashni tavsiya qil."
             )
         if plan.status == "behind":
             lines.append(

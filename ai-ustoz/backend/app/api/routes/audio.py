@@ -2,14 +2,25 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_current_user_id
+from app.db.redis_client import get_redis
 from app.db.session import get_db
 from app.models.schemas import AudioLectureGenerateIn, AudioLectureOut, AudioLectureUpdateIn, SubjectSchema
-from app.services import audio_service
+from app.models.database import UserAudioLecture
+from app.services import audio_service, media_storage
+from app.services.rate_limit import RateLimitExceededError, ensure_below_limit, register_hit
 
 router = APIRouter(prefix="/api/v1/audio-lectures", tags=["audio-lectures"])
+
+GENERATIONS_PER_HOUR = 15  # har biri pullik TTS chaqiruvi
+
+
+def _out(lecture: UserAudioLecture) -> AudioLectureOut:
+    out = AudioLectureOut.model_validate(lecture)
+    return out.model_copy(update={"audio_url": media_storage.playback_url(lecture.audio_url)})
 
 
 @router.post("/generate", response_model=AudioLectureOut)
@@ -17,8 +28,15 @@ async def generate_audio_lecture(
     payload: AudioLectureGenerateIn,
     user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
 ):
     """Ma'ruza matnini (masalan, AI Ustozning chatdagi javobini) audio(MP3)ga aylantirib, shaxsiy kutubxonaga saqlaydi."""
+    key = f"answer_audio:{user_id}"
+    try:
+        await ensure_below_limit(redis, key, GENERATIONS_PER_HOUR)
+    except RateLimitExceededError as exc:
+        raise HTTPException(status_code=429, detail="Bir soatda juda ko'p audio so'raldi. Birozdan keyin urinib ko'ring.") from exc
+    await register_hit(redis, key, 60 * 60)
     try:
         lecture = await audio_service.generate_and_store_lecture(
             db,
@@ -30,10 +48,10 @@ async def generate_audio_lecture(
             payload.lecture_summary,
             payload.voice,
         )
-    except RuntimeError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001 — TTS yoki saqlash ishlamadi
+        raise HTTPException(status_code=502, detail="Audio tayyorlab bo'lmadi. Birozdan keyin urinib ko'ring.") from exc
 
-    return AudioLectureOut.model_validate(lecture)
+    return _out(lecture)
 
 
 @router.get("", response_model=list[AudioLectureOut])
@@ -44,7 +62,7 @@ async def list_audio_lectures(
 ):
     """Shaxsiy audio kutubxona — barcha (yoki bitta fan bo'yicha) saqlangan ma'ruzalar."""
     lectures = await audio_service.list_user_lectures(db, user_id, subject.value if subject else None)
-    return [AudioLectureOut.model_validate(lecture) for lecture in lectures]
+    return [_out(lecture) for lecture in lectures]
 
 
 @router.patch("/{lecture_id}", response_model=AudioLectureOut)
@@ -60,7 +78,7 @@ async def update_audio_lecture(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    return AudioLectureOut.model_validate(lecture)
+    return _out(lecture)
 
 
 @router.delete("/{lecture_id}")

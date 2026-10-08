@@ -434,3 +434,38 @@ class Homework(Base):
     assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class TopicLecture(Base):
+    """Mavzu bo'yicha audio ma'ruza (sinf guruhi bo'yicha umumiy)."""
+
+    __tablename__ = "topic_lectures"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    subject: Mapped[str] = mapped_column(String(20), nullable=False)
+    category: Mapped[str] = mapped_column(String(100), nullable=False)
+    topic: Mapped[str] = mapped_column(String(150), nullable=False)
+    grade_band: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    sections: Mapped[list] = mapped_column(JSONB, default=list)
+    audio_ref: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    duration_seconds: Mapped[int] = mapped_column(Integer, default=0)
+    voice: Mapped[str] = mapped_column(String(20), default="onyx")
+    status: Mapped[str] = mapped_column(String(12), default="generating")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class LectureProgress(Base):
+    """O'quvchi ma'ruzaning qayerida to'xtagani."""
+
+    __tablename__ = "lecture_progress"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    lecture_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("topic_lectures.id", ondelete="CASCADE"), primary_key=True)
+    position_seconds: Mapped[int] = mapped_column(Integer, default=0)
+    completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    listen_count: Mapped[int] = mapped_column(Integer, default=0)
+    first_played_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

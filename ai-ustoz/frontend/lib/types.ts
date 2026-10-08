@@ -491,3 +491,37 @@ export interface HomeworkSubmitPayload {
   mcq_answers: Record<string, number>;
   solutions: { text: string; photo: string | null }[];
 }
+
+export interface LectureProgress {
+  position_seconds: number;
+  completed: boolean;
+  listen_count: number;
+}
+
+export interface Lecture {
+  id: string;
+  subject: Subject;
+  category: string;
+  topic: string;
+  title: string | null;
+  status: "generating" | "ready" | "failed";
+  sections: { title: string; markdown: string; start_seconds: number }[];
+  audio_url: string | null;
+  duration_seconds: number;
+  progress: LectureProgress | null;
+}
+
+export interface LectureCatalogItem {
+  category: string;
+  topic: string;
+  lecture_id: string | null;
+  status: "none" | "generating" | "ready" | "failed";
+  duration_seconds: number;
+  progress: LectureProgress | null;
+}
+
+export interface LectureCatalog {
+  subject: Subject;
+  grade_band: number;
+  items: LectureCatalogItem[];
+}

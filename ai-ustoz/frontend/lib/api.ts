@@ -12,6 +12,9 @@ import type {
   HomeworkSubmitPayload,
   HomeworkSummary,
   Leaderboard,
+  Lecture,
+  LectureCatalog,
+  LectureProgress,
   LeaderboardPeriod,
   LeaderboardScope,
   LoginResult,
@@ -41,6 +44,11 @@ import type {
 } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+
+/** Backend nisbiy havola qaytarsa (lokal saqlangan audio) — API manziliga qo'shiladi. */
+export function mediaUrl(url: string): string {
+  return url.startsWith("/") ? `${API_BASE_URL}${url}` : url;
+}
 
 function authHeaders(token: string): HeadersInit {
   return {
@@ -476,4 +484,42 @@ export async function submitHomework(token: string, id: string, payload: Homewor
   });
   if (!response.ok) throw new Error(await errorDetail(response, "Vazifani yuborib bo'lmadi"));
   return response.json();
+}
+
+export async function fetchLectureCatalog(token: string, subject: Subject): Promise<LectureCatalog> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/lectures?subject=${subject}`, { headers: authHeaders(token) });
+  return (await assertOk(response, "Ma'ruzalarni yuklab bo'lmadi")).json();
+}
+
+/** Tayyor bo'lsa — darhol; bo'lmasa status "generating" qaytadi va fonda tayyorlanadi. */
+export async function requestLecture(token: string, subject: Subject, topic: string): Promise<Lecture> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/lectures`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ subject, topic }),
+  });
+  if (!response.ok) throw new Error(await errorDetail(response, "Ma'ruzani tayyorlab bo'lmadi"));
+  return response.json();
+}
+
+export async function fetchLecture(token: string, id: string): Promise<Lecture> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/lectures/${id}`, { headers: authHeaders(token) });
+  return (await assertOk(response, "Ma'ruzani yuklab bo'lmadi")).json();
+}
+
+/** `keepalive` — sahifa yopilayotganda ham so'rov yetib borsin. */
+export async function saveLectureProgress(
+  token: string,
+  id: string,
+  positionSeconds: number,
+  ended = false,
+  keepalive = false
+): Promise<{ progress: LectureProgress; xp_awarded: number }> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/lectures/${id}/progress`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify({ position_seconds: positionSeconds, ended }),
+    keepalive,
+  });
+  return (await assertOk(response, "Joyni saqlab bo'lmadi")).json();
 }

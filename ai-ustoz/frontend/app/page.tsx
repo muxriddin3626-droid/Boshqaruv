@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-import AudioLibrary from "@/components/audio/AudioLibrary";
 import GameHub from "@/components/games/GameHub";
 import HomeworkCenter, { type HomeworkRequest } from "@/components/homework/HomeworkCenter";
+import LecturesView, { type LectureRequest } from "@/components/lectures/LecturesView";
 import LoginForm from "@/components/auth/LoginForm";
 import ChatWindow, { type LessonRequest } from "@/components/chat/ChatWindow";
 import FlashcardDeck from "@/components/flashcards/FlashcardDeck";
@@ -31,7 +31,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "reyting", label: "Reyting" },
   { key: "flashcards", label: "Flashcard'lar" },
   { key: "radar", label: "Zaif nuqtalar" },
-  { key: "audio", label: "Audio kutubxona" },
+  { key: "audio", label: "Ma'ruzalar" },
 ];
 
 /**
@@ -49,6 +49,7 @@ export default function HomePage() {
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [lessonRequest, setLessonRequest] = useState<LessonRequest | null>(null);
   const [homeworkRequest, setHomeworkRequest] = useState<HomeworkRequest | null>(null);
+  const [lectureRequest, setLectureRequest] = useState<LectureRequest | null>(null);
 
   // `token`ni useState initializer'ida emas, useEffect'da o'qiymiz: server
   // render paytida `window` mavjud emas, shuning uchun agar client'ning
@@ -212,7 +213,16 @@ export default function HomePage() {
 
       {activeTab === "reja" && (
         <section className="flex-1 overflow-y-auto rounded-2xl border border-neon-cyan/20 bg-surface/40 p-4">
-          <StudyPlanView token={token} onStartLesson={startLesson} onOpenTests={() => setActiveTab("tests")} />
+          <StudyPlanView
+            token={token}
+            onStartLesson={startLesson}
+            onListenLecture={(lectureSubject, topic) => {
+              selectSubject(lectureSubject);
+              setLectureRequest({ id: Date.now(), subject: lectureSubject, topic });
+              setActiveTab("audio");
+            }}
+            onOpenTests={() => setActiveTab("tests")}
+          />
         </section>
       )}
 
@@ -259,8 +269,13 @@ export default function HomePage() {
       )}
 
       {activeTab === "audio" && (
-        <section className="flex-1 overflow-hidden rounded-2xl border border-neon-pink/20 bg-surface/40 p-4">
-          <AudioLibrary token={token} subject={subject} />
+        <section className="flex-1 overflow-y-auto rounded-2xl border border-neon-pink/20 bg-surface/40 p-4">
+          <LecturesView
+            token={token}
+            subject={subject}
+            request={lectureRequest}
+            onRequestHandled={() => setLectureRequest(null)}
+          />
         </section>
       )}
     </main>

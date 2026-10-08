@@ -489,3 +489,38 @@ async def grade_homework_solutions(subject: str, topic: str, items: list[dict]) 
     result = json.loads(response.choices[0].message.content or "{}")
     by_n = {r["n"]: r for r in result.get("results", []) if isinstance(r, dict) and isinstance(r.get("n"), int)}
     return [by_n.get(index, {}) for index in range(len(items))]
+
+
+# --- Mavzu ma'ruzalari -------------------------------------------------------------
+
+GRADE_BAND_STYLE = {
+    1: "8-sinfgacha bo'lgan o'quvchilar: juda sodda til, kundalik hayotdan misollar, har yangi atamani izohla",
+    2: "9-10-sinf o'quvchilari: maktab darsligi tilida, keyin DTM darajasiga olib chiq",
+    3: "11-sinf va abituriyentlar: to'liq DTM / Milliy Sertifikat darajasida, tezroq sur'atda",
+}
+
+
+async def generate_lecture_script(subject: str, category: str, topic: str, grade_band: int) -> dict:
+    """
+    Audio ma'ruza ssenariysi. Har bo'limda ikki matn: `markdown` — ekranda o'qish uchun
+    (KaTeX formulalar bilan), `narration` — ovoz uchun (formulalar so'z bilan aytiladi).
+    """
+    system_instruction = (
+        "Sen AI Ustoz — DTM va Milliy Sertifikatga tayyorlovchi talabchan, lekin g'amxo'r repetitorsan. "
+        "Hozir o'quvchi quloqlari bilan tinglaydigan 7-10 daqiqalik AUDIO MA'RUZA ssenariysini yozasan. "
+        f"{QUIZ_STYLE_RULES} "
+        "Tuzilish (bo'limlar shu tartibda): 1) Kirish — mavzu nima uchun muhim, DTMda qanday keladi; "
+        "2) Asosiy tushunchalar; 3) Formulalar va qonuniyatlar (biologiyada — jarayon bosqichlari); "
+        "4) Namunaviy masala — 4 bosqichda yechim (shart, formula, hisob, javob); "
+        "5) Ko'p uchraydigan xatolar va DTM tuzoqlari; 6) Xulosa va o'zingni tekshir: 3 ta savol (javoblarini oxirida ayt). "
+        "`narration` — jonli nutq: o'quvchiga 'sen' deb murojaat, qisqa gaplar, ba'zan hazil, lekin so'kinish va "
+        "haqorat yo'q (tinglovchilar 10-17 yosh). Narrationda HECH QANDAY LaTeX, $ belgisi, markdown, jadval yoki "
+        "emoji bo'lmasin: formulalarni so'z bilan ayt (masalan $H_2SO_4$ — 'ash-ikki-es-o-to'rt, sulfat kislota', "
+        "$n = m / M$ — 'modda miqdori teng massa bo'linsin molyar massaga'). `markdown` — o'sha bo'limning ixcham "
+        "yozma konspekti, formulalar KaTeX'da. Jami narration 900-1300 so'z. Faqat JSON: "
+        '{"title": "...", "sections": [{"title": "...", "markdown": "...", "narration": "..."}]}'
+    )
+    user_content = (
+        f"Fan: {subject}\nBo'lim: {category}\nMavzu: {topic}\nTinglovchilar: {GRADE_BAND_STYLE[grade_band]}"
+    )
+    return await _generate_json(system_instruction, user_content, temperature=0.6)

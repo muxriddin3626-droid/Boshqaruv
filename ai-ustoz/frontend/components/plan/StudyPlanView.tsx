@@ -88,12 +88,14 @@ function SettingsForm({
 function TodayCard({
   plan,
   topic,
+  onListenLecture,
   onStartLesson,
   onTakeTest,
   isStartingTest,
 }: {
   plan: StudyPlan;
   topic: PlanTopic;
+  onListenLecture: () => void;
   onStartLesson: () => void;
   onTakeTest: () => void;
   isStartingTest: boolean;
@@ -118,7 +120,10 @@ function TodayCard({
           </li>
         ))}
       </ol>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-3">
+        <button onClick={onListenLecture} className="rounded-xl border border-neon-violet/60 py-2.5 text-sm text-neon-violet">
+          Ma&apos;ruzani tinglash
+        </button>
         <button onClick={onStartLesson} className="rounded-xl bg-gradient-to-br from-neon-violet to-neon-cyan py-2.5 text-sm font-semibold text-white">
           Darsni boshlash
         </button>
@@ -142,10 +147,12 @@ function TodayCard({
 export default function StudyPlanView({
   token,
   onStartLesson,
+  onListenLecture,
   onOpenTests,
 }: {
   token: string;
   onStartLesson: (subject: Subject, topic: string) => void;
+  onListenLecture: (subject: Subject, topic: string) => void;
   onOpenTests: () => void;
 }) {
   const [plan, setPlan] = useState<StudyPlan | null | undefined>(undefined);
@@ -244,6 +251,7 @@ export default function StudyPlanView({
           plan={plan}
           topic={plan.current}
           isStartingTest={isStartingTest}
+          onListenLecture={() => plan.current && onListenLecture(plan.current.subject, plan.current.topic)}
           onStartLesson={() => plan.current && onStartLesson(plan.current.subject, plan.current.topic)}
           onTakeTest={() => plan.current && takeTest(plan.current)}
         />

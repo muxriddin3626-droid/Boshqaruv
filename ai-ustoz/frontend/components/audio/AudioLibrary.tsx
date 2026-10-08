@@ -20,6 +20,8 @@ export default function AudioLibrary({ token, subject }: { token: string; subjec
     try {
       const data = await fetchAudioLectures(token, subject);
       setLectures(data);
+    } catch {
+      setLectures([]);
     } finally {
       setIsLoading(false);
     }
@@ -41,14 +43,14 @@ export default function AudioLibrary({ token, subject }: { token: string; subjec
   }
 
   if (isLoading) {
-    return <p className="text-center text-gray-500">Audio kutubxona yuklanmoqda...</p>;
+    return <p className="text-sm text-gray-500">Yuklanmoqda...</p>;
   }
 
   if (lectures.length === 0) {
     return (
-      <p className="text-center text-gray-500">
-        Hali saqlangan audio ma&apos;ruza yo&apos;q. Suhbat bo&apos;limida AI Ustoz javobi ostidagi{" "}
-        <span className="text-neon-cyan">&quot;Audio qilish&quot;</span> tugmasidan foydalaning.
+      <p className="text-sm text-gray-500">
+        Hali yo&apos;q. Suhbat bo&apos;limida AI Ustoz javobi ostidagi{" "}
+        <span className="text-neon-cyan">&quot;Audio qilish&quot;</span> tugmasi javobni shu yerga saqlaydi.
       </p>
     );
   }

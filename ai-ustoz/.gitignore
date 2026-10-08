@@ -17,3 +17,6 @@ out/
 
 # OS
 .DS_Store
+
+# Ma'ruza audio fayllari (lokal saqlash)
+backend/media/

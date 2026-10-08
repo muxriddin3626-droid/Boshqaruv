@@ -16,6 +16,8 @@ from app.api.routes import (
     games,
     homework,
     leaderboard,
+    lectures,
+    media,
     onboarding,
     plan,
     progress,
@@ -71,6 +73,8 @@ app.include_router(sync.router)
 app.include_router(exam_feedback.router)
 app.include_router(research.router)
 app.include_router(audio.router)
+app.include_router(lectures.router)
+app.include_router(media.router)
 
 
 @app.get("/health", tags=["system"])

@@ -790,3 +790,58 @@ class HomeworkSummaryOut(BaseModel):
     is_overdue: bool
     percent: int | None
     xp_earned: int
+
+
+class LectureRequestIn(BaseModel):
+    subject: SubjectSchema
+    topic: str = Field(min_length=1, max_length=150)
+
+
+class LectureProgressOut(BaseModel):
+    position_seconds: int
+    completed: bool
+    listen_count: int
+
+
+class LectureSectionOut(BaseModel):
+    title: str
+    markdown: str
+    start_seconds: float
+
+
+class LectureOut(BaseModel):
+    id: uuid.UUID
+    subject: SubjectSchema
+    category: str
+    topic: str
+    title: str | None
+    status: Literal["generating", "ready", "failed"]
+    sections: list[LectureSectionOut]
+    audio_url: str | None
+    duration_seconds: int
+    progress: LectureProgressOut | None
+
+
+class LectureCatalogItemOut(BaseModel):
+    category: str
+    topic: str
+    lecture_id: uuid.UUID | None
+    status: Literal["none", "generating", "ready", "failed"]
+    duration_seconds: int
+    progress: LectureProgressOut | None
+
+
+class LectureCatalogOut(BaseModel):
+    subject: SubjectSchema
+    grade_band: int
+    items: list[LectureCatalogItemOut]
+
+
+class LectureProgressIn(BaseModel):
+    position_seconds: float = Field(ge=0, le=24 * 3600)
+    ended: bool = False
+
+
+class LectureProgressResultOut(BaseModel):
+    progress: LectureProgressOut
+    xp_awarded: int

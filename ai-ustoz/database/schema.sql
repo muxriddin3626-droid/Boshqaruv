@@ -354,7 +354,7 @@ create table if not exists quiz_attempts (
     id              uuid primary key default uuid_generate_v4(),
     user_id         uuid not null references users(id) on delete cascade,
     kind            varchar(20) not null check (kind in
-                        ('dtm_mock', 'topic', 'milliy_sertifikat', 'millioner', 'blitz', 'matching', 'duel', 'homework')),
+                        ('dtm_mock', 'topic', 'milliy_sertifikat', 'millioner', 'blitz', 'matching', 'duel', 'homework', 'lecture')),
     subject         varchar(20) not null check (subject in ('kimyo', 'biologiya', 'ikkalasi')),
     question_ids    jsonb not null default '[]',
     answers         jsonb not null default '{}',   -- {question_id: tanlangan variant}
@@ -474,3 +474,43 @@ create table if not exists homeworks (
 create index if not exists idx_homeworks_user on homeworks(user_id, assigned_at desc);
 -- Har bir fan bo'yicha bir vaqtda bitta ochiq vazifa.
 create unique index if not exists idx_homeworks_one_open on homeworks(user_id, subject) where status = 'assigned';
+
+-- -----------------------------------------------------------------------------
+-- TOPIC_LECTURES — o'quv dasturi mavzulari bo'yicha audio ma'ruzalar. Bitta
+-- mavzu + sinf guruhi uchun bir marta tayyorlanadi va shu guruhdagi barcha
+-- o'quvchilarga beriladi (grade_band: 1 — 8-sinfgacha, 2 — 9-10, 3 — 11/bitiruvchi).
+-- `sections` — bo'limlar matni (KaTeX bilan) va audiodagi boshlanish vaqti.
+-- LECTURE_PROGRESS — har o'quvchi qayerda to'xtagani (qayta eshitishda davom etadi).
+-- -----------------------------------------------------------------------------
+alter table quiz_attempts drop constraint if exists quiz_attempts_kind_check;
+alter table quiz_attempts add constraint quiz_attempts_kind_check check (kind in
+    ('dtm_mock', 'topic', 'milliy_sertifikat', 'millioner', 'blitz', 'matching', 'duel', 'homework', 'lecture'));
+
+create table if not exists topic_lectures (
+    id                uuid primary key default uuid_generate_v4(),
+    subject           varchar(20) not null check (subject in ('kimyo', 'biologiya')),
+    category          varchar(100) not null,
+    topic             varchar(150) not null,
+    grade_band        smallint not null check (grade_band between 1 and 3),
+    title             varchar(255),
+    sections          jsonb not null default '[]',
+    audio_ref         varchar(1024),
+    duration_seconds  integer not null default 0,
+    voice             varchar(20) not null default 'onyx',
+    status            varchar(12) not null default 'generating' check (status in ('generating', 'ready', 'failed')),
+    created_at        timestamptz not null default now(),
+    updated_at        timestamptz not null default now(),
+    unique (subject, topic, grade_band)
+);
+
+create table if not exists lecture_progress (
+    user_id            uuid not null references users(id) on delete cascade,
+    lecture_id         uuid not null references topic_lectures(id) on delete cascade,
+    position_seconds   integer not null default 0,
+    completed          boolean not null default false,
+    listen_count       integer not null default 0,
+    first_played_at    timestamptz not null default now(),
+    completed_at       timestamptz,
+    updated_at         timestamptz not null default now(),
+    primary key (user_id, lecture_id)
+);

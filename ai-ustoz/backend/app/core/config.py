@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_service_role_key: str = ""
     supabase_audio_bucket: str = "audio_lectures"
+    # Supabase sozlanmagan bo'lsa audio shu papkaga yoziladi. Productionda doimiy
+    # disk (volume) bo'lishi shart — konteyner qayta ishga tushsa fayllar yo'qolmasin.
+    media_dir: str = "media"
 
     # Web-search provider (Modul 7: Autonomous Researcher) — Tavily/Serper uslubidagi
     # JSON API: POST {query} -> {results: [{title, url, content}]}. Sozlanmasa,
