@@ -8,6 +8,9 @@ import type {
   DuelState,
   Flashcard,
   FlashcardReviewResult,
+  Leaderboard,
+  LeaderboardPeriod,
+  LeaderboardScope,
   LoginResult,
   MatchingResult,
   MatchingStart,
@@ -360,6 +363,12 @@ export async function finishTest(token: string, attemptId: string): Promise<Test
 export async function fetchMyStats(token: string): Promise<MyStats> {
   const response = await fetch(`${API_BASE_URL}/api/v1/leaderboard/me`, { headers: authHeaders(token) });
   return (await assertOk(response, "Natijalarni yuklab bo'lmadi")).json();
+}
+
+export async function fetchLeaderboard(token: string, period: LeaderboardPeriod, scope: LeaderboardScope): Promise<Leaderboard> {
+  const query = new URLSearchParams({ period, scope });
+  const response = await fetch(`${API_BASE_URL}/api/v1/leaderboard?${query}`, { headers: authHeaders(token) });
+  return (await assertOk(response, "Reytingni yuklab bo'lmadi")).json();
 }
 
 async function postGame<T>(token: string, path: string, body: unknown, fallback: string): Promise<T> {

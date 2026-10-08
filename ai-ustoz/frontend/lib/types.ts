@@ -353,3 +353,23 @@ export interface DuelAnswerResult {
   explanation: string;
   duel: DuelState;
 }
+
+export type LeaderboardPeriod = "week" | "all";
+export type LeaderboardScope = "all" | "grade";
+
+export interface LeaderboardRow {
+  rank: number;
+  name: string;
+  grade: number;
+  xp: number;
+  streak: number;
+  is_me: boolean;
+}
+
+export interface Leaderboard {
+  period: LeaderboardPeriod;
+  scope: LeaderboardScope;
+  rows: LeaderboardRow[];
+  my_rank: number;
+  my_xp: number;
+}

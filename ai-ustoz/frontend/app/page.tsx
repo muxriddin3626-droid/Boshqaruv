@@ -9,6 +9,8 @@ import ChatWindow from "@/components/chat/ChatWindow";
 import FlashcardDeck from "@/components/flashcards/FlashcardDeck";
 import VoiceSession from "@/components/voice/VoiceSession";
 import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
+import LeaderboardView from "@/components/progress/LeaderboardView";
+import StatsBadge from "@/components/progress/StatsBadge";
 import TestCenter from "@/components/tests/TestCenter";
 import TargetedDrill from "@/components/weakness/TargetedDrill";
 import WeaknessRadarChart from "@/components/weakness/WeaknessRadarChart";
@@ -16,12 +18,13 @@ import { useOnlineSync } from "@/hooks/useOnlineSync";
 import { downloadLessonConspect } from "@/lib/api";
 import type { Subject } from "@/lib/types";
 
-type TabKey = "suhbat" | "tests" | "games" | "flashcards" | "radar" | "audio";
+type TabKey = "suhbat" | "tests" | "games" | "reyting" | "flashcards" | "radar" | "audio";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "suhbat", label: "Suhbat" },
   { key: "tests", label: "Testlar" },
   { key: "games", label: "O'yinlar" },
+  { key: "reyting", label: "Reyting" },
   { key: "flashcards", label: "Flashcard'lar" },
   { key: "radar", label: "Zaif nuqtalar" },
   { key: "audio", label: "Audio kutubxona" },
@@ -115,9 +118,12 @@ export default function HomePage() {
   return (
     <main className="mx-auto flex h-screen max-w-5xl flex-col gap-4 p-4 md:p-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-white">
-          AI <span className="text-neon-cyan">Ustoz</span>
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold text-white">
+            AI <span className="text-neon-cyan">Ustoz</span>
+          </h1>
+          <StatsBadge token={token} refreshKey={activeTab} onClick={() => setActiveTab("reyting")} />
+        </div>
 
         <div className="flex items-center gap-2 text-xs">
           <span
@@ -205,6 +211,12 @@ export default function HomePage() {
       {activeTab === "games" && (
         <section className="flex-1 overflow-y-auto rounded-2xl border border-neon-pink/20 bg-surface/40 p-4">
           <GameHub token={token} subject={subject} />
+        </section>
+      )}
+
+      {activeTab === "reyting" && (
+        <section className="flex-1 overflow-y-auto rounded-2xl border border-neon-violet/20 bg-surface/40 p-4">
+          <LeaderboardView token={token} />
         </section>
       )}
 
