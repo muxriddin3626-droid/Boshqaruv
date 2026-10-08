@@ -7,7 +7,7 @@
 import type { DnaInput } from "./dna";
 import type { PunnettInput } from "./punnett";
 
-export const VISUAL_LANGUAGES = new Set(["mermaid", "smiles", "atom", "punnett", "dna", "cell", "rasm"]);
+export const VISUAL_LANGUAGES = new Set(["mermaid", "smiles", "atom", "punnett", "dna", "cell", "rasm", "anatomy", "animal"]);
 
 export interface MoleculeSpec {
   smiles: string;
@@ -105,4 +105,34 @@ export function toSpeechText(markdown: string): string {
     .replace(/[*_#>`|]/g, "")
     .replace(/[ \t]{2,}/g, " ")
     .trim();
+}
+
+export interface CatalogChoice {
+  key: string;
+  highlight: string[];
+}
+
+function normalizeKey(text: string): string {
+  return text.toLowerCase().replace(/['`’ʻʼ]/g, "").replace(/[-\s]+/g, "_").trim();
+}
+
+/** Katalogdan tanlash: aniq kalit, keyin taxallus (masalan "qon tomirlari" -> qon_aylanish). */
+export function resolveCatalogKey(raw: string, catalog: Record<string, { aliases: string[] }>): string | null {
+  const wanted = normalizeKey(raw);
+  if (wanted in catalog) return wanted;
+  const plain = wanted.replace(/_/g, " ");
+  for (const [key, entry] of Object.entries(catalog)) {
+    if (entry.aliases.some((alias) => plain.includes(alias.toLowerCase().replace(/['`’ʻʼ]/g, "")))) return key;
+  }
+  return null;
+}
+
+/** ```anatomy``` / ```animal```: {"system"|"animal": "...", "highlight": [...]} yoki faqat nomi. */
+export function parseCatalogChoice(text: string, field: "system" | "animal", catalog: Record<string, { aliases: string[] }>): CatalogChoice {
+  const json = tryJson(text);
+  const raw = String(json?.[field] ?? json?.type ?? text).trim();
+  const key = resolveCatalogKey(raw, catalog);
+  if (!key) throw new Error(`Bunday chizma yo'q: ${raw}. Mavjudlari: ${Object.keys(catalog).join(", ")}`);
+  const highlight = Array.isArray(json?.highlight) ? (json.highlight as unknown[]).map((item) => String(item)) : [];
+  return { key, highlight };
 }

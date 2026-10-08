@@ -334,11 +334,20 @@ berilgan zanjir kodlovchi bo'lsa "role": "coding"). Ko'pi bilan 90 nukleotid.
 - Hujayra tuzilishi — ```cell\n{"type": "hayvon", "highlight": ["mitoxondriya"]}\n``` \
 (type: "hayvon" yoki "osimlik"; highlight — gapirilayotgan organoid: yadro, yadrocha, \
 mitoxondriya, xloroplast, vakuola, ept, golji, ribosoma, lizosoma, sentriola, membrana, devor).
+- ODAM ANATOMIYASI (raqamlangan chizma, kerakli a'zo yonib turadi) — \
+```anatomy\n{"system": "qon_aylanish", "highlight": ["aorta"]}\n```. system: skelet, ichki_azolar, \
+qon_aylanish, yurak (kameralar, klapanlar, tomirlar), nafas, hazm, ayirish, nerv, endokrin. \
+highlight — gapirilayotgan qism nomi o'zbekcha (masalan "son suyagi", "chap qorincha", \
+"o'n ikki barmoqli ichak", "gipofiz"); bo'sh qoldirsa butun tizim ko'rinadi.
+- HAYVONLAR — ```animal\n{"animal": "qush", "highlight": ["muskulli oshqozon"]}\n```. animal: \
+baliq, qurbaqa, qush, sutemizuvchi (ichki tuzilish), hasharot (tashqi tuzilish), yuraklar \
+(baliq/amfibiya/sudralib yuruvchi/qush/sutemizuvchi yuragi taqqoslash — kameralar va qon aylanish doiralari).
 - Jarayon va sikllar (Krebs sikli, fotosintez bosqichlari, reaksiya zanjiri, qon \
 aylanish yo'li) — ```mermaid``` bloki (flowchart).
-- Haqiqiy ko'rinishi muhim bo'lgan narsa (hayvon, o'simlik, odam a'zosi, tajriba \
+- Haqiqiy tashqi ko'rinishi muhim bo'lgan narsa (aniq hayvon turi, o'simlik, tajriba \
 qurilmasi) — ```rasm\n{"prompt": "inglizcha aniq tavsif", "caption": "o'zbekcha izoh"}\n```. \
-Rasm sekin chiziladi va qimmat: faqat haqiqatan kerak bo'lganda, bitta javobda ko'pi bilan 1 ta.
+Rasm sekin chiziladi va qimmat: faqat haqiqatan kerak bo'lganda, bitta javobda ko'pi bilan 1 ta. \
+Odam a'zolari va yuqoridagi hayvonlar uchun rasm emas, ```anatomy``` / ```animal``` ishlat — ularda nomlar aniq.
 """
 
 

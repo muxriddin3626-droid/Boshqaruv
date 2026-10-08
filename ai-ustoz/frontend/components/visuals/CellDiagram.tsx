@@ -4,15 +4,9 @@ import type { ReactNode } from "react";
 
 import type { CellSpec } from "@/lib/visuals/blocks";
 
-import { VisualFrame } from "./VisualFrame";
+import LabeledDiagram, { type DiagramPart } from "./LabeledDiagram";
 
-interface Organelle {
-  id: string;
-  name: string;
-  aliases: string[];
-  marker: [number, number];
-  shape: ReactNode;
-}
+type Organelle = DiagramPart;
 
 const MITO = (x: number, y: number, rotate: number) => (
   <g transform={`translate(${x} ${y}) rotate(${rotate})`}>
@@ -94,67 +88,14 @@ function plantCell(): { outline: ReactNode; organelles: Organelle[] } {
   };
 }
 
-function matches(organelle: Organelle, highlight: string[], ids: Set<string>): boolean {
-  return highlight.some((item) => {
-    const normalized = item.replace(/['`’]/g, "").trim();
-    if (organelle.id === normalized) return true;
-    // "yadrocha" so'ralsa "yadro" ham yoritilmasin: aniq nom boshqa organoidniki bo'lsa — o'tkaziladi.
-    if (ids.has(normalized)) return false;
-    return organelle.aliases.some((alias) => normalized.includes(alias.replace(/['`’]/g, "")));
-  });
-}
-
 /** Hujayra chizmasi: organoidlar raqamlangan, kerakli organoid yoritiladi (qolgani xiralashadi). */
 export default function CellDiagram({ spec }: { spec: CellSpec }) {
   const { outline, organelles } = spec.type === "osimlik" ? plantCell() : animalCell();
-  const ids = new Set(organelles.map((o) => o.id));
-  const highlighted = new Set(organelles.filter((o) => matches(o, spec.highlight, ids)).map((o) => o.id));
-  const dim = highlighted.size > 0;
   return (
-    <VisualFrame
-      title={spec.type === "osimlik" ? "O'simlik hujayrasi" : "Hayvon hujayrasi"}
-      caption={
-        <ol className="grid grid-cols-1 gap-x-4 gap-y-0.5 sm:grid-cols-2" data-testid="cell-legend">
-          {organelles.map((organelle, i) => (
-            <li key={organelle.id} className={highlighted.has(organelle.id) ? "font-bold text-neon-cyan" : dim ? "text-gray-500" : ""}>
-              {i + 1}. {organelle.name}
-            </li>
-          ))}
-        </ol>
-      }
-    >
-      <svg viewBox="0 0 400 260" className="w-full" role="img" aria-label={spec.type === "osimlik" ? "O'simlik hujayrasi chizmasi" : "Hayvon hujayrasi chizmasi"}>
-        <defs>
-          <filter id="cell-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="4" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-        {outline}
-        {organelles.map((organelle, i) =>
-          organelle.shape ? (
-            <g
-              key={organelle.id}
-              className={`visual-pop ${highlighted.has(organelle.id) ? "cell-highlight" : ""}`}
-              style={{ animationDelay: `${i * 120}ms`, opacity: dim && !highlighted.has(organelle.id) ? 0.35 : 1 }}
-              filter={highlighted.has(organelle.id) ? "url(#cell-glow)" : undefined}
-            >
-              {organelle.shape}
-            </g>
-          ) : null
-        )}
-        {organelles.map((organelle, i) => (
-          <g key={`m-${organelle.id}`} transform={`translate(${organelle.marker[0]} ${organelle.marker[1]})`}>
-            <circle r={8} fill={highlighted.has(organelle.id) ? "#22d3ee" : "#111827"} stroke="#e5e7eb" strokeWidth={1} />
-            <text textAnchor="middle" dy={3.5} fontSize={9} fontWeight={700} fill={highlighted.has(organelle.id) ? "#000" : "#fff"}>
-              {i + 1}
-            </text>
-          </g>
-        ))}
-      </svg>
-    </VisualFrame>
+    <LabeledDiagram
+      spec={{ title: spec.type === "osimlik" ? "O'simlik hujayrasi" : "Hayvon hujayrasi", viewBox: "0 0 400 260", base: outline, parts: organelles }}
+      highlight={spec.highlight}
+      testId="cell"
+    />
   );
 }

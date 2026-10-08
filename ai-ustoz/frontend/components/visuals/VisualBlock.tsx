@@ -4,11 +4,20 @@ import dynamic from "next/dynamic";
 import { useMemo } from "react";
 
 import { atom } from "@/lib/visuals/atom";
-import { parseAtoms, parseCell, parseDna, parseIllustration, parseMolecules, parsePunnett } from "@/lib/visuals/blocks";
+import {
+  parseAtoms,
+  parseCatalogChoice,
+  parseCell,
+  parseDna,
+  parseIllustration,
+  parseMolecules,
+  parsePunnett,
+} from "@/lib/visuals/blocks";
 import { analyzeDna } from "@/lib/visuals/dna";
 import { punnett } from "@/lib/visuals/punnett";
 
 import MermaidDiagram from "../chat/MermaidDiagram";
+import { ANIMAL_CHOICES, AnimalDiagram, HUMAN_SYSTEMS, HumanDiagram } from "./AnatomyDiagram";
 import AtomDiagram from "./AtomDiagram";
 import CellDiagram from "./CellDiagram";
 import DnaDiagram from "./DnaDiagram";
@@ -42,6 +51,10 @@ function parse(language: string, source: string) {
       return { kind: "cell" as const, data: parseCell(source) };
     case "rasm":
       return { kind: "rasm" as const, data: parseIllustration(source) };
+    case "anatomy":
+      return { kind: "anatomy" as const, data: parseCatalogChoice(source, "system", HUMAN_SYSTEMS) };
+    case "animal":
+      return { kind: "animal" as const, data: parseCatalogChoice(source, "animal", ANIMAL_CHOICES) };
     default:
       return { kind: "mermaid" as const, data: source };
   }
@@ -72,6 +85,10 @@ function Inner({ language, source }: { language: string; source: string }) {
       return <CellDiagram spec={parsed.data} />;
     case "rasm":
       return <Illustration spec={parsed.data} />;
+    case "anatomy":
+      return <HumanDiagram system={parsed.data.key} highlight={parsed.data.highlight} />;
+    case "animal":
+      return <AnimalDiagram animal={parsed.data.key} highlight={parsed.data.highlight} />;
     default:
       return <MermaidDiagram chart={parsed.data} />;
   }

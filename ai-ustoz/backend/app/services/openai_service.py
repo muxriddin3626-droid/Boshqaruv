@@ -521,7 +521,9 @@ async def generate_lecture_script(subject: str, category: str, topic: str, grade
         "CHIZMA bloki bo'lsin (ilova ularni o'zi chizadi): ```smiles``` (har qatorda 'SMILES | nomi'), ```atom``` "
         "(masalan 'Fe' yoki 'Na, Na+'), ```punnett``` ({\"p1\": \"Aa\", \"p2\": \"Aa\", \"traits\": {...}}), "
         "```dna``` ({\"strand\": \"TAC...\", \"kind\": \"dna\"}), ```cell``` ({\"type\": \"hayvon\"|\"osimlik\", "
-        "\"highlight\": [...]}), ```mermaid``` (jarayon/sikl sxemasi) va kerak bo'lsa bitta ```rasm``` "
+        "\"highlight\": [...]}), ```anatomy``` ({\"system\": \"skelet|ichki_azolar|qon_aylanish|yurak|nafas|hazm|"
+        "ayirish|nerv|endokrin\", \"highlight\": [...]}), ```animal``` ({\"animal\": \"baliq|qurbaqa|qush|sutemizuvchi|"
+        "hasharot|yuraklar\", \"highlight\": [...]}), ```mermaid``` (jarayon/sikl sxemasi) va kerak bo'lsa bitta ```rasm``` "
         "({\"prompt\": \"inglizcha tavsif\", \"caption\": \"o'zbekcha izoh\"}). Narrationda esa chizmani so'z bilan "
         "tasvirla ('ekrandagi chizmaga qara: ...'). Jami narration 900-1300 so'z. Faqat JSON: "
         '{"title": "...", "sections": [{"title": "...", "markdown": "...", "narration": "..."}]}'
