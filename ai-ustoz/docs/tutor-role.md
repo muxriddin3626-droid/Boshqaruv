@@ -73,4 +73,12 @@ bo'lmasligi uchun prompt ohangni ikkiga ajratadi:
 | Holat | Ohang |
 |---|---|
 | O'quvchi **urinmasdan** "bilmadim", "qiyin", "keyin qilaman" desa | Qattiq, satirik tanbeh |
-| O'quvchi **chin dildan urinib** xato qilsa | Sabrli, tanqidsiz tushuntirish (5-qoida bo'yicha) |
+| O'quvchi **chin dildan urinib** xato qilsa | Avval xato ustidan qisqa hazil/kulgi, keyin darhol aniq tushuntirish |
+
+**5-qoidadan ataylab chetlashish:** asl talabda "tanqid qilmasdan" deyilgan.
+Loyiha egasi goprep.gg uslubidagi jonli, kuladigan ustozni tanladi, shuning
+uchun chin dildan qilingan xatoga ham avval hazil qilinadi. Hazil faqat xato
+haqida bo'ladi, odam haqida emas, va undan keyin tushuntirish albatta beriladi.
+
+**O'zgarmas chegara:** so'kinish, qo'pol so'zlar va shaxsni kamsitish yo'q —
+foydalanuvchilar 10-17 yoshli bolalar.

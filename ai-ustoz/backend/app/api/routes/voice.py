@@ -11,6 +11,7 @@ from app.models.schemas import VoiceMode, VoiceSessionIn, VoiceSessionOut
 from app.prompts.debate_prompt import build_debate_system_prompt
 from app.prompts.exam_feedback_prompt import build_exam_feedback_addendum
 from app.prompts.system_prompt import build_system_prompt
+from app.prompts.voice_persona import SET_EMOTION_TOOL, VOICE_ADDENDUM
 from app.services import exam_pipeline_service, progress_service
 from app.services.openai_service import DEFAULT_VOICE_INSTRUCTIONS, create_realtime_voice_session
 
@@ -48,7 +49,9 @@ async def create_voice_session(
         instructions = (build_system_prompt(student_ctx) or DEFAULT_VOICE_INSTRUCTIONS) + exam_addendum
 
     try:
-        session = await create_realtime_voice_session(instructions=instructions)
+        session = await create_realtime_voice_session(
+            instructions=instructions + VOICE_ADDENDUM, tools=[SET_EMOTION_TOOL]
+        )
     except Exception as exc:  # noqa: BLE001 — tashqi API xatosini frontendga tarjima qilamiz
         raise HTTPException(status_code=502, detail=f"Realtime sessiya yaratib bo'lmadi: {exc}") from exc
 

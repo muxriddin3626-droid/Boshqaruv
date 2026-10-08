@@ -161,7 +161,8 @@ ai-ustoz/
 │   │   │   └── MermaidDiagram.tsx   # Mermaid.js diagrammalar
 │   │   ├── voice/
 │   │   │   ├── VoiceSession.tsx     # WebRTC ulanish, tutor/debate rejim tanlovi
-│   │   │   ├── NeonOrb.tsx          # Three.js 3D audio-reaktiv orb
+│   │   │   ├── TutorMascot.tsx      # Kayfiyati o'zgaradigan AI Ustoz yuzchasi (SVG)
+│   │   │   ├── realtimeEvents.ts    # Realtime hodisalari -> kayfiyat, subtitr
 │   │   │   └── useAudioVisualizer.ts
 │   │   ├── flashcards/
 │   │   │   └── FlashcardDeck.tsx    # Modul 1: flip-card + Esladim/Eslayolmadim
@@ -194,7 +195,7 @@ ai-ustoz/
 
 | Qatlam | Texnologiya |
 |---|---|
-| Frontend | Next.js 14 (App Router, TypeScript), Tailwind CSS, Framer Motion, KaTeX, Mermaid.js, Three.js, Recharts, IndexedDB (PWA) |
+| Frontend | Next.js 14 (App Router, TypeScript), Tailwind CSS, Framer Motion, KaTeX, Mermaid.js, Recharts, IndexedDB (PWA) |
 | Backend | Python FastAPI, OpenAI API (Chat + Realtime + Whisper + Vision + TTS + JSON mode), SQLAlchemy (async), ReportLab, APScheduler |
 | Database | PostgreSQL (Supabase) + pgvector, Redis, Supabase Storage |
 

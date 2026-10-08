@@ -165,7 +165,7 @@ export default function HomePage() {
 
       {activeTab === "suhbat" && (
         <section className="grid flex-1 grid-cols-1 gap-4 overflow-hidden md:grid-cols-3">
-          <div className="flex items-center justify-center rounded-2xl border border-neon-violet/20 bg-surface/40 md:col-span-1">
+          <div className="flex items-center justify-center rounded-2xl border border-neon-violet/20 bg-surface/40 p-4 md:col-span-1">
             <VoiceSession token={token} subject={subject} />
           </div>
           <div className="rounded-2xl border border-neon-cyan/20 bg-surface/40 p-4 md:col-span-2">

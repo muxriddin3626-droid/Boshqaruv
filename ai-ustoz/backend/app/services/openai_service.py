@@ -70,7 +70,9 @@ DEFAULT_VOICE_INSTRUCTIONS = (
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=8))
-async def create_realtime_voice_session(instructions: str = DEFAULT_VOICE_INSTRUCTIONS, voice: str = "alloy") -> dict:
+async def create_realtime_voice_session(
+    instructions: str = DEFAULT_VOICE_INSTRUCTIONS, voice: str = "alloy", tools: list[dict] | None = None
+) -> dict:
     """
     OpenAI Realtime API uchun bir martalik (ephemeral) client_secret yaratadi.
 
@@ -92,6 +94,8 @@ async def create_realtime_voice_session(instructions: str = DEFAULT_VOICE_INSTRU
                 "voice": voice,
                 "modalities": ["audio", "text"],
                 "instructions": instructions,
+                "tools": tools or [],
+                "tool_choice": "auto",
             },
         )
         response.raise_for_status()

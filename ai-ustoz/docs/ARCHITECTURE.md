@@ -63,9 +63,19 @@ O'rniga:
    to'g'ridan-to'g'ri OpenAI serveriga ulanadi (SDP offer/answer almashinuvi,
    `VoiceSession.tsx`).
 4. Kelayotgan audio track `useAudioVisualizer` hook orqali tahlil qilinadi
-   (Web Audio API `AnalyserNode`), amplituda qiymati `NeonOrb.tsx`
-   (Three.js) komponentiga uzatiladi — orb ovoz balandligiga qarab
-   kattalashadi/porlaydi.
+   (Web Audio API `AnalyserNode`), amplituda qiymati `TutorMascot.tsx`
+   yuzchasiga uzatiladi — og'iz ovoz balandligiga qarab ochilib-yopiladi.
+5. Kayfiyat: sessiyaga `set_emotion` funksiyasi (tool) beriladi
+   (`prompts/voice_persona.py`). Model har javob boshida uni chaqiradi,
+   frontend `oai-events` data channel orqali chaqiruvni ushlaydi
+   (`realtimeEvents.ts`), yuzchani almashtiradi va `function_call_output`
+   qaytaradi. Agar model faqat funksiya chaqirib gapirmasdan javobni
+   tugatsa, frontend `response.create` yuboradi (ketma-ket ko'pi bilan 2
+   marta — cheksiz aylanishga qarshi). Kayfiyatlar: neutral, thinking,
+   happy, laughing, shocked, angry.
+6. Sessiya 10 daqiqa bilan cheklangan (Realtime API daqiqasiga pullik).
+   Yuzchani OpenAI kalitisiz ko'rish uchun dev rejimida `/dev/mascot`
+   sahifasi bor (production'da 404).
 
 ## 5. Eksklyuziv modullar (Flashcards, Debate, Radar, PDF, Offline Sync)
 
