@@ -424,3 +424,70 @@ export interface StudyPlan {
   topics: PlanTopic[];
   weeks: PlanWeek[];
 }
+
+export interface HomeworkStep {
+  step: string;
+  ok: boolean;
+  comment: string;
+}
+
+export interface HomeworkProblemReview {
+  problem: string;
+  answer: string;
+  solution_steps: string[];
+  score: number;
+  max_score: number;
+  final_answer_correct: boolean;
+  steps: HomeworkStep[];
+  mistake: string;
+  comment: string;
+  has_photo: boolean;
+}
+
+export interface HomeworkMcqReview {
+  question_id: string;
+  question: string;
+  options: string[];
+  choice: number | null;
+  correct_index: number;
+  correct: boolean;
+  explanation: string;
+}
+
+export interface Homework {
+  id: string;
+  subject: Subject;
+  category: string;
+  topic: string;
+  status: "assigned" | "checked";
+  assigned_at: string;
+  due_at: string;
+  is_overdue: boolean;
+  questions: { id: string; question: string; options: string[] }[];
+  problems: string[];
+  submissions: { text: string; has_photo: boolean }[] | null;
+  result: { percent: number; mcq: HomeworkMcqReview[]; problems: HomeworkProblemReview[] } | null;
+  score: number | null;
+  max_score: number | null;
+  xp_earned: number;
+  is_late: boolean;
+  checked_at: string | null;
+  server_now: string;
+}
+
+export interface HomeworkSummary {
+  id: string;
+  subject: Subject;
+  topic: string;
+  status: "assigned" | "checked";
+  assigned_at: string;
+  due_at: string;
+  is_overdue: boolean;
+  percent: number | null;
+  xp_earned: number;
+}
+
+export interface HomeworkSubmitPayload {
+  mcq_answers: Record<string, number>;
+  solutions: { text: string; photo: string | null }[];
+}

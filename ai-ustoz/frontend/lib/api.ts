@@ -8,6 +8,9 @@ import type {
   DuelState,
   Flashcard,
   FlashcardReviewResult,
+  Homework,
+  HomeworkSubmitPayload,
+  HomeworkSummary,
   Leaderboard,
   LeaderboardPeriod,
   LeaderboardScope,
@@ -441,5 +444,36 @@ export async function updatePlan(token: string, payload: PlanSettingsPayload): P
     body: JSON.stringify(payload),
   });
   if (!response.ok) throw new Error(await errorDetail(response, "Rejani saqlab bo'lmadi"));
+  return response.json();
+}
+
+export async function fetchHomeworkList(token: string): Promise<HomeworkSummary[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/homework`, { headers: authHeaders(token) });
+  return (await assertOk(response, "Vazifalarni yuklab bo'lmadi")).json();
+}
+
+/** Shu fan bo'yicha ochiq vazifa bo'lsa — o'sha qaytadi, aks holda yangisi tuziladi. */
+export async function assignHomework(token: string, subject: Subject, topic?: string): Promise<Homework> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/homework`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ subject, topic: topic ?? null }),
+  });
+  if (!response.ok) throw new Error(await errorDetail(response, "Vazifa olib bo'lmadi"));
+  return response.json();
+}
+
+export async function fetchHomework(token: string, id: string): Promise<Homework> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/homework/${id}`, { headers: authHeaders(token) });
+  return (await assertOk(response, "Vazifani yuklab bo'lmadi")).json();
+}
+
+export async function submitHomework(token: string, id: string, payload: HomeworkSubmitPayload): Promise<Homework> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/homework/${id}/submit`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(await errorDetail(response, "Vazifani yuborib bo'lmadi"));
   return response.json();
 }

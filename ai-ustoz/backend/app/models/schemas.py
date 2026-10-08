@@ -700,3 +700,93 @@ class PlanOut(BaseModel):
     lesson_outline: list[LessonPartOut]
     topics: list[PlanTopicOut]
     weeks: list[PlanWeekOut]
+
+
+class HomeworkCreateIn(BaseModel):
+    subject: SubjectSchema
+    topic: str | None = Field(default=None, max_length=150)
+
+
+class HomeworkSolutionIn(BaseModel):
+    text: str = Field(default="", max_length=4000)
+    # data:image/jpeg;base64,... — frontend rasmni ~1600px gacha kichraytirib yuboradi
+    photo: str | None = Field(default=None, max_length=4_500_000)
+
+
+class HomeworkSubmitIn(BaseModel):
+    mcq_answers: dict[str, int] = Field(default_factory=dict, max_length=20)
+    solutions: list[HomeworkSolutionIn] = Field(default_factory=list, max_length=5)
+
+
+class HomeworkQuestionOut(BaseModel):
+    id: str
+    question: str
+    options: list[str]
+
+
+class HomeworkStepOut(BaseModel):
+    step: str
+    ok: bool
+    comment: str
+
+
+class HomeworkMcqReviewOut(BaseModel):
+    question_id: str
+    question: str
+    options: list[str]
+    choice: int | None
+    correct_index: int
+    correct: bool
+    explanation: str
+
+
+class HomeworkProblemReviewOut(BaseModel):
+    problem: str
+    answer: str
+    solution_steps: list[str]
+    score: int
+    max_score: int
+    final_answer_correct: bool
+    steps: list[HomeworkStepOut]
+    mistake: str
+    comment: str
+    has_photo: bool
+
+
+class HomeworkResultOut(BaseModel):
+    percent: int
+    mcq: list[HomeworkMcqReviewOut]
+    problems: list[HomeworkProblemReviewOut]
+
+
+class HomeworkOut(BaseModel):
+    id: uuid.UUID
+    subject: SubjectSchema
+    category: str
+    topic: str
+    status: Literal["assigned", "checked"]
+    assigned_at: datetime
+    due_at: datetime
+    is_overdue: bool
+    questions: list[HomeworkQuestionOut]
+    problems: list[str]  # faqat shart — javob va yechim tekshiruvdan keyin `result`da
+    submissions: list[dict] | None
+    result: HomeworkResultOut | None
+    score: float | None
+    max_score: float | None
+    xp_earned: int
+    is_late: bool
+    checked_at: datetime | None
+    server_now: datetime
+
+
+class HomeworkSummaryOut(BaseModel):
+    id: uuid.UUID
+    subject: SubjectSchema
+    topic: str
+    status: Literal["assigned", "checked"]
+    assigned_at: datetime
+    due_at: datetime
+    is_overdue: bool
+    percent: int | None
+    xp_earned: int

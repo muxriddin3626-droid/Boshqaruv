@@ -37,6 +37,18 @@ class PlanFocus:
 
 
 @dataclass
+class HomeworkFocus:
+    """Uyga vazifa holati (homework_service hisoblaydi)."""
+
+    pending_topic: str | None = None
+    pending_overdue: bool = False
+    last_topic: str | None = None
+    last_percent: int | None = None
+    last_was_late: bool = False
+    last_mistakes: tuple[str, ...] = ()
+
+
+@dataclass
 class StudentContext:
     full_name: str
     subject: str  # "Kimyo" | "Biologiya"
@@ -54,6 +66,7 @@ class StudentContext:
     exam_month: date | None = None
     daily_study_minutes: int | None = None
     plan: PlanFocus | None = None
+    homework: HomeworkFocus | None = None
 
 
 EXAM_LABELS = {"dtm": "DTM (BMBA)", "milliy_sertifikat": "Milliy Sertifikat", "ikkalasi": "DTM va Milliy Sertifikat"}
@@ -145,6 +158,37 @@ def format_plan_block(ctx: "StudentContext") -> str:
         "ber, keyin rejaga qaytar. Mavzuni o'zlashtirgach, \"Reja\" bo'limidagi mavzu testini "
         "topshirishni ayt: 70% va undan yuqori natija bilan reja keyingi mavzuga o'tadi.\n"
     )
+
+
+def format_homework_block(ctx: "StudentContext") -> str:
+    hw = ctx.homework
+    lines: list[str] = []
+    if hw and hw.pending_topic and hw.pending_overdue:
+        lines.append(
+            f'- "{hw.pending_topic}" bo\'yicha uyga vazifani MUDDATIDA BAJARMAGAN. Dars boshida buni so\'ra: '
+            "dangasalik bo'lsa — qattiq (lekin haqoratsiz) tanbeh ber va bugunoq \"Uy vazifasi\" bo'limida "
+            "topshirishni talab qil."
+        )
+    elif hw and hw.pending_topic:
+        lines.append(
+            f'- "{hw.pending_topic}" bo\'yicha uyga vazifa berilgan, muddati hali o\'tmagan. Dars oxirida eslatib qo\'y.'
+        )
+    if hw and hw.last_topic is not None and hw.last_percent is not None:
+        line = f'- Oxirgi uyga vazifa ("{hw.last_topic}") tekshirildi: {hw.last_percent}%.'
+        if hw.last_was_late:
+            line += " Kechikib topshirgan."
+        if hw.last_mistakes:
+            line += " Asosiy xatolari: " + "; ".join(hw.last_mistakes) + "."
+        lines.append(line)
+        lines.append(
+            "- Agar suhbatda hali muhokama qilinmagan bo'lsa, dars boshida shu natijani qisqa tahlil qil: "
+            "yaxshi bo'lsa maqta, xato bo'lsa — o'sha turdagi bitta masala berib, xatoni tuzattir."
+        )
+    lines.append(
+        "- Mavzu tushuntirilib, masalalar ishlangach (dars oxirida) o'quvchiga \"Uyga vazifa olish\" tugmasini "
+        "bosishni ayt — vazifani AI Ustoz o'zi tuzadi va tekshiradi. O'zing chatda alohida uyga vazifa ro'yxati yozma."
+    )
+    return "UYGA VAZIFA:\n" + "\n".join(lines) + "\n"
 
 
 def format_grade_block(ctx: "StudentContext") -> str:
@@ -306,6 +350,7 @@ JORIY O'QUVCHI HAQIDA MA'LUMOT:
 
 {goal_block}
 {format_plan_block(ctx)}
+{format_homework_block(ctx)}
 {format_grade_block(ctx)}
 O'QUVCHINING DOIMIY XATO QILADIGAN MAVZULARI (weak_spots):
 {format_weak_spots(ctx.weak_spots)}

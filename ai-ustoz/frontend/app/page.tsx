@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import AudioLibrary from "@/components/audio/AudioLibrary";
 import GameHub from "@/components/games/GameHub";
+import HomeworkCenter, { type HomeworkRequest } from "@/components/homework/HomeworkCenter";
 import LoginForm from "@/components/auth/LoginForm";
 import ChatWindow, { type LessonRequest } from "@/components/chat/ChatWindow";
 import FlashcardDeck from "@/components/flashcards/FlashcardDeck";
@@ -19,11 +20,12 @@ import { useOnlineSync } from "@/hooks/useOnlineSync";
 import { downloadLessonConspect } from "@/lib/api";
 import type { Subject } from "@/lib/types";
 
-type TabKey = "suhbat" | "reja" | "tests" | "games" | "reyting" | "flashcards" | "radar" | "audio";
+type TabKey = "suhbat" | "reja" | "homework" | "tests" | "games" | "reyting" | "flashcards" | "radar" | "audio";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "suhbat", label: "Suhbat" },
   { key: "reja", label: "Reja" },
+  { key: "homework", label: "Uy vazifasi" },
   { key: "tests", label: "Testlar" },
   { key: "games", label: "O'yinlar" },
   { key: "reyting", label: "Reyting" },
@@ -46,6 +48,7 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<TabKey>("suhbat");
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [lessonRequest, setLessonRequest] = useState<LessonRequest | null>(null);
+  const [homeworkRequest, setHomeworkRequest] = useState<HomeworkRequest | null>(null);
 
   // `token`ni useState initializer'ida emas, useEffect'da o'qiymiz: server
   // render paytida `window` mavjud emas, shuning uchun agar client'ning
@@ -198,6 +201,10 @@ export default function HomePage() {
               subject={subject}
               lessonRequest={lessonRequest}
               onLessonRequestHandled={() => setLessonRequest(null)}
+              onRequestHomework={() => {
+                setHomeworkRequest({ id: Date.now(), subject });
+                setActiveTab("homework");
+              }}
             />
           </div>
         </section>
@@ -206,6 +213,17 @@ export default function HomePage() {
       {activeTab === "reja" && (
         <section className="flex-1 overflow-y-auto rounded-2xl border border-neon-cyan/20 bg-surface/40 p-4">
           <StudyPlanView token={token} onStartLesson={startLesson} onOpenTests={() => setActiveTab("tests")} />
+        </section>
+      )}
+
+      {activeTab === "homework" && (
+        <section className="flex-1 overflow-y-auto rounded-2xl border border-neon-pink/20 bg-surface/40 p-4">
+          <HomeworkCenter
+            token={token}
+            subject={subject}
+            request={homeworkRequest}
+            onRequestHandled={() => setHomeworkRequest(null)}
+          />
         </section>
       )}
 

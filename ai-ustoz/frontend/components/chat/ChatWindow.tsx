@@ -12,6 +12,9 @@ const SUBJECT_LABELS: Record<Subject, string> = {
   biologiya: "Biologiya",
 };
 
+// Kamida 2 savol-javobdan keyin (dars boshlangach) uyga vazifa taklif qilinadi.
+const MESSAGES_BEFORE_HOMEWORK = 4;
+
 /** "Reja" bo'limidan kelgan "Darsni boshlash" so'rovi (`id` — har bosishda yangi). */
 export interface LessonRequest {
   id: number;
@@ -27,12 +30,15 @@ export default function ChatWindow({
   subject,
   lessonRequest = null,
   onLessonRequestHandled,
+  onRequestHomework,
 }: {
   token: string;
   subject: Subject;
   lessonRequest?: LessonRequest | null;
   /** Chaqiruvchi so'rovni tozalaydi — bo'lim qayta ochilganda dars ikkinchi marta boshlanmasin. */
   onLessonRequestHandled?: () => void;
+  /** Dars oxirida "Uyga vazifa olish" — Uy vazifasi bo'limini ochadi. */
+  onRequestHomework?: () => void;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -145,6 +151,15 @@ export default function ChatWindow({
           );
         })}
       </div>
+
+      {onRequestHomework && messages.length >= MESSAGES_BEFORE_HOMEWORK && !isSending && (
+        <button
+          onClick={onRequestHomework}
+          className="mt-2 self-center rounded-full border border-neon-pink/50 px-4 py-1.5 text-xs font-semibold text-neon-pink"
+        >
+          Darsni tugatdim — uyga vazifa olish
+        </button>
+      )}
 
       <div className="mt-3 flex gap-2">
         <textarea

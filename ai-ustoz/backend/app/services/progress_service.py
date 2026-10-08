@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.database import Lesson, Progress, User, WeakSpot
 from app.prompts.system_prompt import PlanFocus, StudentContext
 from app.prompts.system_prompt import WeakSpot as WeakSpotDTO
+from app.services import homework_service
 from app.services import study_plan_service as plans
 from app.services.xp_service import tashkent_today
 
@@ -90,6 +91,7 @@ async def get_student_context(db: AsyncSession, user_id: uuid.UUID, subject: str
         exam_month=user.exam_month,
         daily_study_minutes=user.daily_study_minutes,
         plan=await get_plan_focus(db, user_id, subject),
+        homework=await homework_service.prompt_focus(db, user_id, subject, datetime.now(timezone.utc)),
     )
 
 

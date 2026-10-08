@@ -354,7 +354,7 @@ create table if not exists quiz_attempts (
     id              uuid primary key default uuid_generate_v4(),
     user_id         uuid not null references users(id) on delete cascade,
     kind            varchar(20) not null check (kind in
-                        ('dtm_mock', 'topic', 'milliy_sertifikat', 'millioner', 'blitz', 'matching', 'duel')),
+                        ('dtm_mock', 'topic', 'milliy_sertifikat', 'millioner', 'blitz', 'matching', 'duel', 'homework')),
     subject         varchar(20) not null check (subject in ('kimyo', 'biologiya', 'ikkalasi')),
     question_ids    jsonb not null default '[]',
     answers         jsonb not null default '{}',   -- {question_id: tanlangan variant}
@@ -437,3 +437,40 @@ create table if not exists study_plans (
     created_at  timestamptz not null default now(),
     updated_at  timestamptz not null default now()
 );
+
+-- -----------------------------------------------------------------------------
+-- HOMEWORKS — darsdan keyin beriladigan uyga vazifa: test qismi (savollar
+-- bankidan, avtomatik tekshiriladi) + yozma masalalar (AI tuzadi va mustaqil
+-- yechib tasdiqlaydi; o'quvchi yechimini matn yoki daftar rasmi bilan yuboradi,
+-- AI bosqichma-bosqich tekshiradi). `problems` ichidagi javob va yechim
+-- tekshiruvdan oldin o'quvchiga yuborilmaydi. XP `quiz_attempts`ga
+-- kind='homework' yozuvi orqali tushadi (haftalik reyting shu jadvaldan).
+-- -----------------------------------------------------------------------------
+alter table quiz_attempts drop constraint if exists quiz_attempts_kind_check;
+alter table quiz_attempts add constraint quiz_attempts_kind_check check (kind in
+    ('dtm_mock', 'topic', 'milliy_sertifikat', 'millioner', 'blitz', 'matching', 'duel', 'homework'));
+
+create table if not exists homeworks (
+    id            uuid primary key default uuid_generate_v4(),
+    user_id       uuid not null references users(id) on delete cascade,
+    subject       varchar(20) not null check (subject in ('kimyo', 'biologiya')),
+    category      varchar(100) not null,
+    topic         varchar(150) not null,
+    status        varchar(10) not null default 'assigned' check (status in ('assigned', 'checked')),
+    question_ids  jsonb not null default '[]',
+    problems      jsonb not null default '[]',   -- [{problem, answer, solution_steps}]
+    answers       jsonb,                         -- test javoblari {question_id: variant}
+    submissions   jsonb,                         -- [{text, has_photo}]
+    result        jsonb,                         -- tekshiruv natijasi va izohlar
+    score         numeric(5, 1),
+    max_score     numeric(5, 1),
+    xp_earned     integer not null default 0,
+    is_late       boolean not null default false,
+    assigned_at   timestamptz not null default now(),
+    due_at        timestamptz not null,
+    checked_at    timestamptz
+);
+
+create index if not exists idx_homeworks_user on homeworks(user_id, assigned_at desc);
+-- Har bir fan bo'yicha bir vaqtda bitta ochiq vazifa.
+create unique index if not exists idx_homeworks_one_open on homeworks(user_id, subject) where status = 'assigned';

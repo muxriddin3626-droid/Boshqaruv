@@ -409,3 +409,28 @@ class StudyPlan(Base):
     completed: Mapped[dict] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class Homework(Base):
+    """Uyga vazifa: test qismi + AI tekshiradigan yozma masalalar."""
+
+    __tablename__ = "homeworks"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    subject: Mapped[str] = mapped_column(String(20), nullable=False)
+    category: Mapped[str] = mapped_column(String(100), nullable=False)
+    topic: Mapped[str] = mapped_column(String(150), nullable=False)
+    status: Mapped[str] = mapped_column(String(10), default="assigned")
+    question_ids: Mapped[list] = mapped_column(JSONB, default=list)
+    problems: Mapped[list] = mapped_column(JSONB, default=list)
+    answers: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    submissions: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    result: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    xp_earned: Mapped[int] = mapped_column(Integer, default=0)
+    is_late: Mapped[bool] = mapped_column(Boolean, default=False)
+    assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

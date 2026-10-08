@@ -14,6 +14,7 @@ from app.api.routes import (
     exam_feedback,
     flashcards,
     games,
+    homework,
     leaderboard,
     onboarding,
     plan,
@@ -58,6 +59,7 @@ app.include_router(plan.router)
 app.include_router(leaderboard.router)
 app.include_router(tests.router)
 app.include_router(games.router)
+app.include_router(homework.router)
 app.include_router(duels.router)
 app.include_router(chat.router)
 app.include_router(voice.router)
