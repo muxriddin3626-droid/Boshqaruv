@@ -1,9 +1,9 @@
 """
-Audio fayllarni saqlash: Supabase Storage sozlangan bo'lsa — o'sha yerga (ommaviy
+Media fayllarni (ma'ruza audiosi, dars rasmlari) saqlash: Supabase Storage sozlangan bo'lsa — o'sha yerga (ommaviy
 URL), aks holda serverning o'z diskiga (`MEDIA_DIR`).
 
 Lokal fayllar ochiq emas: ular vaqtinchalik imzoli havola
-(`/api/v1/media/audio/<yo'l>?exp=...&sig=...`) orqali beriladi — `<audio>` tegi
+(`/api/v1/media/files/<yo'l>?exp=...&sig=...`) orqali beriladi — `<audio>` tegi
 Authorization sarlavhasini yubora olmaydi, shuning uchun ruxsat havolaning
 o'zida (HMAC) bo'ladi. Havola nisbiy: frontend uni API manziliga qo'shadi.
 
@@ -24,7 +24,7 @@ settings = get_settings()
 
 LOCAL_PREFIX = "local:"
 SIGNED_URL_TTL_SECONDS = 6 * 60 * 60
-MEDIA_ROUTE = "/api/v1/media/audio/"
+MEDIA_ROUTE = "/api/v1/media/files/"
 
 
 def media_root() -> Path:
@@ -37,6 +37,11 @@ def _uses_supabase() -> bool:
 
 async def save_audio(relative_path: str, data: bytes) -> str:
     """MP3'ni saqlaydi va bazaga yoziladigan ref qaytaradi."""
+    return await save_file(relative_path, data, "audio/mpeg")
+
+
+async def save_file(relative_path: str, data: bytes, content_type: str) -> str:
+    """Faylni saqlaydi va bazaga yoziladigan ref qaytaradi."""
     if _uses_supabase():
         upload_url = f"{settings.supabase_url}/storage/v1/object/{settings.supabase_audio_bucket}/{relative_path}"
         async with httpx.AsyncClient(timeout=60.0) as http_client:
@@ -46,7 +51,7 @@ async def save_audio(relative_path: str, data: bytes) -> str:
                 headers={
                     "Authorization": f"Bearer {settings.supabase_service_role_key}",
                     "apikey": settings.supabase_service_role_key,
-                    "Content-Type": "audio/mpeg",
+                    "Content-Type": content_type,
                     "x-upsert": "true",
                 },
             )
@@ -82,7 +87,7 @@ def verify_signature(relative_path: str, expires: int, signature: str, now: floa
 
 
 def playback_url(ref: str, now: float | None = None) -> str:
-    """Brauzer ijro eta oladigan havola: Supabase URL o'zi, lokal fayl uchun imzoli nisbiy havola."""
+    """Brauzer ochadigan havola: Supabase URL o'zi, lokal fayl uchun imzoli nisbiy havola."""
     if not ref.startswith(LOCAL_PREFIX):
         return ref
     relative_path = ref[len(LOCAL_PREFIX):]

@@ -144,6 +144,7 @@ export default function ChatWindow({
             <MessageBubble
               key={index}
               message={message}
+              isStreaming={isStreamingThisMessage}
               onGenerateAudio={
                 message.role === "assistant" && !isStreamingThisMessage ? handleGenerateAudio : undefined
               }

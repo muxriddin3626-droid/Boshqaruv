@@ -469,3 +469,18 @@ class LectureProgress(Base):
     first_played_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Illustration(Base):
+    """AI chizgan dars rasmi (tavsif xeshi bo'yicha umumiy kesh)."""
+
+    __tablename__ = "illustrations"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    prompt_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    subject: Mapped[str] = mapped_column(String(20), nullable=False)
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    image_ref: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    status: Mapped[str] = mapped_column(String(12), default="generating")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

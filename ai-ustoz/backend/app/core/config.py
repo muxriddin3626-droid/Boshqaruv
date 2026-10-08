@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     openai_vision_model: str = "gpt-4o"  # rasmdan savol OCR/tiklash uchun (Modul 6)
     openai_whisper_model: str = "whisper-1"  # ovozdan matnga (Modul 6)
     openai_tts_model: str = "tts-1"  # ma'ruzani audio(TTS)ga aylantirish (Modul 8)
+    openai_image_model: str = "gpt-image-1"  # darsdagi rasmlar (illyustratsiyalar)
+    # Rasm chizish pullik (~$0.04): bitta o'quvchiga va butun platformaga kunlik chegara.
+    illustrations_per_user_per_day: int = 15
+    illustrations_global_per_day: int = 300
 
     # Database
     database_url: str

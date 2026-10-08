@@ -15,6 +15,7 @@ from app.api.routes import (
     flashcards,
     games,
     homework,
+    illustrations,
     leaderboard,
     lectures,
     media,
@@ -75,6 +76,7 @@ app.include_router(research.router)
 app.include_router(audio.router)
 app.include_router(lectures.router)
 app.include_router(media.router)
+app.include_router(illustrations.router)
 
 
 @app.get("/health", tags=["system"])

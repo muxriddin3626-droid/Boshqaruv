@@ -845,3 +845,14 @@ class LectureProgressIn(BaseModel):
 class LectureProgressResultOut(BaseModel):
     progress: LectureProgressOut
     xp_awarded: int
+
+
+class IllustrationRequestIn(BaseModel):
+    subject: SubjectSchema
+    prompt: str = Field(min_length=3, max_length=400)
+
+
+class IllustrationOut(BaseModel):
+    id: uuid.UUID
+    status: Literal["generating", "ready", "failed"]
+    image_url: str | None

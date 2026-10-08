@@ -38,6 +38,7 @@ MIN_SECTIONS, MAX_SECTIONS = 3, 10
 DEFAULT_VOICE = "onyx"
 
 _NARRATION_JUNK = re.compile(r"[$\\`*#|_]+")
+_CODE_BLOCK = re.compile(r"```.*?(```|$)", re.DOTALL)
 _background_tasks: set[asyncio.Task] = set()
 
 
@@ -62,7 +63,8 @@ def normalize_script(raw: dict) -> tuple[str, list[dict]] | None:
         title = str(section.get("title") or "").strip()[:120]
         markdown = str(section.get("markdown") or "").strip()
         # Ovozda belgi o'qilib qolmasin: model LaTeX/markdown qoldirsa ham tozalanadi.
-        narration = _NARRATION_JUNK.sub(" ", str(section.get("narration") or "")).strip()
+        narration = _CODE_BLOCK.sub(" ", str(section.get("narration") or ""))  # chizma JSON'i o'qilmasin
+        narration = _NARRATION_JUNK.sub(" ", narration).strip()
         narration = re.sub(r"[ \t]{2,}", " ", narration)
         if title and markdown and narration:
             sections.append({"title": title, "markdown": markdown, "narration": narration})

@@ -1,4 +1,5 @@
 """Chat endpoint — matnli suhbat, streaming javob bilan."""
+import json
 import uuid
 from datetime import date
 
@@ -75,7 +76,8 @@ async def send_chat_message(
         full_response = ""
         async for delta in stream_chat_response(system_prompt, history, payload.message, rag_context):
             full_response += delta
-            yield f"data: {delta}\n\n"
+            # JSON: bo'lak ichidagi "\n\n" (paragraf, ``` chizma bloki) SSE ajratgichi bilan aralashmasin.
+            yield f"data: {json.dumps(delta, ensure_ascii=False)}\n\n"
 
         # Suhbat tugagach: qisqa muddatli Redis tarixini yangilaymiz
         await session_service.append_message(user_id, subject, "user", payload.message)

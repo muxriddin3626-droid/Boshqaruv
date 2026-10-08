@@ -444,11 +444,9 @@ create table if not exists study_plans (
 -- yechib tasdiqlaydi; o'quvchi yechimini matn yoki daftar rasmi bilan yuboradi,
 -- AI bosqichma-bosqich tekshiradi). `problems` ichidagi javob va yechim
 -- tekshiruvdan oldin o'quvchiga yuborilmaydi. XP `quiz_attempts`ga
--- kind='homework' yozuvi orqali tushadi (haftalik reyting shu jadvaldan).
+-- kind='homework' yozuvi orqali tushadi (haftalik reyting shu jadvaldan;
+-- `quiz_attempts_kind_check` cheklovi pastda, ma'ruzalar bo'limida yangilanadi).
 -- -----------------------------------------------------------------------------
-alter table quiz_attempts drop constraint if exists quiz_attempts_kind_check;
-alter table quiz_attempts add constraint quiz_attempts_kind_check check (kind in
-    ('dtm_mock', 'topic', 'milliy_sertifikat', 'millioner', 'blitz', 'matching', 'duel', 'homework'));
 
 create table if not exists homeworks (
     id            uuid primary key default uuid_generate_v4(),
@@ -513,4 +511,20 @@ create table if not exists lecture_progress (
     completed_at       timestamptz,
     updated_at         timestamptz not null default now(),
     primary key (user_id, lecture_id)
+);
+
+-- -----------------------------------------------------------------------------
+-- ILLUSTRATIONS — darsda AI chizgan rasmlar (hayvon, o'simlik, a'zo, tajriba
+-- qurilmasi). Bir xil tavsif (fan + matn xeshi) bo'yicha bir marta chiziladi
+-- va hamma o'quvchiga qayta beriladi.
+-- -----------------------------------------------------------------------------
+create table if not exists illustrations (
+    id           uuid primary key default uuid_generate_v4(),
+    prompt_hash  varchar(64) not null unique,
+    subject      varchar(20) not null check (subject in ('kimyo', 'biologiya')),
+    prompt       text not null,
+    image_ref    varchar(1024),
+    status       varchar(12) not null default 'generating' check (status in ('generating', 'ready', 'failed')),
+    created_at   timestamptz not null default now(),
+    updated_at   timestamptz not null default now()
 );

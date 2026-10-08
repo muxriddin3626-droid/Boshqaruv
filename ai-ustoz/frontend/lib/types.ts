@@ -525,3 +525,9 @@ export interface LectureCatalog {
   grade_band: number;
   items: LectureCatalogItem[];
 }
+
+export interface IllustrationState {
+  id: string;
+  status: "generating" | "ready" | "failed";
+  image_url: string | null;
+}

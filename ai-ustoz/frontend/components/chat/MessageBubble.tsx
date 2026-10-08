@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { useState } from "react";
 
 import type { ChatMessage } from "@/lib/types";
+import { toSpeechText } from "@/lib/visuals/blocks";
 
 import MarkdownRenderer from "./MarkdownRenderer";
 
@@ -11,9 +12,11 @@ interface MessageBubbleProps {
   message: ChatMessage;
   /** MODUL 8: berilsa, assistant xabarlari ostida "Audio qilish" tugmasi chiqadi. */
   onGenerateAudio?: (content: string) => Promise<void>;
+  /** Javob hali kelayotgan bo'lsa chizmalar chizilmaydi (blok chala bo'lishi mumkin). */
+  isStreaming?: boolean;
 }
 
-export default function MessageBubble({ message, onGenerateAudio }: MessageBubbleProps) {
+export default function MessageBubble({ message, onGenerateAudio, isStreaming = false }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
 
@@ -21,7 +24,8 @@ export default function MessageBubble({ message, onGenerateAudio }: MessageBubbl
     if (!onGenerateAudio || isGeneratingAudio) return;
     setIsGeneratingAudio(true);
     try {
-      await onGenerateAudio(message.content);
+      // Chizma bloklari va formulalar ovozda o'qilmasin.
+      await onGenerateAudio(toSpeechText(message.content));
     } finally {
       setIsGeneratingAudio(false);
     }
@@ -41,7 +45,7 @@ export default function MessageBubble({ message, onGenerateAudio }: MessageBubbl
           <p className="whitespace-pre-wrap">{message.content}</p>
         ) : (
           <>
-            <MarkdownRenderer content={message.content} />
+            <MarkdownRenderer content={message.content} isStreaming={isStreaming} />
             {onGenerateAudio && message.content && (
               <button
                 onClick={handleGenerateAudio}

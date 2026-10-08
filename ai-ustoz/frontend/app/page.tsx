@@ -14,6 +14,7 @@ import StudyPlanView from "@/components/plan/StudyPlanView";
 import LeaderboardView from "@/components/progress/LeaderboardView";
 import StatsBadge from "@/components/progress/StatsBadge";
 import TestCenter from "@/components/tests/TestCenter";
+import { VisualContext } from "@/components/visuals/VisualContext";
 import TargetedDrill from "@/components/weakness/TargetedDrill";
 import WeaknessRadarChart from "@/components/weakness/WeaknessRadarChart";
 import { useOnlineSync } from "@/hooks/useOnlineSync";
@@ -129,6 +130,7 @@ export default function HomePage() {
   }
 
   return (
+    <VisualContext.Provider value={{ token, subject }}>
     <main className="mx-auto flex h-screen max-w-5xl flex-col gap-4 p-4 md:p-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -279,5 +281,6 @@ export default function HomePage() {
         </section>
       )}
     </main>
+    </VisualContext.Provider>
   );
 }

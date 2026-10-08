@@ -517,10 +517,40 @@ async def generate_lecture_script(subject: str, category: str, topic: str, grade
         "haqorat yo'q (tinglovchilar 10-17 yosh). Narrationda HECH QANDAY LaTeX, $ belgisi, markdown, jadval yoki "
         "emoji bo'lmasin: formulalarni so'z bilan ayt (masalan $H_2SO_4$ — 'ash-ikki-es-o-to'rt, sulfat kislota', "
         "$n = m / M$ — 'modda miqdori teng massa bo'linsin molyar massaga'). `markdown` — o'sha bo'limning ixcham "
-        "yozma konspekti, formulalar KaTeX'da. Jami narration 900-1300 so'z. Faqat JSON: "
+        "yozma konspekti, formulalar KaTeX'da, reaksiyalar $\\ce{...}$ (mhchem). Konspektda mavzuga mos 2-4 ta "
+        "CHIZMA bloki bo'lsin (ilova ularni o'zi chizadi): ```smiles``` (har qatorda 'SMILES | nomi'), ```atom``` "
+        "(masalan 'Fe' yoki 'Na, Na+'), ```punnett``` ({\"p1\": \"Aa\", \"p2\": \"Aa\", \"traits\": {...}}), "
+        "```dna``` ({\"strand\": \"TAC...\", \"kind\": \"dna\"}), ```cell``` ({\"type\": \"hayvon\"|\"osimlik\", "
+        "\"highlight\": [...]}), ```mermaid``` (jarayon/sikl sxemasi) va kerak bo'lsa bitta ```rasm``` "
+        "({\"prompt\": \"inglizcha tavsif\", \"caption\": \"o'zbekcha izoh\"}). Narrationda esa chizmani so'z bilan "
+        "tasvirla ('ekrandagi chizmaga qara: ...'). Jami narration 900-1300 so'z. Faqat JSON: "
         '{"title": "...", "sections": [{"title": "...", "markdown": "...", "narration": "..."}]}'
     )
     user_content = (
         f"Fan: {subject}\nBo'lim: {category}\nMavzu: {topic}\nTinglovchilar: {GRADE_BAND_STYLE[grade_band]}"
     )
     return await _generate_json(system_instruction, user_content, temperature=0.6)
+
+
+# --- Dars rasmlari ----------------------------------------------------------------
+
+SUBJECT_EN = {"kimyo": "chemistry", "biologiya": "biology"}
+
+
+async def generate_illustration(subject: str, description: str) -> bytes:
+    """Darslik uslubidagi rasm (JPEG). Matn/yozuv chizilmaydi — izoh rasm ostida o'zbekcha beriladi."""
+    prompt = (
+        f"Educational illustration for a school {SUBJECT_EN.get(subject, 'science')} lesson (students aged 10-17). "
+        "Scientifically accurate, clean textbook style, light neutral background, soft colors, friendly and not scary. "
+        "Absolutely no text, letters, numbers, labels or watermarks in the image. "
+        f"Depict: {description}"
+    )
+    response = await client.images.generate(
+        model=settings.openai_image_model,
+        prompt=prompt,
+        size="1024x1024",
+        n=1,
+        # gpt-image-1 parametrlari kutubxonaning eski versiyasida yo'q — so'rov tanasiga qo'shiladi.
+        extra_body={"quality": "medium", "output_format": "jpeg", "output_compression": 80, "moderation": "auto"},
+    )
+    return base64.b64decode(response.data[0].b64_json)

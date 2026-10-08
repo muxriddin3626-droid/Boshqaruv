@@ -11,6 +11,7 @@ import type {
   Homework,
   HomeworkSubmitPayload,
   HomeworkSummary,
+  IllustrationState,
   Leaderboard,
   Lecture,
   LectureCatalog,
@@ -66,6 +67,16 @@ async function assertOk(response: Response, errorMessage: string): Promise<Respo
  * Backendga xabar yuboradi va SSE oqimini o'qib, har bir matn bo'lagini
  * (delta) `onDelta` callback orqali qaytaradi. Oqim tugagach `onDone` chaqiriladi.
  */
+/** Backend har bo'lakni JSON satr qilib yuboradi (ichidagi yangi qatorlar SSE'ni buzmasin). */
+function decodeChunk(raw: string): string {
+  try {
+    const value = JSON.parse(raw);
+    return typeof value === "string" ? value : raw;
+  } catch {
+    return raw;
+  }
+}
+
 export async function streamChatMessage(
   token: string,
   subject: Subject,
@@ -101,7 +112,7 @@ export async function streamChatMessage(
         return;
       }
       if (line.startsWith("data: ")) {
-        onDelta(line.slice("data: ".length));
+        onDelta(decodeChunk(line.slice("data: ".length)));
       }
     }
   }
@@ -522,4 +533,20 @@ export async function saveLectureProgress(
     keepalive,
   });
   return (await assertOk(response, "Joyni saqlab bo'lmadi")).json();
+}
+
+/** Keshda bo'lsa — tayyor rasm; aks holda "generating" (fonda chiziladi). */
+export async function requestIllustration(token: string, subject: Subject, prompt: string): Promise<IllustrationState> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/illustrations`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ subject, prompt }),
+  });
+  if (!response.ok) throw new Error(await errorDetail(response, "Rasm chizib bo'lmadi"));
+  return response.json();
+}
+
+export async function fetchIllustration(token: string, id: string): Promise<IllustrationState> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/illustrations/${id}`, { headers: authHeaders(token) });
+  return (await assertOk(response, "Rasmni yuklab bo'lmadi")).json();
 }
