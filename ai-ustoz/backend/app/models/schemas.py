@@ -877,3 +877,31 @@ class PhotoOut(BaseModel):
     license: str | None = None
     license_url: str | None = None
     source_url: str | None = None
+
+
+class TextbookAccessOut(BaseModel):
+    is_admin: bool
+    max_mb: int
+    ocr_max_pages: int
+
+
+class TextbookOut(BaseModel):
+    id: uuid.UUID
+    subject: str
+    grade: int
+    title: str
+    filename: str
+    size_bytes: int
+    use_ocr: bool
+    status: Literal["queued", "processing", "ready", "failed"]
+    stage: str | None
+    progress_done: int
+    progress_total: int
+    pages_total: int
+    pages_text: int
+    pages_ocr: int
+    pages_skipped: int
+    chunks_count: int
+    error: str | None
+    created_at: datetime
+    updated_at: datetime

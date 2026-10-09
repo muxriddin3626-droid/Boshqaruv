@@ -549,3 +549,35 @@ create table if not exists photos (
     created_at   timestamptz not null default now(),
     updated_at   timestamptz not null default now()
 );
+
+-- -----------------------------------------------------------------------------
+-- TEXTBOOKS — admin ilova orqali yuklagan darsliklar (PDF). Fonda matn ajratiladi
+-- (skaner sahifalar OCR qilinadi), bo'laklarga bo'linib knowledge_chunks ga yoziladi.
+-- Darslik o'chirilsa uning bo'laklari ham o'chadi.
+-- -----------------------------------------------------------------------------
+create table if not exists textbooks (
+    id             uuid primary key default uuid_generate_v4(),
+    subject        varchar(20) not null check (subject in ('kimyo', 'biologiya')),
+    grade          integer not null check (grade between 5 and 11),
+    title          varchar(200) not null,
+    filename       varchar(255) not null,
+    file_path      varchar(512) not null,
+    size_bytes     bigint not null,
+    use_ocr        boolean not null default true,
+    status         varchar(12) not null default 'queued' check (status in ('queued', 'processing', 'ready', 'failed')),
+    stage          varchar(20),
+    progress_done  integer not null default 0,
+    progress_total integer not null default 0,
+    pages_total    integer not null default 0,
+    pages_text     integer not null default 0,
+    pages_ocr      integer not null default 0,
+    pages_skipped  integer not null default 0,
+    chunks_count   integer not null default 0,
+    error          text,
+    uploaded_by    uuid references users(id) on delete set null,
+    created_at     timestamptz not null default now(),
+    updated_at     timestamptz not null default now()
+);
+
+alter table knowledge_chunks add column if not exists textbook_id uuid references textbooks(id) on delete cascade;
+create index if not exists idx_knowledge_chunks_textbook on knowledge_chunks(textbook_id);

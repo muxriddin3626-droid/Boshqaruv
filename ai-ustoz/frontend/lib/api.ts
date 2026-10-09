@@ -13,6 +13,9 @@ import type {
   HomeworkSummary,
   IllustrationState,
   PhotoState,
+  Textbook,
+  TextbookAccess,
+  TextbookUpload,
   Leaderboard,
   Lecture,
   LectureCatalog,
@@ -566,4 +569,56 @@ export async function requestPhoto(token: string, subject: Subject, query: strin
 export async function fetchPhoto(token: string, id: string): Promise<PhotoState> {
   const response = await fetch(`${API_BASE_URL}/api/v1/photos/${id}`, { headers: authHeaders(token) });
   return (await assertOk(response, "Rasmni yuklab bo'lmadi")).json();
+}
+
+export async function fetchTextbookAccess(token: string): Promise<TextbookAccess> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/textbooks/access`, { headers: authHeaders(token) });
+  return (await assertOk(response, "Huquqni tekshirib bo'lmadi")).json();
+}
+
+export async function fetchTextbooks(token: string): Promise<Textbook[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/textbooks`, { headers: authHeaders(token) });
+  return (await assertOk(response, "Darsliklar ro'yxatini olib bo'lmadi")).json();
+}
+
+/** XMLHttpRequest — fetch yuklash foizini bermaydi, katta PDF uchun esa progress kerak. */
+export function uploadTextbook(token: string, upload: TextbookUpload, onProgress: (fraction: number) => void): Promise<Textbook> {
+  return new Promise((resolve, reject) => {
+    const form = new FormData();
+    form.append("file", upload.file);
+    form.append("subject", upload.subject);
+    form.append("grade", String(upload.grade));
+    form.append("title", upload.title);
+    form.append("use_ocr", upload.useOcr ? "true" : "false");
+    const request = new XMLHttpRequest();
+    request.open("POST", `${API_BASE_URL}/api/v1/textbooks`);
+    request.setRequestHeader("Authorization", `Bearer ${token}`);
+    request.upload.onprogress = (event) => event.lengthComputable && onProgress(event.loaded / event.total);
+    request.onload = () => {
+      let body: { detail?: unknown } | Textbook | null = null;
+      try {
+        body = JSON.parse(request.responseText);
+      } catch {
+        body = null;
+      }
+      if (request.status >= 200 && request.status < 300 && body) resolve(body as Textbook);
+      else {
+        const detail = body && "detail" in body && typeof body.detail === "string" ? body.detail : null;
+        reject(new Error(detail ?? `Yuklab bo'lmadi (${request.status})`));
+      }
+    };
+    request.onerror = () => reject(new Error("Internet aloqasi uzildi — qayta urinib ko'ring"));
+    request.send(form);
+  });
+}
+
+export async function retryTextbook(token: string, id: string): Promise<Textbook> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/textbooks/${id}/retry`, { method: "POST", headers: authHeaders(token) });
+  if (!response.ok) throw new Error(await errorDetail(response, "Qayta urinib bo'lmadi"));
+  return response.json();
+}
+
+export async function deleteTextbook(token: string, id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/textbooks/${id}`, { method: "DELETE", headers: authHeaders(token) });
+  if (!response.ok) throw new Error(await errorDetail(response, "O'chirib bo'lmadi"));
 }

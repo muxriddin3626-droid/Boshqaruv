@@ -1,5 +1,13 @@
 # Fayllar papkasi — bu yerga yuklang
 
+> **Eng oson yo'l — ilovaning o'zi:** administrator ilovada **"Darsliklar"** bo'limini
+> ochadi, PDF ni tanlaydi (fan, sinf, nomi) va "Yuklash" ni bosadi. Server darslikni
+> o'zi o'qiydi, skanerlangan sahifalarni OCR qiladi va bilim bazasiga yozadi.
+> Administratorlar backend `.env` dagi `ADMIN_PHONES` (telefon raqamlari, vergul bilan)
+> orqali belgilanadi. Fayl hajmi chegarasi — `TEXTBOOK_MAX_MB` (standart 100 MB).
+>
+> Quyidagi GitHub/skript usuli ham ishlaydi (skript faqat matnli PDF uchun, OCR qilmaydi).
+
 Bu papka AI Ustoz bilim bazasini to'ldirish uchun **manba fayllar** joyi.
 GitHub orqali to'g'ridan-to'g'ri yuklashingiz mumkin (chatning 30 MB
 cheklovi bu yerda yo'q).

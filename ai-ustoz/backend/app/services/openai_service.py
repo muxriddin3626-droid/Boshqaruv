@@ -569,3 +569,26 @@ async def is_image_unsafe_for_kids(image: bytes, mime: str) -> bool:
         input=[{"type": "image_url", "image_url": {"url": data_url}}],
     )
     return bool(response.results and response.results[0].flagged)
+
+
+async def ocr_textbook_page(image_bytes: bytes, mime_type: str = "image/jpeg") -> str:
+    """Skanerlangan darslik sahifasini (GPT-4o vision) matnga o'giradi — bilim bazasi (RAG) uchun."""
+    data_url = f"data:{mime_type};base64,{base64.b64encode(image_bytes).decode('utf-8')}"
+    response = await client.chat.completions.create(
+        model=settings.openai_vision_model,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "Sen darslik sahifasini matnga o'giruvchi OCR yordamchisan. Sahifadagi BUTUN matnni "
+                    "o'qilish tartibida, o'z tilida (o'zbekcha lotin yoki kirill — qanday bo'lsa shunday), so'zma-so'z "
+                    "yoz: sarlavhalar, ta'riflar, formulalar (oddiy matn: H2SO4, 2H2 + O2 -> 2H2O), jadvallar "
+                    "(qatorma-qator). Rasm yoki sxema bo'lsa, bitta qatorda [Rasm: ...] deb qisqa tasvirla. "
+                    "Sahifa raqami, kolontitul va o'zingdan izoh yozma. Matn bo'lmasa — bo'sh javob qaytar."
+                ),
+            },
+            {"role": "user", "content": [{"type": "image_url", "image_url": {"url": data_url, "detail": "high"}}]},
+        ],
+        temperature=0.0,
+    )
+    return (response.choices[0].message.content or "").strip()

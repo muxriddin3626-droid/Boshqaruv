@@ -14,14 +14,15 @@ import StudyPlanView from "@/components/plan/StudyPlanView";
 import LeaderboardView from "@/components/progress/LeaderboardView";
 import StatsBadge from "@/components/progress/StatsBadge";
 import TestCenter from "@/components/tests/TestCenter";
+import TextbookManager from "@/components/textbooks/TextbookManager";
 import { VisualContext } from "@/components/visuals/VisualContext";
 import TargetedDrill from "@/components/weakness/TargetedDrill";
 import WeaknessRadarChart from "@/components/weakness/WeaknessRadarChart";
 import { useOnlineSync } from "@/hooks/useOnlineSync";
-import { downloadLessonConspect } from "@/lib/api";
-import type { Subject } from "@/lib/types";
+import { downloadLessonConspect, fetchTextbookAccess } from "@/lib/api";
+import type { Subject, TextbookAccess } from "@/lib/types";
 
-type TabKey = "suhbat" | "reja" | "homework" | "tests" | "games" | "reyting" | "flashcards" | "radar" | "audio";
+type TabKey = "suhbat" | "reja" | "homework" | "tests" | "games" | "reyting" | "flashcards" | "radar" | "audio" | "darsliklar";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "suhbat", label: "Suhbat" },
@@ -62,6 +63,22 @@ export default function HomePage() {
   const [token, setToken] = useState("");
   const [isTokenChecked, setIsTokenChecked] = useState(false);
   const [authMode, setAuthMode] = useState<"register" | "login">("register");
+  // "Darsliklar" bo'limi faqat administratorlarga ko'rinadi (server ADMIN_PHONES bo'yicha aytadi).
+  const [textbookAccess, setTextbookAccess] = useState<TextbookAccess | null>(null);
+
+  useEffect(() => {
+    if (!token) {
+      setTextbookAccess(null);
+      return;
+    }
+    let isCancelled = false;
+    fetchTextbookAccess(token)
+      .then((access) => !isCancelled && setTextbookAccess(access))
+      .catch(() => !isCancelled && setTextbookAccess(null));
+    return () => {
+      isCancelled = true;
+    };
+  }, [token]);
 
   useEffect(() => {
     // Mobil qurilmalarda Developer Tools/Console ochish qulay bo'lmagani
@@ -172,7 +189,7 @@ export default function HomePage() {
       </header>
 
       <nav className="flex gap-2 overflow-x-auto">
-        {TABS.map((tab) => (
+        {[...TABS, ...(textbookAccess?.is_admin ? [{ key: "darsliklar" as const, label: "Darsliklar" }] : [])].map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
@@ -267,6 +284,12 @@ export default function HomePage() {
       {activeTab === "reyting" && (
         <section className="flex-1 overflow-y-auto rounded-2xl border border-neon-violet/20 bg-surface/40 p-4">
           <LeaderboardView token={token} />
+        </section>
+      )}
+
+      {activeTab === "darsliklar" && textbookAccess?.is_admin && (
+        <section className="flex-1 overflow-y-auto rounded-2xl border border-neon-cyan/20 bg-surface/40 p-4">
+          <TextbookManager token={token} access={textbookAccess} defaultSubject={subject} />
         </section>
       )}
 

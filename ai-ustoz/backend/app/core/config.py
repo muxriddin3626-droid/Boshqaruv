@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     commons_user_agent: str = "AIUstozBot/1.0 (educational tutor app; https://github.com/muxriddin3626-droid/Boshqaruv)"
     photos_per_user_per_day: int = 40
     photos_global_per_day: int = 2000
+    # Darslik yuklash (RAG bilim bazasi). Faqat shu telefon raqamli foydalanuvchilar (vergul bilan,
+    # masalan "+998901234567,+998931112233") darslik yuklay oladi. Bo'sh bo'lsa — hech kim.
+    admin_phones: str = ""
+    textbook_max_mb: int = 100
+    # Skaner (matnsiz) sahifalarni GPT-4o vision bilan o'qish pullik: bitta darslikda ko'pi bilan shuncha sahifa.
+    textbook_ocr_max_pages: int = 400
 
     # Database
     database_url: str
@@ -71,6 +77,10 @@ class Settings(BaseSettings):
     research_scan_enabled: bool = False
     research_scan_interval_hours: int = 24
     innovation_scan_interval_hours: int = 24
+
+    @property
+    def admin_phone_set(self) -> set[str]:
+        return {phone.strip() for phone in self.admin_phones.split(",") if phone.strip()}
 
     @property
     def cors_origins_list(self) -> list[str]:

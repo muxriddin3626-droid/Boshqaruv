@@ -21,7 +21,6 @@ bosqichi kerak (bu skript OCR qilmaydi).
 """
 import argparse
 import asyncio
-import re
 import sys
 from pathlib import Path
 
@@ -31,55 +30,20 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from openai import AsyncOpenAI  # noqa: E402
-from pypdf import PdfReader  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 
 from app.core.config import get_settings  # noqa: E402
 from app.db.session import AsyncSessionLocal  # noqa: E402
+from app.services.textbook_service import build_chunks, read_text_pages  # noqa: E402
 
-CHUNK_SIZE = 1000
-CHUNK_OVERLAP = 150
 EMBEDDING_BATCH_SIZE = 100
 
 SUBJECT_LABELS = {"kimyo": "Kimyo", "biologiya": "Biologiya"}
 
 
 def extract_pages(pdf_path: Path) -> list[tuple[int, str]]:
-    """Har bir sahifadan matn chiqaradi, bo'sh (masalan, sof rasm) sahifalarni tashlab ketadi."""
-    reader = PdfReader(str(pdf_path))
-    pages: list[tuple[int, str]] = []
-    for i, page in enumerate(reader.pages, start=1):
-        raw = page.extract_text() or ""
-        cleaned = re.sub(r"[ \t]+", " ", raw).strip()
-        if cleaned:
-            pages.append((i, cleaned))
-    return pages
-
-
-def build_chunks(pages: list[tuple[int, str]]) -> list[tuple[int, str]]:
-    """Har bir sahifa matnini (page_num, chunk_text) juftliklariga bo'ladi.
-
-    Chunk chegaralari CHUNK_SIZE atrofida, imkon qadar gap oxirida (". ")
-    kesiladi; ketma-ket chunk'lar CHUNK_OVERLAP belgi bilan ustma-ust
-    tushadi (bo'lim chegarasida kontekst uzilib qolmasligi uchun).
-    """
-    chunks: list[tuple[int, str]] = []
-    for page_num, page_text in pages:
-        start = 0
-        length = len(page_text)
-        while start < length:
-            end = min(start + CHUNK_SIZE, length)
-            if end < length:
-                boundary = page_text.rfind(". ", start, end)
-                if boundary != -1 and boundary > start + CHUNK_SIZE // 2:
-                    end = boundary + 1
-            chunk = page_text[start:end].strip()
-            if chunk:
-                chunks.append((page_num, chunk))
-            if end >= length:
-                break
-            start = max(end - CHUNK_OVERLAP, start + 1)
-    return chunks
+    """Matn qatlami bor sahifalar: (sahifa, matn). Skaner sahifalar uchun ilovadagi "Darsliklar" bo'limi OCR qiladi."""
+    return read_text_pages(pdf_path)[1]
 
 
 async def embed_batch(client: AsyncOpenAI, model: str, texts: list[str]) -> list[list[float]]:

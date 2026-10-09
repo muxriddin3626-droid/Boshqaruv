@@ -543,3 +543,40 @@ export interface PhotoState {
   license_url?: string | null;
   source_url?: string | null;
 }
+
+export interface TextbookAccess {
+  is_admin: boolean;
+  max_mb: number;
+  ocr_max_pages: number;
+}
+
+/** Bilim bazasiga yuklangan darslik: fonda matn ajratiladi, skaner sahifalar OCR qilinadi. */
+export interface Textbook {
+  id: string;
+  subject: Subject;
+  grade: number;
+  title: string;
+  filename: string;
+  size_bytes: number;
+  use_ocr: boolean;
+  status: "queued" | "processing" | "ready" | "failed";
+  stage: "matn" | "ocr" | "embedding" | null;
+  progress_done: number;
+  progress_total: number;
+  pages_total: number;
+  pages_text: number;
+  pages_ocr: number;
+  pages_skipped: number;
+  chunks_count: number;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TextbookUpload {
+  file: File;
+  subject: Subject;
+  grade: number;
+  title: string;
+  useOcr: boolean;
+}

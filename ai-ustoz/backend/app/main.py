@@ -26,11 +26,13 @@ from app.api.routes import (
     research,
     sync,
     tests,
+    textbooks,
     voice,
     weakness,
 )
 from app.core.config import get_settings
 from app.services.scheduler import shutdown_scheduler, start_scheduler
+from app.services.textbook_service import recover_interrupted
 
 settings = get_settings()
 
@@ -38,6 +40,7 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     start_scheduler()  # Modul 7: RESEARCH_SCAN_ENABLED=true bo'lsagina fon vazifalarini boshlaydi
+    await recover_interrupted()  # yarim qolgan darslik yuklashlari "xato" holatiga o'tadi
     yield
     shutdown_scheduler()
 
@@ -79,6 +82,7 @@ app.include_router(lectures.router)
 app.include_router(media.router)
 app.include_router(illustrations.router)
 app.include_router(photos.router)
+app.include_router(textbooks.router)
 
 
 @app.get("/health", tags=["system"])
