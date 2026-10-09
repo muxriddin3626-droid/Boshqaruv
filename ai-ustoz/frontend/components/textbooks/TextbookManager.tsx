@@ -126,7 +126,10 @@ export default function TextbookManager({ token, access, defaultSubject }: { tok
           <h2 className="text-base font-semibold text-white">Ilova ichida {bundled.length} ta darslik tayyor turibdi</h2>
           <p className="mt-1 text-xs text-gray-300">{bundled.join(", ")}</p>
           <p className="mt-1 text-[11px] text-gray-400">
-            Bir bosishda hammasi AI Ustoz bilim bazasiga qo&apos;shiladi. Skanerlangan kitoblarni o&apos;qish (OCR) pullik — pastdagi belgi bilan boshqariladi.
+            Bir bosishda hammasi AI Ustoz bilim bazasiga qo&apos;shiladi.{" "}
+            {access.ocr_free
+              ? "Skanerlangan kitoblar ham bepul o'qiladi, faqat sekinroq (bitta kitob ~15-30 daqiqa)."
+              : "Skanerlangan kitoblarni o'qish (OCR) pullik — pastdagi belgi bilan boshqariladi."}
           </p>
           <button
             type="button"
@@ -191,7 +194,8 @@ export default function TextbookManager({ token, access, defaultSubject }: { tok
           <label className="flex items-start gap-2 text-xs text-gray-300">
             <input type="checkbox" checked={useOcr} onChange={(e) => setUseOcr(e.target.checked)} className="mt-0.5" />
             <span>
-              Skanerlangan (rasm ko&apos;rinishidagi) sahifalarni ham o&apos;qish (OCR). Pullik: ~1 sahifa ≈ 1 sent, bitta darslikda ko&apos;pi bilan {access.ocr_max_pages} sahifa.
+              Skanerlangan (rasm ko&apos;rinishidagi) sahifalarni ham o&apos;qish (OCR).{" "}
+              {access.ocr_free ? "Bepul" : "Pullik: ~1 sahifa ≈ 1 sent"}, bitta darslikda ko&apos;pi bilan {access.ocr_max_pages} sahifa.
             </span>
           </label>
           {uploadProgress !== null ? (

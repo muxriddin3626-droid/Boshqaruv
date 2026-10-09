@@ -548,6 +548,8 @@ export interface TextbookAccess {
   is_admin: boolean;
   max_mb: number;
   ocr_max_pages: number;
+  /** Skaner sahifalar serverning o'zida bepul o'qiladi (Tesseract). */
+  ocr_free?: boolean;
   /** Ilova ichida tayyor turgan, hali bilim bazasiga qo'shilmagan darsliklar nomlari. */
   bundled_pending: string[];
 }

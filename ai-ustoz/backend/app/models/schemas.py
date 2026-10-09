@@ -883,6 +883,7 @@ class TextbookAccessOut(BaseModel):
     is_admin: bool
     max_mb: int
     ocr_max_pages: int
+    ocr_free: bool = False  # skaner sahifalar bepul (Tesseract) o'qiladi
     # Ilova ichida (repoda) tayyor turgan, lekin hali bilim bazasiga qo'shilmagan darsliklar (faqat adminga).
     bundled_pending: list[str] = []
 

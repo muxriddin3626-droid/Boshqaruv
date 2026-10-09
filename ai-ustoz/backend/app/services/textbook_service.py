@@ -42,6 +42,10 @@ EMBEDDING_BATCH_SIZE = 100
 MIN_TEXT_CHARS = 40
 OCR_CONCURRENCY = 4
 OCR_MAX_SIDE = 1600
+# Tesseract protsessorda ishlaydi: kichik serverda bir vaqtda 2 tadan ko'p sahifa xotirani to'ldiradi.
+TESSERACT_CONCURRENCY = 2
+TESSERACT_MIN_SIDE = 1400  # mayda skanlar kattalashtiriladi — harflar aniqroq taniladi
+TESSERACT_TIMEOUT_SECONDS = 180
 
 _lock = asyncio.Lock()
 _background_tasks: set[asyncio.Task] = set()
@@ -117,6 +121,39 @@ def page_image(pdf_path: Path, page_number: int) -> tuple[bytes, str] | None:
     return out.getvalue(), "image/jpeg"
 
 
+def uses_free_ocr() -> bool:
+    """Bepul Tesseract ishlatiladimi (sozlamada tanlangan va serverda o'rnatilgan)."""
+    return settings.textbook_ocr_engine == "tesseract" and shutil.which("tesseract") is not None
+
+
+def tesseract_page(pdf_path: Path, page_number: int) -> str:
+    """Skaner sahifani serverning o'zida, bepul o'qiydi (Tesseract, o'zbek tili)."""
+    import subprocess
+
+    from PIL import Image
+
+    reader = PdfReader(str(pdf_path))
+    images = reader.pages[page_number - 1].images
+    if not images:
+        return ""
+    largest = max(images, key=lambda image: len(image.data))
+    picture = Image.open(io.BytesIO(largest.data)).convert("L")
+    if max(picture.size) < TESSERACT_MIN_SIDE:
+        scale = TESSERACT_MIN_SIDE / max(picture.size)
+        picture = picture.resize((round(picture.width * scale), round(picture.height * scale)), Image.LANCZOS)
+    png = io.BytesIO()
+    picture.save(png, format="PNG")
+    result = subprocess.run(
+        ["tesseract", "stdin", "stdout", "-l", settings.textbook_ocr_lang, "--psm", "3"],
+        input=png.getvalue(),
+        capture_output=True,
+        timeout=TESSERACT_TIMEOUT_SECONDS,
+        env={**os.environ, "OMP_THREAD_LIMIT": "1"},
+        check=True,
+    )
+    return result.stdout.decode("utf-8", errors="ignore")
+
+
 # --- Fon jarayoni ----------------------------------------------------------------------
 
 
@@ -127,12 +164,15 @@ async def _set(textbook_id: uuid.UUID, **values) -> None:
 
 
 async def _ocr_pages(textbook_id: uuid.UUID, pdf_path: Path, numbers: list[int]) -> list[tuple[int, str]]:
-    semaphore = asyncio.Semaphore(OCR_CONCURRENCY)
+    free = uses_free_ocr()
+    semaphore = asyncio.Semaphore(TESSERACT_CONCURRENCY if free else OCR_CONCURRENCY)
     done = 0
 
     async def one(number: int) -> tuple[int, str]:
         async with semaphore:
             try:
+                if free:
+                    return number, await asyncio.to_thread(tesseract_page, pdf_path, number)
                 found = await asyncio.to_thread(page_image, pdf_path, number)
                 if found is None:
                     return number, ""

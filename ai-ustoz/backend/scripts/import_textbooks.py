@@ -54,7 +54,8 @@ async def main(args: argparse.Namespace) -> None:
         total_ocr += ocr
         kind = "skaner" if not with_text else ("aralash" if empty else "matnli")
         print(f"  {book['title']:<38} {book['subject']:<9} {book['grade']:>2}-sinf  {total:>3} bet  {kind:<7}  OCR: {ocr} bet")
-    print(f"\nOCR jami: {total_ocr} bet ≈ ${total_ocr * OCR_COST_PER_PAGE:.2f} (taxminan). Embedding narxi juda kichik (sentlar).")
+    cost = "bepul (Tesseract)" if textbook_service.uses_free_ocr() else f"≈ ${total_ocr * OCR_COST_PER_PAGE:.2f} (taxminan)"
+    print(f"\nOCR jami: {total_ocr} bet, {cost}. Embedding narxi juda kichik (sentlar).")
     if args.dry_run:
         print("\n--dry-run: hech narsa yozilmadi.")
         return

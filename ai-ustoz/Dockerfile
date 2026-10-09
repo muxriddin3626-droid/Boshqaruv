@@ -21,6 +21,11 @@ FROM python:3.12-slim
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1 WEB_DIR=/app/web SCHEMA_DIR=/app/database TEXTBOOKS_DIR=/data/textbooks MEDIA_DIR=/app/media
 
+# Tesseract — skaner darslik sahifalarini serverning o'zida bepul o'qish (o'zbek tili paketi bilan).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-uzb \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

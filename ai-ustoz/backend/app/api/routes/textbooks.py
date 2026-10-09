@@ -40,7 +40,7 @@ def _out(textbook: Textbook) -> TextbookOut:
 async def access(user_id: uuid.UUID = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     is_admin = await _is_admin(db, user_id)
     pending = [book["title"] for book in await textbook_service.pending_bundled()] if is_admin else []
-    return TextbookAccessOut(is_admin=is_admin, max_mb=settings.textbook_max_mb, ocr_max_pages=settings.textbook_ocr_max_pages, bundled_pending=pending)
+    return TextbookAccessOut(is_admin=is_admin, max_mb=settings.textbook_max_mb, ocr_max_pages=settings.textbook_ocr_max_pages, ocr_free=textbook_service.uses_free_ocr(), bundled_pending=pending)
 
 
 @router.post("/import-bundled", response_model=TextbookImportOut, status_code=202)

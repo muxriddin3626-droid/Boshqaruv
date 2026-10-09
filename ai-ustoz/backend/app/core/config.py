@@ -28,8 +28,12 @@ class Settings(BaseSettings):
     # masalan "+998901234567,+998931112233") darslik yuklay oladi. Bo'sh bo'lsa — hech kim.
     admin_phones: str = ""
     textbook_max_mb: int = 100
-    # Skaner (matnsiz) sahifalarni GPT-4o vision bilan o'qish pullik: bitta darslikda ko'pi bilan shuncha sahifa.
+    # Skaner (matnsiz) sahifalarni o'qish (OCR): bitta darslikda ko'pi bilan shuncha sahifa.
     textbook_ocr_max_pages: int = 400
+    # "tesseract" — bepul, serverning o'zida (o'zbek tili paketi bilan); "openai" — GPT-4o vision, pullik
+    # (~1 sent/sahifa), formulalarni aniqroq o'qiydi. Tesseract o'rnatilmagan bo'lsa, openai ishlatiladi.
+    textbook_ocr_engine: str = "tesseract"
+    textbook_ocr_lang: str = "uzb"
 
     # Database
     database_url: str

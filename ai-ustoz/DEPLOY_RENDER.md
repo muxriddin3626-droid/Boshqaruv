@@ -16,7 +16,7 @@ Hammasi telefon brauzeridan (Chrome yoki Safari) qilinadi, terminal kerak emas.
 | Render server (Starter) + 1 GB disk | ~7,25 $/oy |
 | Render baza (Postgres, basic-256mb) | ~6 $/oy |
 | Render Redis | bepul |
-| OpenAI | ishlatganingizcha; 12 ta darslikni bir marta o'qitish ≈ 6 $ |
+| OpenAI | ishlatganingizcha (suhbat, ovoz); darsliklarni o'qitish deyarli bepul (skaner sahifalarni server o'zi o'qiydi) |
 
 ---
 
@@ -60,7 +60,7 @@ Hammasi telefon brauzeridan (Chrome yoki Safari) qilinadi, terminal kerak emas.
 1. `ai-ustoz` xizmati sahifasining tepasidagi manzilni oching, masalan `https://ai-ustoz.onrender.com`.
 2. Ro'yxatdan o'ting. Telefon raqam **`ADMIN_PHONES` dagi bilan bir xil** bo'lsin.
 3. **"Darsliklar"** bo'limini oching (bo'limlar qatorini o'ngga suring).
-4. **"Hammasini bilim bazasiga qo'shish"** ni bosing. Hammasi 30–60 daqiqada tayyor bo'ladi; sahifani yopsangiz ham davom etadi.
+4. **"Hammasini bilim bazasiga qo'shish"** ni bosing. Hammasi 1–2 soatda tayyor bo'ladi (skaner kitoblarni server bepul, lekin sekinroq o'qiydi); sahifani yopsangiz ham davom etadi.
 
 Tamom! Sayt manzilini o'quvchilarga yuboring.
 
