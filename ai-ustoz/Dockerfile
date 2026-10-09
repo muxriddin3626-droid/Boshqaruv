@@ -19,11 +19,11 @@ RUN npm run build
 # --- 2) API ---------------------------------------------------------------------------
 FROM python:3.12-slim
 WORKDIR /app
-ENV PYTHONUNBUFFERED=1 WEB_DIR=/app/web SCHEMA_DIR=/app/database TEXTBOOKS_DIR=/data/textbooks MEDIA_DIR=/app/media
+ENV PYTHONUNBUFFERED=1 MALLOC_ARENA_MAX=2 WEB_DIR=/app/web SCHEMA_DIR=/app/database TEXTBOOKS_DIR=/data/textbooks MEDIA_DIR=/app/media
 
-# Tesseract — skaner darslik sahifalarini serverning o'zida bepul o'qish (o'zbek tili paketi bilan).
+# Tesseract — skaner darslik sahifalarini bepul o'qish (o'zbek tili); poppler (pdftoppm) — sahifani rasmga aylantirish.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-uzb \
+    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-uzb poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt .

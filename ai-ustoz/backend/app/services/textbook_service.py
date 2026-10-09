@@ -19,6 +19,8 @@ import logging
 import os
 import re
 import shutil
+import subprocess
+import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -44,7 +46,7 @@ OCR_CONCURRENCY = 4
 OCR_MAX_SIDE = 1600
 # Tesseract protsessorda ishlaydi: kichik serverda bir vaqtda 2 tadan ko'p sahifa xotirani to'ldiradi.
 TESSERACT_CONCURRENCY = 2
-TESSERACT_MIN_SIDE = 1400  # mayda skanlar kattalashtiriladi — harflar aniqroq taniladi
+TESSERACT_SIDE = 2600  # sahifaning uzun tomoni (~300 dpi): harflar aniqroq taniladi
 TESSERACT_TIMEOUT_SECONDS = 180
 
 _lock = asyncio.Lock()
@@ -103,16 +105,45 @@ def build_chunks(pages: list[tuple[int, str]]) -> list[tuple[int, str]]:
     return chunks
 
 
-def page_image(pdf_path: Path, page_number: int) -> tuple[bytes, str] | None:
-    """Skaner sahifadagi eng katta rasm — JPEG ko'rinishida, uzun tomoni OCR_MAX_SIDE dan oshmaydi."""
+def render_page(pdf_path: Path, page_number: int, long_side: int, fmt: str) -> bytes | None:
+    """
+    Sahifani rasmga aylantiradi (uzun tomoni `long_side` px, kulrang) — alohida `pdftoppm` jarayonida.
+    Shunda katta PDF xotirasi asosiy serverda to'planib qolmaydi (kichik serverda 512 MB bor xolos).
+    `pdftoppm` bo'lmasa — None (chaqiruvchi pypdf bilan rasmni o'zi ajratadi).
+    """
+    if shutil.which("pdftoppm") is None:
+        return None
+    with tempfile.TemporaryDirectory() as tmp:
+        subprocess.run(
+            ["pdftoppm", "-f", str(page_number), "-l", str(page_number), "-scale-to", str(long_side), "-gray",
+             f"-{fmt}", "-singlefile", str(pdf_path), f"{tmp}/page"],
+            capture_output=True,
+            timeout=TESSERACT_TIMEOUT_SECONDS,
+            check=True,
+        )
+        out = Path(tmp) / f"page.{'jpg' if fmt == 'jpeg' else fmt}"
+        return out.read_bytes() if out.exists() else b""
+
+
+def _largest_image(pdf_path: Path, page_number: int):
+    """Zaxira yo'l (pdftoppm yo'q): sahifadagi eng katta rasm, PIL ko'rinishida."""
     from PIL import Image
 
-    reader = PdfReader(str(pdf_path))
-    images = reader.pages[page_number - 1].images
+    images = PdfReader(str(pdf_path)).pages[page_number - 1].images
     if not images:
         return None
     largest = max(images, key=lambda image: len(image.data))
-    picture = Image.open(io.BytesIO(largest.data))
+    return Image.open(io.BytesIO(largest.data))
+
+
+def page_image(pdf_path: Path, page_number: int) -> tuple[bytes, str] | None:
+    """Skaner sahifa — JPEG ko'rinishida, uzun tomoni OCR_MAX_SIDE (OpenAI OCR uchun)."""
+    rendered = render_page(pdf_path, page_number, OCR_MAX_SIDE, "jpeg")
+    if rendered is not None:
+        return (rendered, "image/jpeg") if rendered else None
+    picture = _largest_image(pdf_path, page_number)
+    if picture is None:
+        return None
     picture.thumbnail((OCR_MAX_SIDE, OCR_MAX_SIDE))
     if picture.mode not in ("RGB", "L"):
         picture = picture.convert("RGB")
@@ -128,24 +159,25 @@ def uses_free_ocr() -> bool:
 
 def tesseract_page(pdf_path: Path, page_number: int) -> str:
     """Skaner sahifani serverning o'zida, bepul o'qiydi (Tesseract, o'zbek tili)."""
-    import subprocess
+    png = render_page(pdf_path, page_number, TESSERACT_SIDE, "png")
+    if png is None:
+        from PIL import Image
 
-    from PIL import Image
-
-    reader = PdfReader(str(pdf_path))
-    images = reader.pages[page_number - 1].images
-    if not images:
+        picture = _largest_image(pdf_path, page_number)
+        if picture is None:
+            return ""
+        picture = picture.convert("L")
+        if max(picture.size) < TESSERACT_SIDE:
+            scale = TESSERACT_SIDE / max(picture.size)
+            picture = picture.resize((round(picture.width * scale), round(picture.height * scale)), Image.LANCZOS)
+        buffer = io.BytesIO()
+        picture.save(buffer, format="PNG")
+        png = buffer.getvalue()
+    if not png:
         return ""
-    largest = max(images, key=lambda image: len(image.data))
-    picture = Image.open(io.BytesIO(largest.data)).convert("L")
-    if max(picture.size) < TESSERACT_MIN_SIDE:
-        scale = TESSERACT_MIN_SIDE / max(picture.size)
-        picture = picture.resize((round(picture.width * scale), round(picture.height * scale)), Image.LANCZOS)
-    png = io.BytesIO()
-    picture.save(png, format="PNG")
     result = subprocess.run(
         ["tesseract", "stdin", "stdout", "-l", settings.textbook_ocr_lang, "--psm", "3"],
-        input=png.getvalue(),
+        input=png,
         capture_output=True,
         timeout=TESSERACT_TIMEOUT_SECONDS,
         env={**os.environ, "OMP_THREAD_LIMIT": "1"},
