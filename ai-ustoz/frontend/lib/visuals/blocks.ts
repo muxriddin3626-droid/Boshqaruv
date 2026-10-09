@@ -1,13 +1,14 @@
 /**
  * AI Ustoz javobidagi chizma bloklari (```smiles```, ```atom```, ```punnett```,
- * ```dna```, ```cell```, ```rasm```, ```foto```, ```mermaid```) — matnni komponentga
+ * ```dna```, ```cell```, ```rasm```, ```foto```, ```reaksiya```, ```mermaid```) — matnni komponentga
  * beriladigan ma'lumotga aylantirish. Formatni AI biroz buzsa ham (JSON o'rniga
  * oddiy matn) imkon qadar tushunadi.
  */
 import type { DnaInput } from "./dna";
 import type { PunnettInput } from "./punnett";
+import type { ReactionSpec } from "./reactionView";
 
-export const VISUAL_LANGUAGES = new Set(["mermaid", "smiles", "atom", "punnett", "dna", "cell", "rasm", "foto", "anatomy", "animal"]);
+export const VISUAL_LANGUAGES = new Set(["mermaid", "smiles", "atom", "punnett", "dna", "cell", "rasm", "foto", "anatomy", "animal", "reaksiya"]);
 
 export interface MoleculeSpec {
   smiles: string;
@@ -109,6 +110,25 @@ export function parsePhoto(text: string): PhotoSpec {
   const query = String(json ? (json.query ?? "") : text).replace(/\s+/g, " ").trim();
   if (query.length < 2) throw new Error("Rasm uchun qidiruv so'zi yo'q");
   return { query: query.slice(0, 200), caption: String(json?.caption ?? "").trim().slice(0, 200) };
+}
+
+function stringRecord(value: unknown, limit: number): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => typeof v === "string" || typeof v === "number")
+      .slice(0, limit)
+      .map(([k, v]) => [k.trim(), String(v).trim()]),
+  );
+}
+
+/** ```reaksiya```: {"equation": "Zn + 2HCl -> ZnCl2 + H2", "names": {...}, "given": {"Zn": "13 g"}} yoki faqat tenglama. */
+export function parseReaction(text: string): ReactionSpec {
+  const json = tryJson(text);
+  const equation = String(json ? (json.equation ?? "") : text).trim();
+  if (!equation) throw new Error("Reaksiya tenglamasi yo'q");
+  if (equation.length > 300) throw new Error("Tenglama juda uzun");
+  return { equation, names: stringRecord(json?.names, 12), given: stringRecord(json?.given, 4) };
 }
 
 /** Ovozga aylantirishdan oldin: chizma bloklari, formulalar va markdown belgilari olib tashlanadi. */

@@ -125,4 +125,7 @@ body {
   .cell-highlight {
     animation: none;
   }
+  .particle-atom {
+    transition: none !important;
+  }
 }

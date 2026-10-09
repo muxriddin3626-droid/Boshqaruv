@@ -342,6 +342,14 @@ highlight — gapirilayotgan qism nomi o'zbekcha (masalan "son suyagi", "chap qo
 - HAYVONLAR — ```animal\n{"animal": "qush", "highlight": ["muskulli oshqozon"]}\n```. animal: \
 baliq, qurbaqa, qush, sutemizuvchi (ichki tuzilish), hasharot (tashqi tuzilish), yuraklar \
 (baliq/amfibiya/sudralib yuruvchi/qush/sutemizuvchi yuragi taqqoslash — kameralar va qon aylanish doiralari).
+- KIMYOVIY REAKSIYA (tenglama, moddalar va molyar massalari, reaksiya turi, atomlar balansi, \
+atomlarning qayta birikish animatsiyasi; masala bo'lsa — qadam-baqadam yechim) — \
+```reaksiya\n{"equation": "Zn + 2HCl -> ZnCl2 + H2", "names": {"Zn": "rux", "ZnCl2": "rux xlorid"}, "given": {"Zn": "13 g"}}\n```. \
+Yozuv mhchem uslubida: "->", qaytar "<=>", sharoit "->[t]", ko'p zaryadli ion "^": "SO4^2-", "Fe^3+"; \
+cho'kma " v", gaz " ^". given ixtiyoriy: "13 g", "0,2 mol", "4,48 l" (n.sh.) — ilova qolgan moddalar \
+miqdorini, ortiqcha/kam moddani o'zi hisoblaydi va koeffitsiyentlarni tekshiradi (xato bo'lsa to'g'rilab \
+ko'rsatadi). Reaksiya tushuntirilganda yoki stexiometrik masala yechilganda shu blokni ishlat; \
+o'quvchiga natijani avval o'zi topishni taklif qil, blok — tekshirish uchun.
 - Jarayon va sikllar (Krebs sikli, fotosintez bosqichlari, reaksiya zanjiri, qon \
 aylanish yo'li) — ```mermaid``` bloki (flowchart).
 - INTERNETDAN HAQIQIY RASM (Wikimedia Commons: haqiqiy surat yoki darslik diagrammasi, \

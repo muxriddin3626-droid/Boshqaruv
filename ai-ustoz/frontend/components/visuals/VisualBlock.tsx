@@ -13,9 +13,11 @@ import {
   parseMolecules,
   parsePhoto,
   parsePunnett,
+  parseReaction,
 } from "@/lib/visuals/blocks";
 import { analyzeDna } from "@/lib/visuals/dna";
 import { punnett } from "@/lib/visuals/punnett";
+import { analyzeReaction } from "@/lib/visuals/reactionView";
 
 import MermaidDiagram from "../chat/MermaidDiagram";
 import { ANIMAL_CHOICES, AnimalDiagram, HUMAN_SYSTEMS, HumanDiagram } from "./AnatomyDiagram";
@@ -25,6 +27,7 @@ import DnaDiagram from "./DnaDiagram";
 import Illustration from "./Illustration";
 import Photo from "./Photo";
 import PunnettSquare from "./PunnettSquare";
+import ReactionDiagram from "./ReactionDiagram";
 import { VisualBoundary, VisualError, VisualPlaceholder } from "./VisualFrame";
 
 // smiles-drawer og'ir — faqat molekula chizilganda yuklanadi.
@@ -55,6 +58,10 @@ function parse(language: string, source: string) {
       return { kind: "rasm" as const, data: parseIllustration(source) };
     case "foto":
       return { kind: "foto" as const, data: parsePhoto(source) };
+    case "reaksiya": {
+      const spec = parseReaction(source);
+      return { kind: "reaksiya" as const, data: { spec, view: analyzeReaction(spec) } };
+    }
     case "anatomy":
       return { kind: "anatomy" as const, data: parseCatalogChoice(source, "system", HUMAN_SYSTEMS) };
     case "animal":
@@ -91,6 +98,8 @@ function Inner({ language, source }: { language: string; source: string }) {
       return <Illustration spec={parsed.data} />;
     case "foto":
       return <Photo spec={parsed.data} />;
+    case "reaksiya":
+      return <ReactionDiagram spec={parsed.data.spec} view={parsed.data.view} />;
     case "anatomy":
       return <HumanDiagram system={parsed.data.key} highlight={parsed.data.highlight} />;
     case "animal":
