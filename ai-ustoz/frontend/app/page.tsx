@@ -148,7 +148,7 @@ export default function HomePage() {
 
   return (
     <VisualContext.Provider value={{ token, subject }}>
-    <main className="mx-auto flex h-screen max-w-5xl flex-col gap-4 p-4 md:p-6">
+    <main className="mx-auto flex h-[100dvh] max-w-5xl flex-col gap-4 p-4 md:p-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold text-white">
@@ -211,11 +211,12 @@ export default function HomePage() {
       </nav>
 
       {activeTab === "suhbat" && (
-        <section className="grid flex-1 grid-cols-1 gap-4 overflow-hidden md:grid-cols-3">
+        <section className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto md:grid-cols-3 md:overflow-hidden">
+          {/* Telefonda yuzcha va suhbat ustma-ust: bo'lim o'zi suriladi, suhbat oynasi qirqilmaydi. */}
           <div className="flex items-center justify-center rounded-2xl border border-neon-violet/20 bg-surface/40 p-4 md:col-span-1">
             <VoiceSession token={token} subject={subject} />
           </div>
-          <div className="rounded-2xl border border-neon-cyan/20 bg-surface/40 p-4 md:col-span-2">
+          <div className="h-[85dvh] min-h-[420px] rounded-2xl border border-neon-cyan/20 bg-surface/40 p-4 md:col-span-2 md:h-auto md:min-h-0">
             <ChatWindow
               token={token}
               subject={subject}

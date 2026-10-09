@@ -46,6 +46,7 @@ export default function ChatWindow({
   const [progress, setProgress] = useState<ProgressResponse | null>(null);
   const [todayTopic, setTodayTopic] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const handledLessonRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -80,6 +81,8 @@ export default function ChatWindow({
 
     if (preset === undefined) setInput("");
     setIsSending(true);
+    // Telefonda suhbat oynasi yuzcha ostida — javob ko'rinishi uchun unga suriladi.
+    if (window.matchMedia("(max-width: 767px)").matches) rootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     setMessages((prev) => [...prev, { role: "user", content: text }, { role: "assistant", content: "" }]);
 
     try {
@@ -111,7 +114,7 @@ export default function ChatWindow({
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div ref={rootRef} className="flex h-full flex-col">
       {progress?.current_lesson_title && (
         <div className="mb-3 rounded-xl border border-neon-cyan/30 bg-surface/80 px-4 py-3 text-sm text-neon-cyan">
           Kecha <strong>{progress.current_lesson_title}</strong> mavzusida
