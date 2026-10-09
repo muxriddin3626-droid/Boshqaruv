@@ -556,3 +556,16 @@ async def generate_illustration(subject: str, description: str) -> bytes:
         extra_body={"quality": "medium", "output_format": "jpeg", "output_compression": 80, "moderation": "auto"},
     )
     return base64.b64decode(response.data[0].b64_json)
+
+
+async def is_image_unsafe_for_kids(image: bytes, mime: str) -> bool:
+    """Internetdan olingan rasm 10-17 yoshli o'quvchiga ko'rsatishga yaroqsizmi (OpenAI moderatsiyasi, bepul).
+
+    Darslik diagrammalari odatda o'tadi; jinsiy, zo'ravonlik yoki og'ir (qonli) suratlar tashlanadi.
+    """
+    data_url = f"data:{mime};base64,{base64.b64encode(image).decode()}"
+    response = await client.moderations.create(
+        model="omni-moderation-latest",
+        input=[{"type": "image_url", "image_url": {"url": data_url}}],
+    )
+    return bool(response.results and response.results[0].flagged)

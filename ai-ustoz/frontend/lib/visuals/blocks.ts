@@ -1,13 +1,13 @@
 /**
  * AI Ustoz javobidagi chizma bloklari (```smiles```, ```atom```, ```punnett```,
- * ```dna```, ```cell```, ```rasm```, ```mermaid```) — matnni komponentga
+ * ```dna```, ```cell```, ```rasm```, ```foto```, ```mermaid```) — matnni komponentga
  * beriladigan ma'lumotga aylantirish. Formatni AI biroz buzsa ham (JSON o'rniga
  * oddiy matn) imkon qadar tushunadi.
  */
 import type { DnaInput } from "./dna";
 import type { PunnettInput } from "./punnett";
 
-export const VISUAL_LANGUAGES = new Set(["mermaid", "smiles", "atom", "punnett", "dna", "cell", "rasm", "anatomy", "animal"]);
+export const VISUAL_LANGUAGES = new Set(["mermaid", "smiles", "atom", "punnett", "dna", "cell", "rasm", "foto", "anatomy", "animal"]);
 
 export interface MoleculeSpec {
   smiles: string;
@@ -21,6 +21,12 @@ export interface CellSpec {
 
 export interface IllustrationSpec {
   prompt: string;
+  caption: string;
+}
+
+export interface PhotoSpec {
+  /** Wikimedia Commons'da qidirish uchun inglizcha so'rov. */
+  query: string;
   caption: string;
 }
 
@@ -95,6 +101,14 @@ export function parseIllustration(text: string): IllustrationSpec {
   const prompt = String(json?.prompt ?? "").trim();
   if (!prompt) throw new Error("Rasm tavsifi yo'q");
   return { prompt: prompt.slice(0, 400), caption: String(json?.caption ?? "").trim().slice(0, 200) };
+}
+
+/** ```foto```: {"query": "frog anatomy", "caption": "..."} yoki faqat so'rov matni. */
+export function parsePhoto(text: string): PhotoSpec {
+  const json = tryJson(text);
+  const query = String(json ? (json.query ?? "") : text).replace(/\s+/g, " ").trim();
+  if (query.length < 2) throw new Error("Rasm uchun qidiruv so'zi yo'q");
+  return { query: query.slice(0, 200), caption: String(json?.caption ?? "").trim().slice(0, 200) };
 }
 
 /** Ovozga aylantirishdan oldin: chizma bloklari, formulalar va markdown belgilari olib tashlanadi. */

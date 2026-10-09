@@ -528,3 +528,24 @@ create table if not exists illustrations (
     created_at   timestamptz not null default now(),
     updated_at   timestamptz not null default now()
 );
+
+-- -----------------------------------------------------------------------------
+-- PHOTOS — internetdan (Wikimedia Commons) olingan haqiqiy rasmlar. Faqat erkin
+-- litsenziyali (PD, CC0, CC BY, CC BY-SA); muallif va litsenziya birga saqlanadi
+-- va rasm ostida ko'rsatiladi. So'rov (fan + matn xeshi) bo'yicha bir marta qidiriladi.
+-- -----------------------------------------------------------------------------
+create table if not exists photos (
+    id           uuid primary key default uuid_generate_v4(),
+    query_hash   varchar(64) not null unique,
+    subject      varchar(20) not null check (subject in ('kimyo', 'biologiya')),
+    query        text not null,
+    status       varchar(12) not null default 'searching' check (status in ('searching', 'ready', 'not_found', 'failed')),
+    image_ref    varchar(1024),
+    title        varchar(200),
+    author       varchar(200),
+    license      varchar(60),
+    license_url  varchar(500),
+    source_url   varchar(1024),
+    created_at   timestamptz not null default now(),
+    updated_at   timestamptz not null default now()
+);

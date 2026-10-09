@@ -34,7 +34,7 @@ function visualBlockOf(pre: HastNode | undefined): { language: string; source: s
 /**
  * AI Ustoz javoblarini render qiladi:
  * - $...$ / $$...$$ — formulalar (KaTeX), $\ce{2H2 + O2 -> 2H2O}$ — reaksiyalar (mhchem);
- * - ```mermaid```, ```smiles```, ```atom```, ```punnett```, ```dna```, ```cell```, ```rasm``` — chizmalar;
+ * - ```mermaid```, ```smiles```, ```atom```, ```punnett```, ```dna```, ```cell```, ```rasm```, ```foto``` — chizmalar;
  * - qolgan kod bloklari oddiy monospace.
  * `isStreaming` — javob hali kelayotgan bo'lsa chala chizma bloklari chizilmaydi.
  */

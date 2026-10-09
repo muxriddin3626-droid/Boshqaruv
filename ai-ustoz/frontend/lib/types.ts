@@ -531,3 +531,15 @@ export interface IllustrationState {
   status: "generating" | "ready" | "failed";
   image_url: string | null;
 }
+
+/** Internetdan olingan rasm: muallif va litsenziya rasm ostida albatta ko'rsatiladi. */
+export interface PhotoState {
+  id: string;
+  status: "searching" | "ready" | "not_found" | "failed";
+  image_url: string | null;
+  title?: string | null;
+  author?: string | null;
+  license?: string | null;
+  license_url?: string | null;
+  source_url?: string | null;
+}

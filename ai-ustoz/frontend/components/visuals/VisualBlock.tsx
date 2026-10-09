@@ -11,6 +11,7 @@ import {
   parseDna,
   parseIllustration,
   parseMolecules,
+  parsePhoto,
   parsePunnett,
 } from "@/lib/visuals/blocks";
 import { analyzeDna } from "@/lib/visuals/dna";
@@ -22,6 +23,7 @@ import AtomDiagram from "./AtomDiagram";
 import CellDiagram from "./CellDiagram";
 import DnaDiagram from "./DnaDiagram";
 import Illustration from "./Illustration";
+import Photo from "./Photo";
 import PunnettSquare from "./PunnettSquare";
 import { VisualBoundary, VisualError, VisualPlaceholder } from "./VisualFrame";
 
@@ -51,6 +53,8 @@ function parse(language: string, source: string) {
       return { kind: "cell" as const, data: parseCell(source) };
     case "rasm":
       return { kind: "rasm" as const, data: parseIllustration(source) };
+    case "foto":
+      return { kind: "foto" as const, data: parsePhoto(source) };
     case "anatomy":
       return { kind: "anatomy" as const, data: parseCatalogChoice(source, "system", HUMAN_SYSTEMS) };
     case "animal":
@@ -85,6 +89,8 @@ function Inner({ language, source }: { language: string; source: string }) {
       return <CellDiagram spec={parsed.data} />;
     case "rasm":
       return <Illustration spec={parsed.data} />;
+    case "foto":
+      return <Photo spec={parsed.data} />;
     case "anatomy":
       return <HumanDiagram system={parsed.data.key} highlight={parsed.data.highlight} />;
     case "animal":

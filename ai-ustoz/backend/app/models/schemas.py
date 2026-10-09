@@ -856,3 +856,24 @@ class IllustrationOut(BaseModel):
     id: uuid.UUID
     status: Literal["generating", "ready", "failed"]
     image_url: str | None
+
+
+class PhotoRequestIn(BaseModel):
+    subject: SubjectSchema
+    query: str = Field(min_length=2, max_length=200)
+
+    @field_validator("query", mode="before")
+    @classmethod
+    def strip_query(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+
+class PhotoOut(BaseModel):
+    id: uuid.UUID
+    status: Literal["searching", "ready", "not_found", "failed"]
+    image_url: str | None
+    title: str | None = None
+    author: str | None = None
+    license: str | None = None
+    license_url: str | None = None
+    source_url: str | None = None

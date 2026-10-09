@@ -484,3 +484,23 @@ class Illustration(Base):
     status: Mapped[str] = mapped_column(String(12), default="generating")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Photo(Base):
+    """Internetdan (Wikimedia Commons) olingan haqiqiy rasm — so'rov xeshi bo'yicha umumiy kesh."""
+
+    __tablename__ = "photos"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    query_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    subject: Mapped[str] = mapped_column(String(20), nullable=False)
+    query: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(12), default="searching")
+    image_ref: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    title: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    author: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    license: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    license_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

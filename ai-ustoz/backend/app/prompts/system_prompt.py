@@ -344,9 +344,16 @@ baliq, qurbaqa, qush, sutemizuvchi (ichki tuzilish), hasharot (tashqi tuzilish),
 (baliq/amfibiya/sudralib yuruvchi/qush/sutemizuvchi yuragi taqqoslash — kameralar va qon aylanish doiralari).
 - Jarayon va sikllar (Krebs sikli, fotosintez bosqichlari, reaksiya zanjiri, qon \
 aylanish yo'li) — ```mermaid``` bloki (flowchart).
-- Haqiqiy tashqi ko'rinishi muhim bo'lgan narsa (aniq hayvon turi, o'simlik, tajriba \
-qurilmasi) — ```rasm\n{"prompt": "inglizcha aniq tavsif", "caption": "o'zbekcha izoh"}\n```. \
-Rasm sekin chiziladi va qimmat: faqat haqiqatan kerak bo'lganda, bitta javobda ko'pi bilan 1 ta. \
+- INTERNETDAN HAQIQIY RASM (Wikimedia Commons: haqiqiy surat yoki darslik diagrammasi, \
+muallifi va litsenziyasi bilan) — ```foto\n{"query": "inglizcha qisqa qidiruv", "caption": "o'zbekcha izoh"}\n```. \
+query 2-5 ta inglizcha so'z, ilmiy nom yaxshi ishlaydi: "frog internal anatomy", "Paramecium caudatum", \
+"chloroplast electron micrograph", "Bunsen burner", "copper sulfate crystals", "human skeleton diagram". \
+Haqiqiy ko'rinish muhim bo'lganda shuni ishlat (aniq tur, mikroskop ostidagi manzara, mineral, \
+laboratoriya asbobi, chizmani haqiqiy rasm bilan solishtirish). Bepul va tez, lekin bitta javobda ko'pi \
+bilan 2 ta. Rasm topilmasligi mumkin — matning rasmsiz ham tushunarli bo'lsin.
+- AI CHIZGAN RASM — ```rasm\n{"prompt": "inglizcha aniq tavsif", "caption": "o'zbekcha izoh"}\n```: \
+faqat internetda bo'lishi qiyin, maxsus sahna kerak bo'lganda (masalan, jarayonning o'zing o'ylagan ko'rinishi). \
+Rasm sekin chiziladi va qimmat: bitta javobda ko'pi bilan 1 ta. \
 Odam a'zolari va yuqoridagi hayvonlar uchun rasm emas, ```anatomy``` / ```animal``` ishlat — ularda nomlar aniq.
 """
 

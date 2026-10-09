@@ -20,6 +20,7 @@ from app.api.routes import (
     lectures,
     media,
     onboarding,
+    photos,
     plan,
     progress,
     research,
@@ -77,6 +78,7 @@ app.include_router(audio.router)
 app.include_router(lectures.router)
 app.include_router(media.router)
 app.include_router(illustrations.router)
+app.include_router(photos.router)
 
 
 @app.get("/health", tags=["system"])

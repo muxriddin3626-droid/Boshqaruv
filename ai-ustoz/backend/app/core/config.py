@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     # Rasm chizish pullik (~$0.04): bitta o'quvchiga va butun platformaga kunlik chegara.
     illustrations_per_user_per_day: int = 15
     illustrations_global_per_day: int = 300
+    # Internetdagi haqiqiy rasmlar (Wikimedia Commons, bepul). Wikimedia so'rovlarda ilova
+    # nomi va aloqa (sayt yoki email) yozilgan User-Agent talab qiladi — productionda o'zingiznikini qo'ying.
+    commons_user_agent: str = "AIUstozBot/1.0 (educational tutor app; https://github.com/muxriddin3626-droid/Boshqaruv)"
+    photos_per_user_per_day: int = 40
+    photos_global_per_day: int = 2000
 
     # Database
     database_url: str

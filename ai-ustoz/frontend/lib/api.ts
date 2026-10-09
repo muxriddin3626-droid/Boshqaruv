@@ -12,6 +12,7 @@ import type {
   HomeworkSubmitPayload,
   HomeworkSummary,
   IllustrationState,
+  PhotoState,
   Leaderboard,
   Lecture,
   LectureCatalog,
@@ -548,5 +549,21 @@ export async function requestIllustration(token: string, subject: Subject, promp
 
 export async function fetchIllustration(token: string, id: string): Promise<IllustrationState> {
   const response = await fetch(`${API_BASE_URL}/api/v1/illustrations/${id}`, { headers: authHeaders(token) });
+  return (await assertOk(response, "Rasmni yuklab bo'lmadi")).json();
+}
+
+/** Internetdagi haqiqiy rasm (Wikimedia Commons): keshda bo'lsa — darhol; aks holda "searching" (fonda qidiriladi). */
+export async function requestPhoto(token: string, subject: Subject, query: string): Promise<PhotoState> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/photos`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ subject, query }),
+  });
+  if (!response.ok) throw new Error(await errorDetail(response, "Rasmni topib bo'lmadi"));
+  return response.json();
+}
+
+export async function fetchPhoto(token: string, id: string): Promise<PhotoState> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/photos/${id}`, { headers: authHeaders(token) });
   return (await assertOk(response, "Rasmni yuklab bo'lmadi")).json();
 }
