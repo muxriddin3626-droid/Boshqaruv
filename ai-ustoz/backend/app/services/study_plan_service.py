@@ -253,6 +253,22 @@ async def load_plan(db: AsyncSession, user_id: uuid.UUID, lock: bool = False) ->
     return await db.get(StudyPlan, user_id, with_for_update=lock, populate_existing=lock)
 
 
+def is_outdated(plan: StudyPlan) -> bool:
+    """O'quv dasturi o'zgargan (yangi mavzu qo'shilgan/olib tashlangan) — reja qayta tuzilishi kerak."""
+    subjects = tuple(plan.settings.get("subjects") or ())
+    stored = [(t["subject"], t["topic"]) for t in plan.plan.get("topics", [])]
+    return stored != [(t.subject, t.topic) for t in ordered_topics(subjects)]
+
+
+async def load_current_plan(db: AsyncSession, user_id: uuid.UUID, today: date) -> StudyPlan | None:
+    """Rejani o'qiydi; dastur yangilangan bo'lsa, o'tilgan mavzularni saqlab, qayta tuzadi."""
+    plan = await load_plan(db, user_id)
+    if plan is None or not is_outdated(plan):
+        return plan
+    user = await db.get(User, user_id)
+    return await rebuild_plan(db, user, today) if user else plan
+
+
 async def rebuild_plan(db: AsyncSession, user: User, today: date) -> StudyPlan:
     """Rejani foydalanuvchining joriy sozlamalaridan qayta tuzadi; o'tilgan mavzular saqlanadi."""
     existing = await load_plan(db, user.id, lock=True)

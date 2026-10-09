@@ -21,13 +21,13 @@ from app.services.xp_service import tashkent_today
 
 async def get_plan_focus(db: AsyncSession, user_id: uuid.UUID, subject: str) -> PlanFocus | None:
     """O'quv rejadan shu fan bo'yicha bugungi mavzu va dars tuzilishi."""
-    plan = await plans.load_plan(db, user_id)
+    today = tashkent_today(datetime.now(timezone.utc))
+    plan = await plans.load_current_plan(db, user_id, today)
     if plan is None:
         return None
     subject_topics = [t for t in plan.plan["topics"] if t["subject"] == subject]
     if not subject_topics:
         return None
-    today = tashkent_today(datetime.now(timezone.utc))
     completed = plan.completed or {}
     status = plans.plan_status({**plan.plan, "topics": subject_topics}, completed, plan.start_date, today)
     remaining = [t for t in subject_topics if plans.topic_key(subject, t["topic"]) not in completed]

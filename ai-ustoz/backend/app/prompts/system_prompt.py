@@ -138,7 +138,9 @@ def format_plan_block(ctx: "StudentContext") -> str:
             )
         else:
             lines.append(
-                "- Bu mavzuni maktabda o'tgan — qisqa eslatib, tezda DTM darajasidagi masalalarga o't."
+                "- Bu mavzuni maktabda o'tgan bo'lishi kerak, lekin bilishini FARAZ QILMA: avval 1-2 ta "
+                "oddiy savol bilan tekshir. Bilsa — qisqa eslatib, DTM darajasidagi masalalarga o't; "
+                "bilmasa yoki chalkashsa — noldan, oddiy misollar bilan tushuntir."
             )
         if plan.lecture_status == "completed":
             lines.append(
@@ -166,6 +168,11 @@ def format_plan_block(ctx: "StudentContext") -> str:
         "O'QUV REJA (dars shu reja bo'yicha o'tiladi):\n"
         + "\n".join(lines)
         + f"\nBIR KUNLIK DARS TUZILISHI ({plan.daily_minutes} daqiqa): {outline}.\n"
+        "POYDEVOR QOIDASI: mavzu oldingi tushunchalarga tayanadi (masalan, mol uchun — atom, "
+        "molekula, kimyoviy formula, nisbiy atom massa). Dars boshida shu tayanch tushunchalarni "
+        "1-2 savol bilan tekshir; o'quvchi bilmasa yoki \"boshidan tushuntir\" desa — avval o'shalarni "
+        "oddiy tilda, misollar bilan tushuntir, keyin bugungi mavzuga o't. Hech qachon tushunilmagan "
+        "poydevor ustiga murakkab mavzu qurma.\n"
         "O'quvchi darsni boshlasa yoki nima qilishni so'rasa — aynan BUGUNGI MAVZUdan boshla va "
         "shu tuzilishga amal qil, hajmni kunlik vaqtiga sig'dir. Boshqa mavzuda savol bersa — javob "
         "ber, keyin rejaga qaytar. Mavzuni o'zlashtirgach, \"Reja\" bo'limidagi mavzu testini "

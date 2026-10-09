@@ -8,6 +8,10 @@ from dataclasses import dataclass
 
 SUBJECT_TOPICS: dict[str, list[tuple[str, str]]] = {
     "kimyo": [
+        ("Umumiy kimyo", "Kimyo fani: moddalar va hodisalar"),
+        ("Umumiy kimyo", "Atom, molekula va kimyoviy element"),
+        ("Umumiy kimyo", "Kimyoviy formula va valentlik"),
+        ("Umumiy kimyo", "Kimyoviy reaksiya tenglamalari"),
         ("Umumiy kimyo", "Atom tuzilishi va davriy qonun"),
         ("Umumiy kimyo", "Kimyoviy bog'lanish"),
         ("Umumiy kimyo", "Mol va stexiometriya"),
@@ -15,6 +19,7 @@ SUBJECT_TOPICS: dict[str, list[tuple[str, str]]] = {
         ("Umumiy kimyo", "Eritmalar va konsentratsiya"),
         ("Umumiy kimyo", "Kimyoviy kinetika va muvozanat"),
         ("Umumiy kimyo", "Oksidlanish-qaytarilish reaksiyalari"),
+        ("Anorganik kimyo", "Anorganik birikmalar sinflari"),
         ("Anorganik kimyo", "Elektrolitik dissotsiatsiya"),
         ("Anorganik kimyo", "Metallar"),
         ("Anorganik kimyo", "Metallmaslar"),

@@ -72,10 +72,11 @@ async def _get_user(db: AsyncSession, user_id: uuid.UUID) -> User:
 async def get_plan(user_id: uuid.UUID = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     """404 — reja hali tuzilmagan (so'rovnoma reja savollarisiz o'tilgan): frontend sozlamalarni so'raydi."""
     user = await _get_user(db, user_id)
-    plan = await plans.load_plan(db, user_id)
+    today = tashkent_today(datetime.now(timezone.utc))
+    plan = await plans.load_current_plan(db, user_id, today)
     if plan is None:
         raise HTTPException(status_code=404, detail="O'quv reja hali tuzilmagan")
-    return plan_out(user, plan, tashkent_today(datetime.now(timezone.utc)))
+    return plan_out(user, plan, today)
 
 
 @router.put("", response_model=PlanOut)

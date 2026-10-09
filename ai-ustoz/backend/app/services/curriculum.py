@@ -27,9 +27,15 @@ CURRICULUM: dict[str, list[CurriculumTopic]] = {
     "kimyo": _topics(
         "kimyo",
         [
+            # Poydevor (7-sinf boshi): mol va masalalardan oldin shular tushunilishi shart.
+            ("Umumiy kimyo", "Kimyo fani: moddalar va hodisalar", 7, 4),
+            ("Umumiy kimyo", "Atom, molekula va kimyoviy element", 7, 5),
+            ("Umumiy kimyo", "Kimyoviy formula va valentlik", 7, 6),
+            ("Umumiy kimyo", "Kimyoviy reaksiya tenglamalari", 7, 6),
             ("Umumiy kimyo", "Mol va stexiometriya", 7, 12),
             ("Umumiy kimyo", "Gaz qonunlari", 7, 8),
             ("Umumiy kimyo", "Eritmalar va konsentratsiya", 7, 10),
+            ("Anorganik kimyo", "Anorganik birikmalar sinflari", 8, 10),
             ("Umumiy kimyo", "Atom tuzilishi va davriy qonun", 8, 8),
             ("Umumiy kimyo", "Kimyoviy bog'lanish", 8, 6),
             ("Umumiy kimyo", "Oksidlanish-qaytarilish reaksiyalari", 8, 8),
