@@ -44,7 +44,7 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     start_scheduler()  # Modul 7: RESEARCH_SCAN_ENABLED=true bo'lsagina fon vazifalarini boshlaydi
-    await recover_interrupted()  # yarim qolgan darslik yuklashlari "xato" holatiga o'tadi
+    await recover_interrupted()  # yarim qolgan darslik yuklashlari navbatga qaytib, o'zi davom etadi
     yield
     shutdown_scheduler()
 

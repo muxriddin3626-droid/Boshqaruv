@@ -579,5 +579,8 @@ create table if not exists textbooks (
     updated_at     timestamptz not null default now()
 );
 
+-- Qayta ishlash paytida server necha marta qayta ishga tushgani (deploy/yiqilish): 2 martadan keyin to'xtatiladi.
+alter table textbooks add column if not exists restarts integer not null default 0;
+
 alter table knowledge_chunks add column if not exists textbook_id uuid references textbooks(id) on delete cascade;
 create index if not exists idx_knowledge_chunks_textbook on knowledge_chunks(textbook_id);

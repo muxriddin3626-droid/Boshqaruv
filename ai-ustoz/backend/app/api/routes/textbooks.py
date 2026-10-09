@@ -135,6 +135,7 @@ async def retry(textbook_id: uuid.UUID, _: uuid.UUID = Depends(require_admin), d
         raise HTTPException(status_code=409, detail="Darslik hozir qayta ishlanmoqda")
     textbook.status = "queued"
     textbook.error = None
+    textbook.restarts = 0
     textbook.updated_at = datetime.now(timezone.utc)
     await db.commit()
     textbook_service.schedule(textbook_id)

@@ -240,15 +240,32 @@ def schedule(textbook_id: uuid.UUID) -> None:
     task.add_done_callback(_background_tasks.discard)
 
 
+MAX_RESTARTS = 2
+
+
 async def recover_interrupted() -> None:
-    """Server qayta ishga tushganda yarim qolgan darsliklar — "xato" (admin "Qayta urinish" bosadi)."""
+    """
+    Server qayta ishga tushganda (yangilanish yoki yiqilish) yarim qolgan darsliklar navbatga
+    qaytadi va o'zi davom etadi. Bitta darslikda server ketma-ket MAX_RESTARTS marta to'xtagan
+    bo'lsa (masalan, xotira yetmay yiqilsa), cheksiz aylanmasligi uchun "xato" qilib qo'yiladi.
+    """
     async with AsyncSessionLocal() as db:
         await db.execute(
             update(Textbook)
-            .where(Textbook.status.in_(["queued", "processing"]))
-            .values(status="failed", stage=None, error="Server qayta ishga tushdi — \"Qayta urinish\" tugmasini bosing.")
+            .where(Textbook.status == "processing", Textbook.restarts >= MAX_RESTARTS)
+            .values(status="failed", stage=None, error="Server bu darslikni o'qiyotganda bir necha marta to'xtadi — \"Qayta urinish\" ni bosing.")
         )
+        await db.execute(
+            update(Textbook).where(Textbook.status == "processing").values(status="queued", stage=None, restarts=Textbook.restarts + 1)
+        )
+        pending = (
+            await db.execute(select(Textbook.id).where(Textbook.status == "queued").order_by(Textbook.created_at, Textbook.title))
+        ).scalars().all()
         await db.commit()
+    for textbook_id in pending:
+        schedule(textbook_id)
+    if pending:
+        logger.info("Server qayta ishga tushdi: %s ta darslik navbatda davom etadi", len(pending))
 
 
 async def remove(textbook: Textbook) -> None:
