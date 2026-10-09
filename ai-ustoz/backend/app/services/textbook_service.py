@@ -241,6 +241,7 @@ def schedule(textbook_id: uuid.UUID) -> None:
 
 
 MAX_RESTARTS = 2
+_LEGACY_RESTART_ERROR = "Server qayta ishga tushdi — \"Qayta urinish\" tugmasini bosing."
 
 
 async def recover_interrupted() -> None:
@@ -257,6 +258,12 @@ async def recover_interrupted() -> None:
         )
         await db.execute(
             update(Textbook).where(Textbook.status == "processing").values(status="queued", stage=None, restarts=Textbook.restarts + 1)
+        )
+        # Eski versiya qayta ishga tushganda navbatni shu xabar bilan "xato" qilardi — ularni ham davom ettiramiz.
+        await db.execute(
+            update(Textbook)
+            .where(Textbook.status == "failed", Textbook.error == _LEGACY_RESTART_ERROR)
+            .values(status="queued", error=None)
         )
         pending = (
             await db.execute(select(Textbook.id).where(Textbook.status == "queued").order_by(Textbook.created_at, Textbook.title))
