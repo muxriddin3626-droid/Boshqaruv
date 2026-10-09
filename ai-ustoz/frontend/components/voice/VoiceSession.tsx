@@ -9,7 +9,8 @@ import { createRealtimeEventHandler, type Emotion, type Phase, type RealtimeUpda
 import TutorMascot from "./TutorMascot";
 import { useAudioVisualizer } from "./useAudioVisualizer";
 
-const OPENAI_REALTIME_URL = "https://api.openai.com/v1/realtime";
+// GA Realtime API: SDP offer ephemeral kalit bilan shu manzilga yuboriladi (model sessiyada belgilangan).
+const OPENAI_REALTIME_CALLS_URL = "https://api.openai.com/v1/realtime/calls";
 // Bitta sessiya chegarasi: Realtime API daqiqasiga pullik, cheksiz ochiq qolmasin.
 const SESSION_LIMIT_SECONDS = 10 * 60;
 const CAPTION_MAX_CHARS = 220;
@@ -133,7 +134,7 @@ export default function VoiceSession({ token, subject }: { token: string; subjec
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      const sdpResponse = await fetch(`${OPENAI_REALTIME_URL}?model=${session.model}`, {
+      const sdpResponse = await fetch(OPENAI_REALTIME_CALLS_URL, {
         method: "POST",
         body: offer.sdp,
         headers: {
@@ -143,7 +144,8 @@ export default function VoiceSession({ token, subject }: { token: string; subjec
       });
 
       if (!sdpResponse.ok) {
-        throw new Error("OpenAI Realtime bilan SDP almashinuvi muvaffaqiyatsiz tugadi");
+        const reason = await sdpResponse.text().catch(() => "");
+        throw new Error(`OpenAI ovozli aloqani ulamadi (${sdpResponse.status})${reason ? `: ${reason.slice(0, 160)}` : ""}`);
       }
 
       const answerSdp = await sdpResponse.text();

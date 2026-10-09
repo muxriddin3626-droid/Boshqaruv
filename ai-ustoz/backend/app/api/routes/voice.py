@@ -2,6 +2,7 @@
 import uuid
 from datetime import date
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +14,7 @@ from app.prompts.exam_feedback_prompt import build_exam_feedback_addendum
 from app.prompts.system_prompt import build_system_prompt
 from app.prompts.voice_persona import SET_EMOTION_TOOL, VOICE_ADDENDUM
 from app.services import exam_pipeline_service, progress_service
-from app.services.openai_service import DEFAULT_VOICE_INSTRUCTIONS, create_realtime_voice_session
+from app.services.openai_service import DEFAULT_VOICE_INSTRUCTIONS, RealtimeSessionError, create_realtime_voice_session
 
 router = APIRouter(prefix="/api/v1/voice", tags=["voice"])
 
@@ -52,13 +53,14 @@ async def create_voice_session(
         session = await create_realtime_voice_session(
             instructions=instructions + VOICE_ADDENDUM, tools=[SET_EMOTION_TOOL]
         )
-    except Exception as exc:  # noqa: BLE001 — tashqi API xatosini frontendga tarjima qilamiz
-        raise HTTPException(status_code=502, detail=f"Realtime sessiya yaratib bo'lmadi: {exc}") from exc
+    except RealtimeSessionError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="OpenAI bilan aloqa bo'lmadi — birozdan keyin qayta urinib ko'ring.") from exc
 
-    client_secret = session["client_secret"]
     return VoiceSessionOut(
-        client_secret=client_secret["value"],
-        expires_at=client_secret["expires_at"],
+        client_secret=session["client_secret"],
+        expires_at=session["expires_at"],
         model=session["model"],
         mode=payload.mode,
     )

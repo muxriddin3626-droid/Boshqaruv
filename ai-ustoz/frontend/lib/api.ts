@@ -140,7 +140,12 @@ export async function createVoiceSession(
     headers: authHeaders(token),
     body: JSON.stringify({ subject, mode }),
   });
-  return (await assertOk(response, "Ovozli sessiya yaratib bo'lmadi")).json();
+  if (!response.ok) {
+    // Backend sababini o'zbekcha yozadi (kalit noto'g'ri, mablag' tugagan...) — o'quvchiga shuni ko'rsatamiz.
+    const body = await response.json().catch(() => null);
+    throw new Error(typeof body?.detail === "string" ? body.detail : "Ovozli sessiya yaratib bo'lmadi");
+  }
+  return response.json();
 }
 
 // ---------------------------------------------------------------------------

@@ -18,14 +18,14 @@ from typing import Any
 
 import httpx
 from openai import AsyncOpenAI
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from app.core.config import get_settings
 
 settings = get_settings()
 client = AsyncOpenAI(api_key=settings.openai_api_key)
 
-OPENAI_REALTIME_SESSIONS_URL = "https://api.openai.com/v1/realtime/sessions"
+OPENAI_REALTIME_CLIENT_SECRETS_URL = "https://api.openai.com/v1/realtime/client_secrets"
 
 
 def _build_messages(system_prompt: str, history: list[dict], user_message: str, rag_context: str) -> list[dict]:
@@ -69,37 +69,84 @@ DEFAULT_VOICE_INSTRUCTIONS = (
 )
 
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=8))
+class RealtimeSessionError(Exception):
+    """Ovozli sessiya ochilmadi — xabar o'quvchiga ko'rsatiladi (o'zbekcha)."""
+
+    def __init__(self, message: str, status_code: int):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+def _realtime_error_message(response: httpx.Response) -> str:
+    try:
+        error = response.json().get("error") or {}
+    except ValueError:
+        error = {}
+    code = error.get("code") or error.get("type") or ""
+    if response.status_code == 401:
+        return "OpenAI kaliti noto'g'ri yoki o'chirilgan (Render → Environment → OPENAI_API_KEY)."
+    if code == "insufficient_quota":
+        return "OpenAI hisobida mablag' tugagan — platform.openai.com → Billing'da to'ldiring."
+    if response.status_code == 429:
+        return "OpenAI hozir band — bir daqiqadan keyin qayta urinib ko'ring."
+    detail = error.get("message") or response.text[:200]
+    return f"OpenAI ovozli sessiyani ochmadi ({response.status_code}): {detail}"
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    # 4xx (kalit, mablag', noto'g'ri so'rov) qayta urinish bilan tuzalmaydi.
+    return not isinstance(exc, RealtimeSessionError) or exc.status_code >= 500
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=8),
+    retry=retry_if_exception(_is_retryable),
+    reraise=True,
+)
 async def create_realtime_voice_session(
-    instructions: str = DEFAULT_VOICE_INSTRUCTIONS, voice: str = "alloy", tools: list[dict] | None = None
+    instructions: str = DEFAULT_VOICE_INSTRUCTIONS, voice: str = "marin", tools: list[dict] | None = None
 ) -> dict:
     """
-    OpenAI Realtime API uchun bir martalik (ephemeral) client_secret yaratadi.
+    OpenAI Realtime API (GA) uchun bir martalik (ephemeral) client_secret yaratadi.
 
     Frontend shu client_secret bilan RTCPeerConnection orqali to'g'ridan-to'g'ri
-    OpenAI serveriga ulanadi (WebRTC SDP offer/answer almashinuvi).
+    OpenAI serveriga ulanadi (`/v1/realtime/calls` ga SDP offer/answer).
+    Eski beta `/v1/realtime/sessions` va `gpt-4o-realtime-preview` 2026-yilda o'chirilgan.
 
     `instructions` — rejimga qarab almashadi: oddiy repetitorlik yoki
     Live Voice Debate (`debate_prompt.build_debate_system_prompt`).
+
+    Qaytadi: {"client_secret", "expires_at", "model"}.
     """
     async with httpx.AsyncClient(timeout=15.0) as http_client:
         response = await http_client.post(
-            OPENAI_REALTIME_SESSIONS_URL,
+            OPENAI_REALTIME_CLIENT_SECRETS_URL,
             headers={
                 "Authorization": f"Bearer {settings.openai_api_key}",
                 "Content-Type": "application/json",
             },
             json={
-                "model": settings.openai_realtime_model,
-                "voice": voice,
-                "modalities": ["audio", "text"],
-                "instructions": instructions,
-                "tools": tools or [],
-                "tool_choice": "auto",
+                # Kalit faqat ulanishni boshlash uchun; ulangan sessiya undan keyin ham davom etadi.
+                "expires_after": {"anchor": "created_at", "seconds": 120},
+                "session": {
+                    "type": "realtime",
+                    "model": settings.openai_realtime_model,
+                    "instructions": instructions,
+                    "audio": {"output": {"voice": voice}},
+                    "tools": tools or [],
+                    "tool_choice": "auto",
+                },
             },
         )
-        response.raise_for_status()
-        return response.json()
+    if response.status_code >= 400:
+        raise RealtimeSessionError(_realtime_error_message(response), response.status_code)
+    data = response.json()
+    return {
+        "client_secret": data["value"],
+        "expires_at": data["expires_at"],
+        "model": (data.get("session") or {}).get("model") or settings.openai_realtime_model,
+    }
 
 
 async def _generate_json(system_instruction: str, user_content: str, temperature: float = 0.4) -> dict[str, Any]:

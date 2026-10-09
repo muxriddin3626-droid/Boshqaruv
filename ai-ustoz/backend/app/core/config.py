@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     # OpenAI
     openai_api_key: str
     openai_chat_model: str = "gpt-4o"
-    openai_realtime_model: str = "gpt-4o-realtime-preview"
+    openai_realtime_model: str = "gpt-realtime-2.1-mini"
     openai_embedding_model: str = "text-embedding-3-small"
     openai_vision_model: str = "gpt-4o"  # rasmdan savol OCR/tiklash uchun (Modul 6)
     openai_whisper_model: str = "whisper-1"  # ovozdan matnga (Modul 6)
