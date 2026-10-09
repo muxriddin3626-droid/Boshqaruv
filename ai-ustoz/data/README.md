@@ -52,12 +52,16 @@ git add ai-ustoz/data && git commit -m "Add kimyo 9-sinf" && git push
 
 ## Yuklagandan keyin
 
-Fayllar avtomatik bazaga tushmaydi — ularni `knowledge_chunks` jadvaliga
-yuklash uchun ingestion skriptini ishga tushirish kerak:
+Fayllar avtomatik bazaga tushmaydi. Serverda **bitta buyruq** hammasini yuklaydi
+(matnli kitoblar, skaner kitoblar uchun OCR, bo'laklash, embedding):
 
 ```bash
-python scripts/ingest_textbook.py --pdf ../data/textbooks/kimyo/9-sinf.pdf \
-    --subject kimyo --grade 9
+# Avval ro'yxat va OCR narxini ko'rish (bepul, hech narsa yozilmaydi):
+docker compose exec backend python scripts/import_textbooks.py --dry-run
+
+# Hammasini yuklash (tayyor bo'lganlari qayta yuklanmaydi):
+docker compose exec backend python scripts/import_textbooks.py
 ```
 
-Batafsil: `data/textbooks/README.md`
+Sinf fayl nomidan olinadi (`kimyo_9_uzb.pdf` -> 9-sinf, `5-sinf.pdf` -> 5-sinf),
+fan — papkadan. Yuklangan kitoblar ilovadagi "Darsliklar" bo'limida ko'rinadi.

@@ -51,6 +51,11 @@ services:
       # Frontend qaysi manzildan ochilsa (localhost yoki HOST_IP), backend
       # shu manzildan kelayotgan so'rovlarni CORS orqali qabul qilishi kerak.
       CORS_ORIGINS: http://localhost:3000,http://${HOST_IP:-localhost}:3000
+    volumes:
+      # Repodagi darsliklar (scripts/import_textbooks.py shu yerdan o'qiydi) va
+      # yuklangan fayllar/audiolar uchun doimiy disk.
+      - ./data:/data:ro
+      - ai_ustoz_media:/app/media
     ports:
       - "8000:8000"
     depends_on:
@@ -77,3 +82,4 @@ services:
 
 volumes:
   ai_ustoz_pgdata:
+  ai_ustoz_media:

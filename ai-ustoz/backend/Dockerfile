@@ -6,6 +6,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
+COPY scripts ./scripts
 
 # Supabase Storage sozlanmasa, ma'ruza audiolari shu yerga yoziladi — doimiy disk (volume) ulang,
 # aks holda konteyner qayta ishga tushganda audiolar yo'qoladi.
