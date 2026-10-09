@@ -1,14 +1,16 @@
 /**
  * AI Ustoz javobidagi chizma bloklari (```smiles```, ```atom```, ```punnett```,
- * ```dna```, ```cell```, ```rasm```, ```foto```, ```reaksiya```, ```mermaid```) — matnni komponentga
+ * ```dna```, ```cell```, ```rasm```, ```foto```, ```reaksiya```, ```bolinish```, ```zanjir```, ```mermaid```) — matnni komponentga
  * beriladigan ma'lumotga aylantirish. Formatni AI biroz buzsa ham (JSON o'rniga
  * oddiy matn) imkon qadar tushunadi.
  */
+import type { DivisionInput } from "./division";
 import type { DnaInput } from "./dna";
+import type { ChainInput } from "./ecology";
 import type { PunnettInput } from "./punnett";
 import type { ReactionSpec } from "./reactionView";
 
-export const VISUAL_LANGUAGES = new Set(["mermaid", "smiles", "atom", "punnett", "dna", "cell", "rasm", "foto", "anatomy", "animal", "reaksiya"]);
+export const VISUAL_LANGUAGES = new Set(["mermaid", "smiles", "atom", "punnett", "dna", "cell", "rasm", "foto", "anatomy", "animal", "reaksiya", "bolinish", "zanjir"]);
 
 export interface MoleculeSpec {
   smiles: string;
@@ -129,6 +131,50 @@ export function parseReaction(text: string): ReactionSpec {
   if (!equation) throw new Error("Reaksiya tenglamasi yo'q");
   if (equation.length > 300) throw new Error("Tenglama juda uzun");
   return { equation, names: stringRecord(json?.names, 12), given: stringRecord(json?.given, 4) };
+}
+
+/** ```bolinish```: {"type": "meyoz", "2n": 46, "sex": "urg'ochi", "times": 5, "stage": "anafaza I"} yoki "mitoz 46". */
+export function parseDivision(text: string): DivisionInput {
+  const json = tryJson(text);
+  const raw = String(json?.type ?? text).toLowerCase();
+  const type = /meyoz|meioz|meiosis|gametogenez|spermatogenez|ovogenez/.test(raw) ? "meyoz" : "mitoz";
+  let diploid = Number(json?.["2n"] ?? json?.diploid ?? NaN);
+  if (!Number.isFinite(diploid) && json?.n !== undefined) diploid = 2 * Number(json.n);
+  if (!Number.isFinite(diploid)) diploid = Number(text.match(/2n\s*=\s*(\d+)/i)?.[1] ?? text.match(/\b(\d+)\b/)?.[1] ?? 46);
+  const sexRaw = String(json?.sex ?? raw).toLowerCase();
+  const sex = /urg|ayol|ovo|tuxum|female/.test(sexRaw) ? "urgochi" : /erk|sperma|male/.test(sexRaw) ? "erkak" : null;
+  const times = Math.round(Number(json?.times ?? 1)) || 1;
+  return { type, diploid, times, sex, stage: json?.stage ? String(json.stage) : null, organism: String(json?.organism ?? "").slice(0, 60) };
+}
+
+/** "5 kg", "10000 kJ", "2,5 t" -> [5, "kg"]. */
+function valueWithUnit(raw: string): [number, string] {
+  const match = raw.trim().replace(/\s(?=\d{3}\b)/g, "").match(/^(\d+(?:[.,]\d+)?)\s*(.*)$/);
+  if (!match) throw new Error(`Qiymatni tushunib bo'lmadi: ${raw}`);
+  return [Number(match[1].replace(",", ".")), match[2].trim().slice(0, 12)];
+}
+
+/** ```zanjir```: {"chain": ["o'simlik", "chigirtka", ...], "given": {"burgut": "5 kg"}, "percent": 10} yoki "o't -> quyon -> tulki". */
+export function parseChain(text: string): ChainInput {
+  const json = tryJson(text);
+  const chain = (Array.isArray(json?.chain) ? (json.chain as unknown[]).map(String) : text.split(/\s*(?:->|→|—>|=>)\s*/))
+    .map((name) => name.trim())
+    .filter(Boolean)
+    .slice(0, 8)
+    .map((name) => name.slice(0, 40));
+  let givenLevel: string | number | null = null;
+  let givenValue: number | null = null;
+  let unit = "";
+  const given = json?.given;
+  if (given && typeof given === "object" && !Array.isArray(given)) {
+    const [entry] = Object.entries(given as Record<string, unknown>);
+    if (entry) {
+      givenLevel = entry[0];
+      [givenValue, unit] = valueWithUnit(String(entry[1]));
+    }
+  }
+  const percent = Number(json?.percent ?? 10);
+  return { chain, givenLevel, givenValue, unit, percent };
 }
 
 /** Ovozga aylantirishdan oldin: chizma bloklari, formulalar va markdown belgilari olib tashlanadi. */

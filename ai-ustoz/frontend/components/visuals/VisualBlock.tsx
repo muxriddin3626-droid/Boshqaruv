@@ -8,6 +8,8 @@ import {
   parseAtoms,
   parseCatalogChoice,
   parseCell,
+  parseChain,
+  parseDivision,
   parseDna,
   parseIllustration,
   parseMolecules,
@@ -15,7 +17,9 @@ import {
   parsePunnett,
   parseReaction,
 } from "@/lib/visuals/blocks";
+import { analyzeDivision, divisionScenes } from "@/lib/visuals/division";
 import { analyzeDna } from "@/lib/visuals/dna";
+import { analyzeChain } from "@/lib/visuals/ecology";
 import { punnett } from "@/lib/visuals/punnett";
 import { analyzeReaction } from "@/lib/visuals/reactionView";
 
@@ -23,7 +27,9 @@ import MermaidDiagram from "../chat/MermaidDiagram";
 import { ANIMAL_CHOICES, AnimalDiagram, HUMAN_SYSTEMS, HumanDiagram } from "./AnatomyDiagram";
 import AtomDiagram from "./AtomDiagram";
 import CellDiagram from "./CellDiagram";
+import DivisionDiagram from "./DivisionDiagram";
 import DnaDiagram from "./DnaDiagram";
+import FoodChainDiagram from "./FoodChainDiagram";
 import Illustration from "./Illustration";
 import Photo from "./Photo";
 import PunnettSquare from "./PunnettSquare";
@@ -58,6 +64,12 @@ function parse(language: string, source: string) {
       return { kind: "rasm" as const, data: parseIllustration(source) };
     case "foto":
       return { kind: "foto" as const, data: parsePhoto(source) };
+    case "bolinish": {
+      const input = parseDivision(source);
+      return { kind: "bolinish" as const, data: { result: analyzeDivision(input), scenes: divisionScenes(input.type, input.sex) } };
+    }
+    case "zanjir":
+      return { kind: "zanjir" as const, data: analyzeChain(parseChain(source)) };
     case "reaksiya": {
       const spec = parseReaction(source);
       return { kind: "reaksiya" as const, data: { spec, view: analyzeReaction(spec) } };
@@ -98,6 +110,10 @@ function Inner({ language, source }: { language: string; source: string }) {
       return <Illustration spec={parsed.data} />;
     case "foto":
       return <Photo spec={parsed.data} />;
+    case "bolinish":
+      return <DivisionDiagram result={parsed.data.result} scenes={parsed.data.scenes} />;
+    case "zanjir":
+      return <FoodChainDiagram result={parsed.data} />;
     case "reaksiya":
       return <ReactionDiagram spec={parsed.data.spec} view={parsed.data.view} />;
     case "anatomy":

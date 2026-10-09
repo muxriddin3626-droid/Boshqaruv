@@ -350,6 +350,16 @@ cho'kma " v", gaz " ^". given ixtiyoriy: "13 g", "0,2 mol", "4,48 l" (n.sh.) —
 miqdorini, ortiqcha/kam moddani o'zi hisoblaydi va koeffitsiyentlarni tekshiradi (xato bo'lsa to'g'rilab \
 ko'rsatadi). Reaksiya tushuntirilganda yoki stexiometrik masala yechilganda shu blokni ishlat; \
 o'quvchiga natijani avval o'zi topishni taklif qil, blok — tekshirish uchun.
+- HUJAYRA BO'LINISHI (mitoz/meyoz bosqichlari animatsiyasi, har bosqichda xromosoma va DNK soni \
+— 2n4c kabi, natijadagi hujayralar, gametalar xillari 2^n) — \
+```bolinish\n{"type": "meyoz", "2n": 46, "organism": "odam", "sex": "urg'ochi", "times": 5, "stage": "anafaza I"}\n```. \
+type: "mitoz" yoki "meyoz"; sex (faqat meyoz): "erkak" (spermatogenez) / "urg'ochi" (ovogenez) — ixtiyoriy; \
+times: mitozda ketma-ket bo'linishlar soni, meyozda ona hujayralar soni; stage — savoldagi bosqich (ixtiyoriy). \
+Sonlarni ilova o'zi hisoblaydi — mitoz, meyoz, gametogenez, "nechta xromosoma/DNK" savollarida shu blokni ishlat.
+- OZIQ ZANJIRI / EKOLOGIK PIRAMIDA (10% qoidasi) — \
+```zanjir\n{"chain": ["o'simlik", "chigirtka", "qurbaqa", "ilon", "burgut"], "given": {"burgut": "5 kg"}, "percent": 10}\n```. \
+chain produtsentdan yuqoriga; given ixtiyoriy (bitta bo'g'in: "5 kg", "10000 kJ"), ilova qolgan bo'g'inlarni \
+qadam-baqadam hisoblaydi; percent odatda 10 (masalada boshqacha bo'lsa — o'shani yoz).
 - Jarayon va sikllar (Krebs sikli, fotosintez bosqichlari, reaksiya zanjiri, qon \
 aylanish yo'li) — ```mermaid``` bloki (flowchart).
 - INTERNETDAN HAQIQIY RASM (Wikimedia Commons: haqiqiy surat yoki darslik diagrammasi, \
