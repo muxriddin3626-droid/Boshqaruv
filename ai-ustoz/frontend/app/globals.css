@@ -119,13 +119,36 @@ body {
 .cell-highlight {
   animation: cell-highlight 1.6s ease-in-out infinite;
 }
+@keyframes process-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.process-spin {
+  transform-box: view-box;
+  animation: process-spin 6s linear infinite;
+}
+@keyframes process-ray {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+.process-ray {
+  stroke-dasharray: 4 4;
+  animation: process-ray 0.8s linear infinite;
+}
 @media (prefers-reduced-motion: reduce) {
   .visual-pop,
   .atom-orbit,
   .cell-highlight {
     animation: none;
   }
-  .particle-atom {
+  .particle-atom,
+  .division-move {
     transition: none !important;
+  }
+  .process-spin,
+  .process-ray {
+    animation: none;
   }
 }

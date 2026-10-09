@@ -360,8 +360,16 @@ Sonlarni ilova o'zi hisoblaydi — mitoz, meyoz, gametogenez, "nechta xromosoma/
 ```zanjir\n{"chain": ["o'simlik", "chigirtka", "qurbaqa", "ilon", "burgut"], "given": {"burgut": "5 kg"}, "percent": 10}\n```. \
 chain produtsentdan yuqoriga; given ixtiyoriy (bitta bo'g'in: "5 kg", "10000 kJ"), ilova qolgan bo'g'inlarni \
 qadam-baqadam hisoblaydi; percent odatda 10 (masalada boshqacha bo'lsa — o'shani yoz).
-- Jarayon va sikllar (Krebs sikli, fotosintez bosqichlari, reaksiya zanjiri, qon \
-aylanish yo'li) — ```mermaid``` bloki (flowchart).
+- POPULYATSIYA GENETIKASI (Xardi–Vaynberg: p, q, p², 2pq, q², tashuvchilar, muvozanat) — \
+```populyatsiya\n{"given": {"aa": "4%"}, "total": 1000, "traits": {"A": "normal teri", "a": "albinizm"}}\n```. \
+given: "p", "q", "AA", "Aa" yoki "aa" — ulush (0,04), foiz ("4%") yoki son ("16", bunda total kerak); \
+uchala genotip soni berilsa ilova p, q ni sanaydi va muvozanatni tekshiradi.
+- ENERGIYA JARAYONLARI (bosqichlar animatsiyasi, ATF va energiya, moddalar massasi/hajmi) — \
+```jarayon\n{"process": "nafas", "given": {"glyukoza": "2 mol"}}\n```. process: "nafas" (aerob: glikoliz, \
+Krebs, elektron tashish — 38 ATF), "fotosintez" (yorug'lik va qorong'ilik fazalari), "sut bijg'ish", \
+"spirtli bijg'ish". given ixtiyoriy, bitta: glyukoza / O2 / CO2 / H2O / ATF ("760") — "360 g", "134,4 l", "2 mol".
+- Boshqa jarayon va sikllar (reaksiya zanjiri, qon aylanish yo'li, tasnif) — ```mermaid``` bloki \
+(flowchart). Fotosintez, nafas olish va bijg'ish uchun ```jarayon``` bloki yaxshiroq.
 - INTERNETDAN HAQIQIY RASM (Wikimedia Commons: haqiqiy surat yoki darslik diagrammasi, \
 muallifi va litsenziyasi bilan) — ```foto\n{"query": "inglizcha qisqa qidiruv", "caption": "o'zbekcha izoh"}\n```. \
 query 2-5 ta inglizcha so'z, ilmiy nom yaxshi ishlaydi: "frog internal anatomy", "Paramecium caudatum", \

@@ -14,12 +14,16 @@ import {
   parseIllustration,
   parseMolecules,
   parsePhoto,
+  parsePopulation,
+  parseProcess,
   parsePunnett,
   parseReaction,
 } from "@/lib/visuals/blocks";
 import { analyzeDivision, divisionScenes } from "@/lib/visuals/division";
 import { analyzeDna } from "@/lib/visuals/dna";
 import { analyzeChain } from "@/lib/visuals/ecology";
+import { analyzePopulation } from "@/lib/visuals/population";
+import { analyzeProcess, processKind } from "@/lib/visuals/process";
 import { punnett } from "@/lib/visuals/punnett";
 import { analyzeReaction } from "@/lib/visuals/reactionView";
 
@@ -32,6 +36,8 @@ import DnaDiagram from "./DnaDiagram";
 import FoodChainDiagram from "./FoodChainDiagram";
 import Illustration from "./Illustration";
 import Photo from "./Photo";
+import PopulationDiagram from "./PopulationDiagram";
+import ProcessDiagram from "./ProcessDiagram";
 import PunnettSquare from "./PunnettSquare";
 import ReactionDiagram from "./ReactionDiagram";
 import { VisualBoundary, VisualError, VisualPlaceholder } from "./VisualFrame";
@@ -70,6 +76,14 @@ function parse(language: string, source: string) {
     }
     case "zanjir":
       return { kind: "zanjir" as const, data: analyzeChain(parseChain(source)) };
+    case "populyatsiya": {
+      const input = parsePopulation(source);
+      return { kind: "populyatsiya" as const, data: { result: analyzePopulation(input), traits: input.traits } };
+    }
+    case "jarayon": {
+      const { kind, given } = parseProcess(source, processKind);
+      return { kind: "jarayon" as const, data: analyzeProcess(kind, given) };
+    }
     case "reaksiya": {
       const spec = parseReaction(source);
       return { kind: "reaksiya" as const, data: { spec, view: analyzeReaction(spec) } };
@@ -114,6 +128,10 @@ function Inner({ language, source }: { language: string; source: string }) {
       return <DivisionDiagram result={parsed.data.result} scenes={parsed.data.scenes} />;
     case "zanjir":
       return <FoodChainDiagram result={parsed.data} />;
+    case "populyatsiya":
+      return <PopulationDiagram result={parsed.data.result} traits={parsed.data.traits} />;
+    case "jarayon":
+      return <ProcessDiagram result={parsed.data} />;
     case "reaksiya":
       return <ReactionDiagram spec={parsed.data.spec} view={parsed.data.view} />;
     case "anatomy":

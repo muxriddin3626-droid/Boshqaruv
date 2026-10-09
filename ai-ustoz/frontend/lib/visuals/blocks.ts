@@ -1,16 +1,18 @@
 /**
  * AI Ustoz javobidagi chizma bloklari (```smiles```, ```atom```, ```punnett```,
- * ```dna```, ```cell```, ```rasm```, ```foto```, ```reaksiya```, ```bolinish```, ```zanjir```, ```mermaid```) — matnni komponentga
+ * ```dna```, ```cell```, ```rasm```, ```foto```, ```reaksiya```, ```bolinish```, ```zanjir```, ```populyatsiya```, ```jarayon```, ```mermaid```) — matnni komponentga
  * beriladigan ma'lumotga aylantirish. Formatni AI biroz buzsa ham (JSON o'rniga
  * oddiy matn) imkon qadar tushunadi.
  */
 import type { DivisionInput } from "./division";
 import type { DnaInput } from "./dna";
 import type { ChainInput } from "./ecology";
+import type { PopulationInput } from "./population";
+import type { ProcessKind } from "./process";
 import type { PunnettInput } from "./punnett";
 import type { ReactionSpec } from "./reactionView";
 
-export const VISUAL_LANGUAGES = new Set(["mermaid", "smiles", "atom", "punnett", "dna", "cell", "rasm", "foto", "anatomy", "animal", "reaksiya", "bolinish", "zanjir"]);
+export const VISUAL_LANGUAGES = new Set(["mermaid", "smiles", "atom", "punnett", "dna", "cell", "rasm", "foto", "anatomy", "animal", "reaksiya", "bolinish", "zanjir", "populyatsiya", "jarayon"]);
 
 export interface MoleculeSpec {
   smiles: string;
@@ -175,6 +177,21 @@ export function parseChain(text: string): ChainInput {
   }
   const percent = Number(json?.percent ?? 10);
   return { chain, givenLevel, givenValue, unit, percent };
+}
+
+/** ```populyatsiya```: {"given": {"aa": "4%"}, "total": 1000, "traits": {"A": "normal", "a": "albinizm"}}. */
+export function parsePopulation(text: string): PopulationInput {
+  const json = tryJson(text);
+  if (!json) throw new Error("Populyatsiya bloki JSON ko'rinishida bo'lsin");
+  const total = json.total === undefined || json.total === null ? null : Math.round(Number(json.total));
+  if (total !== null && !(total > 0)) throw new Error("Jami son (total) musbat bo'lsin");
+  return { given: stringRecord(json.given, 3), total, traits: stringRecord(json.traits, 4) };
+}
+
+/** ```jarayon```: {"process": "nafas" | "fotosintez" | "sut bijg'ish" | "spirtli bijg'ish", "given": {"glyukoza": "2 mol"}}. */
+export function parseProcess(text: string, kindOf: (raw: string) => ProcessKind): { kind: ProcessKind; given: Record<string, string> } {
+  const json = tryJson(text);
+  return { kind: kindOf(String(json?.process ?? json?.type ?? text)), given: stringRecord(json?.given, 1) };
 }
 
 /** Ovozga aylantirishdan oldin: chizma bloklari, formulalar va markdown belgilari olib tashlanadi. */

@@ -1,21 +1,14 @@
 "use client";
 
-import "katex/contrib/mhchem";
-
-import katex from "katex";
 import { useEffect, useRef, useState } from "react";
 
 import { atomColors, prettyFormula, type ParticleLayout } from "@/lib/visuals/particles";
 import { formatNumber, molarMassWorking, type Species } from "@/lib/visuals/reaction";
 import type { ReactionSpec, ReactionView } from "@/lib/visuals/reactionView";
 
+import ChemEquation from "./ChemEquation";
 import { VisualFrame } from "./VisualFrame";
 
-function Equation({ text, testId }: { text: string; testId?: string }) {
-  const html = katex.renderToString(`\\ce{${text}}`, { throwOnError: false, displayMode: true, trust: false });
-  // Telefonda kichikroq: KaTeX display satri bo'linmaydi, uzun tenglama ekrandan chiqib ketmasin.
-  return <div className="overflow-x-auto text-[13px] sm:text-base" data-testid={testId} dangerouslySetInnerHTML={{ __html: html }} />;
-}
 
 function Badge({ children, tone }: { children: string; tone: "cyan" | "amber" | "violet" | "gray" }) {
   const tones = {
@@ -134,7 +127,7 @@ export default function ReactionDiagram({ spec, view }: { spec: ReactionSpec; vi
             Yozilgan tenglama tenglashmagan edi (<span className="font-mono">{view.writtenText}</span>). Ilova koeffitsiyentlarni to&apos;g&apos;riladi:
           </div>
         )}
-        <Equation text={view.text} testId="reaction-equation" />
+        <ChemEquation text={view.text} testId="reaction-equation" />
         {view.status === "unbalanced" && (
           <p className="text-xs text-amber-300" data-testid="reaction-unbalanced">
             Diqqat: bu tenglamani tenglashtirib bo&apos;lmadi — moddalarni tekshiring.
