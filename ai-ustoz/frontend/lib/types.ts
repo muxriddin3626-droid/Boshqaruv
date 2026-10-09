@@ -548,6 +548,8 @@ export interface TextbookAccess {
   is_admin: boolean;
   max_mb: number;
   ocr_max_pages: number;
+  /** Ilova ichida tayyor turgan, hali bilim bazasiga qo'shilmagan darsliklar nomlari. */
+  bundled_pending: string[];
 }
 
 /** Bilim bazasiga yuklangan darslik: fonda matn ajratiladi, skaner sahifalar OCR qilinadi. */

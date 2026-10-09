@@ -883,6 +883,12 @@ class TextbookAccessOut(BaseModel):
     is_admin: bool
     max_mb: int
     ocr_max_pages: int
+    # Ilova ichida (repoda) tayyor turgan, lekin hali bilim bazasiga qo'shilmagan darsliklar (faqat adminga).
+    bundled_pending: list[str] = []
+
+
+class TextbookImportOut(BaseModel):
+    queued: list[str]
 
 
 class TextbookOut(BaseModel):

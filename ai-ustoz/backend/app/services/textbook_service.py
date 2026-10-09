@@ -16,14 +16,16 @@ qolganlari navbatda ("queued") turadi.
 import asyncio
 import io
 import logging
+import os
 import re
+import shutil
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
 from openai import AsyncOpenAI
 from pypdf import PdfReader
-from sqlalchemy import delete, text, update
+from sqlalchemy import delete, select, text, update
 
 from app.core.config import get_settings
 from app.db.session import AsyncSessionLocal
@@ -213,8 +215,23 @@ async def process(textbook_id: uuid.UUID) -> None:
             async with AsyncSessionLocal() as db:
                 await db.execute(text("DELETE FROM knowledge_chunks WHERE textbook_id = :id"), {"id": textbook_id})
                 await db.commit()
-            message = str(exc) if isinstance(exc, ValueError) else f"Qayta ishlashda xato: {type(exc).__name__}"
+            message = str(exc) if isinstance(exc, ValueError) else explain_error(exc)
             await _set(textbook_id, status="failed", stage=None, chunks_count=0, error=message[:500])
+
+
+def explain_error(exc: Exception) -> str:
+    """OpenAI xatolarini admin tushunadigan o'zbekcha matnga aylantiradi."""
+    import openai
+
+    if isinstance(exc, openai.AuthenticationError):
+        return "OpenAI kaliti noto'g'ri yoki o'chirilgan — Render'da OPENAI_API_KEY ni tekshiring."
+    if isinstance(exc, openai.RateLimitError):
+        if "insufficient_quota" in str(exc):
+            return "OpenAI hisobida mablag' tugagan — platform.openai.com -> Billing bo'limida hisobni to'ldiring."
+        return "OpenAI so'rovlar chegarasiga yetildi — birozdan keyin \"Qayta urinish\" ni bosing."
+    if isinstance(exc, openai.APIConnectionError):
+        return "OpenAI'ga ulanib bo'lmadi (internet) — keyinroq \"Qayta urinish\" ni bosing."
+    return f"Qayta ishlashda xato: {type(exc).__name__}"
 
 
 def schedule(textbook_id: uuid.UUID) -> None:
@@ -239,3 +256,113 @@ async def remove(textbook: Textbook) -> None:
         await db.execute(delete(Textbook).where(Textbook.id == textbook.id))
         await db.commit()
     Path(textbook.file_path).unlink(missing_ok=True)
+
+
+# --- Ilova ichidagi (repodagi) darsliklar ---------------------------------------------------
+
+SUBJECTS = ("kimyo", "biologiya")
+# Fayl nomi boshi -> chiroyli nom (topilmasa, nomdan avtomatik yasaladi).
+BUNDLED_TITLES = {
+    "5-sinf": "Biologiya 5-sinf",
+    "botanika_6": "Botanika 6-sinf",
+    "zoologiya_7": "Zoologiya 7-sinf",
+    "odam_va_uning_salomatligi_8": "Odam va uning salomatligi 8-sinf",
+    "biologiya_9": "Biologiya 9-sinf",
+    "biologiya_10": "Biologiya 10-sinf",
+    "biologiya_11": "Biologiya 11-sinf",
+    "kimyo_7": "Kimyo 7-sinf",
+    "kimyo_8": "Kimyo 8-sinf",
+    "kimyo_9": "Kimyo 9-sinf",
+    "organik_kimyo_10": "Organik kimyo 10-sinf",
+    "umumiy_kimyo_11": "Umumiy kimyo 11-sinf",
+}
+
+
+def bundled_dir() -> Path:
+    env = os.environ.get("TEXTBOOKS_DIR")
+    if env:
+        return Path(env)
+    repo = Path(__file__).resolve().parents[3] / "data" / "textbooks"  # lokal: ai-ustoz/data/textbooks
+    return repo if repo.exists() else Path("/data/textbooks")  # Docker (Render) obrazida
+
+
+def grade_from_name(name: str) -> int | None:
+    """`_8_`, `-10-`, `5-sinf` kabi alohida turgan 5..11 son; `11zon` kabi so'z ichidagi raqam hisoblanmaydi."""
+    for match in re.finditer(r"(?:^|[_\-\s])(\d{1,2})(?=$|[_\-\s.(]|-?sinf)", name):
+        value = int(match.group(1))
+        if 5 <= value <= 11:
+            return value
+    return None
+
+
+def title_for(stem: str, subject: str, grade: int) -> str:
+    for key, title in BUNDLED_TITLES.items():
+        if stem.startswith(key):
+            return title
+    words = re.sub(r"_(uzb|11zon|compressed)\b", "", stem)
+    words = re.sub(r"[_\-]+|\(\d+\)", " ", words).strip()
+    return f"{words[:1].upper()}{words[1:]} ({grade}-sinf)" if words else f"{subject.capitalize()} {grade}-sinf"
+
+
+def scan_bundled(directory: Path | None = None, only: str | None = None) -> list[dict]:
+    """`<papka>/<fan>/*.pdf` — fan, sinf (fayl nomidan) va nom bilan. Sinf aniqlanmasa grade=None."""
+    directory = directory or bundled_dir()
+    books = []
+    for path in sorted(directory.glob("*/*.pdf")):
+        subject = path.parent.name
+        if subject not in SUBJECTS or (only and only.lower() not in path.name.lower()):
+            continue
+        grade = grade_from_name(path.stem)
+        books.append({"path": path, "subject": subject, "grade": grade, "title": title_for(path.stem, subject, grade) if grade else None})
+    return books
+
+
+async def pending_bundled() -> list[dict]:
+    """Hali bilim bazasiga qo'shilmagan (yoki xato bo'lgan) ilova ichidagi darsliklar."""
+    books = [book for book in scan_bundled() if book["grade"]]
+    async with AsyncSessionLocal() as db:
+        rows = (await db.execute(select(Textbook.filename, Textbook.size_bytes, Textbook.status))).all()
+    done = {(name, size) for name, size, status in rows if status in ("ready", "queued", "processing")}
+    return [book for book in books if (book["path"].name, book["path"].stat().st_size) not in done]
+
+
+async def register_bundled(book: dict, use_ocr: bool) -> uuid.UUID:
+    """Darslikni yopiq papkaga nusxalab, yozuv yaratadi (yoki xato bo'lganini qayta navbatga qo'yadi)."""
+    path: Path = book["path"]
+    size = path.stat().st_size
+    async with AsyncSessionLocal() as db:
+        existing = (
+            await db.execute(select(Textbook).where(Textbook.subject == book["subject"], Textbook.filename == path.name, Textbook.size_bytes == size))
+        ).scalar_one_or_none()
+        now = datetime.now(timezone.utc)
+        if existing:
+            existing.use_ocr = use_ocr
+            existing.status = "queued"
+            existing.error = None
+            existing.updated_at = now
+            await db.commit()
+            return existing.id
+        textbook_id = uuid.uuid4()
+        target_dir = textbooks_dir()
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target = target_dir / f"{textbook_id}.pdf"
+        await asyncio.to_thread(shutil.copyfile, path, target)
+        pages = len((await asyncio.to_thread(PdfReader, str(target))).pages)
+        db.add(
+            Textbook(
+                id=textbook_id,
+                subject=book["subject"],
+                grade=book["grade"],
+                title=book["title"],
+                filename=path.name,
+                file_path=str(target),
+                size_bytes=size,
+                use_ocr=use_ocr,
+                status="queued",
+                pages_total=pages,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        await db.commit()
+        return textbook_id

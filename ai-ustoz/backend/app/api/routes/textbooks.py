@@ -12,7 +12,7 @@ from app.core.config import get_settings
 from app.core.security import get_current_user_id
 from app.db.session import get_db
 from app.models.database import Textbook, User
-from app.models.schemas import SubjectSchema, TextbookAccessOut, TextbookOut
+from app.models.schemas import SubjectSchema, TextbookAccessOut, TextbookImportOut, TextbookOut
 from app.services import textbook_service
 
 router = APIRouter(prefix="/api/v1/textbooks", tags=["textbooks"])
@@ -38,7 +38,19 @@ def _out(textbook: Textbook) -> TextbookOut:
 
 @router.get("/access", response_model=TextbookAccessOut)
 async def access(user_id: uuid.UUID = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
-    return TextbookAccessOut(is_admin=await _is_admin(db, user_id), max_mb=settings.textbook_max_mb, ocr_max_pages=settings.textbook_ocr_max_pages)
+    is_admin = await _is_admin(db, user_id)
+    pending = [book["title"] for book in await textbook_service.pending_bundled()] if is_admin else []
+    return TextbookAccessOut(is_admin=is_admin, max_mb=settings.textbook_max_mb, ocr_max_pages=settings.textbook_ocr_max_pages, bundled_pending=pending)
+
+
+@router.post("/import-bundled", response_model=TextbookImportOut, status_code=202)
+async def import_bundled(use_ocr: bool = True, _: uuid.UUID = Depends(require_admin)):
+    """Ilova ichidagi (repodagi) hali qo'shilmagan darsliklarni navbatga qo'yadi — bittadan qayta ishlanadi."""
+    queued = []
+    for book in await textbook_service.pending_bundled():
+        textbook_service.schedule(await textbook_service.register_bundled(book, use_ocr=use_ocr))
+        queued.append(book["title"])
+    return TextbookImportOut(queued=queued)
 
 
 @router.get("", response_model=list[TextbookOut])

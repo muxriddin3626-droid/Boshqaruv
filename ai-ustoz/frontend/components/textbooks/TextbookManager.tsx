@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { deleteTextbook, fetchTextbooks, retryTextbook, uploadTextbook } from "@/lib/api";
+import { deleteTextbook, fetchTextbooks, importBundledTextbooks, retryTextbook, uploadTextbook } from "@/lib/api";
 import type { Subject, Textbook, TextbookAccess } from "@/lib/types";
 
 const POLL_MS = 3000;
@@ -51,6 +51,8 @@ export default function TextbookManager({ token, access, defaultSubject }: { tok
   const [file, setFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const [bundled, setBundled] = useState<string[]>(access.bundled_pending ?? []);
+  const [isImporting, setIsImporting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -102,8 +104,41 @@ export default function TextbookManager({ token, access, defaultSubject }: { tok
     await refresh();
   };
 
+  const importBundled = async () => {
+    setIsImporting(true);
+    setMessage(null);
+    try {
+      const { queued } = await importBundledTextbooks(token, useOcr);
+      setBundled([]);
+      setMessage({ tone: "ok", text: `${queued.length} ta darslik navbatga qo'yildi — bittadan qayta ishlanadi. Bu sahifani yopsangiz ham davom etadi.` });
+    } catch (err) {
+      setMessage({ tone: "error", text: err instanceof Error ? err.message : "Xato" });
+    } finally {
+      setIsImporting(false);
+      await refresh();
+    }
+  };
+
   return (
     <div className="space-y-4" data-testid="textbooks">
+      {bundled.length > 0 && (
+        <div className="rounded-2xl border border-neon-cyan/40 bg-neon-cyan/5 p-4" data-testid="textbook-bundled">
+          <h2 className="text-base font-semibold text-white">Ilova ichida {bundled.length} ta darslik tayyor turibdi</h2>
+          <p className="mt-1 text-xs text-gray-300">{bundled.join(", ")}</p>
+          <p className="mt-1 text-[11px] text-gray-400">
+            Bir bosishda hammasi AI Ustoz bilim bazasiga qo&apos;shiladi. Skanerlangan kitoblarni o&apos;qish (OCR) pullik — pastdagi belgi bilan boshqariladi.
+          </p>
+          <button
+            type="button"
+            disabled={isImporting}
+            onClick={() => void importBundled()}
+            className="mt-3 w-full rounded-xl bg-neon-cyan px-4 py-2.5 text-sm font-semibold text-black disabled:opacity-50"
+            data-testid="textbook-import-bundled"
+          >
+            {isImporting ? "Qo'shilmoqda..." : "Hammasini bilim bazasiga qo'shish"}
+          </button>
+        </div>
+      )}
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
         <h2 className="text-base font-semibold text-white">Darslik yuklash</h2>
         <p className="mt-1 text-xs text-gray-400">

@@ -622,3 +622,13 @@ export async function deleteTextbook(token: string, id: string): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/api/v1/textbooks/${id}`, { method: "DELETE", headers: authHeaders(token) });
   if (!response.ok) throw new Error(await errorDetail(response, "O'chirib bo'lmadi"));
 }
+
+/** Ilova ichidagi (repodagi) darsliklarni bilim bazasiga navbatga qo'yish. */
+export async function importBundledTextbooks(token: string, useOcr: boolean): Promise<{ queued: string[] }> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/textbooks/import-bundled?use_ocr=${useOcr ? "true" : "false"}`, {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+  if (!response.ok) throw new Error(await errorDetail(response, "Darsliklarni qo'shib bo'lmadi"));
+  return response.json();
+}

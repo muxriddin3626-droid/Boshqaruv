@@ -1,9 +1,13 @@
 """AI Ustoz — FastAPI ilova kirish nuqtasi."""
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import (
     audio,
@@ -88,3 +92,17 @@ app.include_router(textbooks.router)
 @app.get("/health", tags=["system"])
 async def health_check():
     return {"status": "ok", "service": "ai-ustoz-backend"}
+
+
+# --- Sayt (frontend) --------------------------------------------------------------------
+# Render'da sayt va API bitta xizmatda: `next build` (NEXT_OUTPUT=export) chiqargan tayyor
+# fayllar WEB_DIR dan beriladi. Papka bo'lmasa (lokal ishlab chiqish) — hech narsa ulanmaydi.
+_web_dir = Path(os.environ.get("WEB_DIR", "/app/web"))
+if _web_dir.is_dir():
+
+    @app.get("/icon", include_in_schema=False)
+    async def site_icon():
+        # Next.js eksporti favicon'ni kengaytmasiz "icon" fayli qilib chiqaradi — turini aniq aytamiz.
+        return FileResponse(_web_dir / "icon", media_type="image/png")
+
+    app.mount("/", StaticFiles(directory=_web_dir, html=True), name="web")
