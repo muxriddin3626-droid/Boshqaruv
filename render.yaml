@@ -21,8 +21,10 @@ services:
       mountPath: /app/media
       sizeGB: 1
     envVars:
-      - key: DATABASE_URL # Neon.tech dan nusxalangan ulanish satri
-        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ai-ustoz-db
+          property: connectionString
       - key: OPENAI_API_KEY # platform.openai.com -> API keys
         sync: false
       - key: ADMIN_PHONES # "Darsliklar" bo'limi ochiladigan telefon raqamlar, masalan +998901234567
@@ -47,3 +49,13 @@ services:
     region: frankfurt
     maxmemoryPolicy: allkeys-lru
     ipAllowList: [] # faqat Render ichidan ulanish mumkin
+
+databases:
+  # Postgres (pgvector bilan — darsliklar bilim bazasi). Render ichidan ulanadi, tashqaridan yopiq.
+  - name: ai-ustoz-db
+    plan: basic-256mb
+    region: frankfurt
+    databaseName: ai_ustoz
+    user: ai_ustoz
+    postgresMajorVersion: "16"
+    ipAllowList: []
