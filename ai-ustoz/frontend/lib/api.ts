@@ -94,7 +94,7 @@ export async function streamChatMessage(
     body: JSON.stringify({ subject, message }),
   });
 
-  if (!response.body) {
+  if (!response.ok || !response.body) {
     throw new Error("Server javob oqimini qaytarmadi");
   }
 

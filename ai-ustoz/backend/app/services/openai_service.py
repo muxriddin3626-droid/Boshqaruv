@@ -62,6 +62,19 @@ async def stream_chat_response(
             yield delta
 
 
+def describe_error_for_student(exc: Exception) -> str:
+    """OpenAI xatosini o'quvchiga ko'rsatiladigan qisqa o'zbekcha matnga aylantiradi."""
+    import openai
+
+    if isinstance(exc, openai.RateLimitError) and "insufficient_quota" in str(exc):
+        return "AI Ustoz hozir javob bera olmayapti: OpenAI hisobida mablag' tugagan. Administratorga xabar bering."
+    if isinstance(exc, openai.AuthenticationError):
+        return "AI Ustoz hozir javob bera olmayapti: OpenAI kaliti noto'g'ri. Administratorga xabar bering."
+    if isinstance(exc, openai.RateLimitError):
+        return "AI Ustoz hozir juda band — bir daqiqadan keyin qayta yozib ko'ring."
+    return "AI Ustoz javob berishda xatoga uchradi — birozdan keyin qayta urinib ko'ring."
+
+
 DEFAULT_VOICE_INSTRUCTIONS = (
     "Sen AI Ustoz — qattiqqo'l, lekin g'amxo'r o'zbek repetitori. "
     "O'zbek tilida gapir, qisqa va aniq javob ber, o'quvchini "

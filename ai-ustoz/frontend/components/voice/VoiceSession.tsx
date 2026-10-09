@@ -21,6 +21,25 @@ const PHASE_LABEL: Record<Phase, string> = {
   speaking: "Gapiryapman...",
 };
 
+/** OpenAI ulanish xatosini o'quvchi tushunadigan o'zbekcha matnga aylantiradi. */
+function describeSdpError(status: number, body: string): string {
+  let message = "";
+  let code = "";
+  try {
+    const parsed = JSON.parse(body) as { error?: { message?: string; code?: string; type?: string } };
+    message = parsed.error?.message ?? "";
+    code = parsed.error?.code ?? parsed.error?.type ?? "";
+  } catch {
+    message = body;
+  }
+  if (code === "insufficient_quota" || /credits|quota|billing/i.test(message)) {
+    return "OpenAI hisobida mablag' tugagan — admin platform.openai.com → Billing bo'limida hisobni to'ldirishi kerak.";
+  }
+  if (status === 401) return "Ovozli aloqa kaliti eskirdi — qaytadan \"Ovozli suhbatni boshlash\" ni bosing.";
+  if (status === 429) return "OpenAI hozir band — bir daqiqadan keyin qayta urinib ko'ring.";
+  return `OpenAI ovozli aloqani ulamadi (${status})${message ? `: ${message.slice(0, 120)}` : ""}`;
+}
+
 function formatClock(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -144,8 +163,7 @@ export default function VoiceSession({ token, subject }: { token: string; subjec
       });
 
       if (!sdpResponse.ok) {
-        const reason = await sdpResponse.text().catch(() => "");
-        throw new Error(`OpenAI ovozli aloqani ulamadi (${sdpResponse.status})${reason ? `: ${reason.slice(0, 160)}` : ""}`);
+        throw new Error(describeSdpError(sdpResponse.status, await sdpResponse.text().catch(() => "")));
       }
 
       const answerSdp = await sdpResponse.text();
@@ -213,7 +231,7 @@ export default function VoiceSession({ token, subject }: { token: string; subjec
         </div>
       )}
 
-      {error && <p className="text-center text-sm text-red-400">{error}</p>}
+      {error && <p className="break-words text-center text-sm text-red-400 [overflow-wrap:anywhere]">{error}</p>}
 
       {!isConnected && (
         <button

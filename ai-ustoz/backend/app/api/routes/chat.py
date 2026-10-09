@@ -1,5 +1,6 @@
 """Chat endpoint — matnli suhbat, streaming javob bilan."""
 import json
+import logging
 import uuid
 from datetime import date
 
@@ -17,10 +18,11 @@ from app.prompts.exam_feedback_prompt import build_exam_feedback_addendum
 from app.prompts.innovation_prompt import build_innovation_addendum
 from app.prompts.system_prompt import build_system_prompt
 from app.services import exam_pipeline_service, progress_service, rag_service, research_service, weakness_service
-from app.services.openai_service import stream_chat_response
+from app.services.openai_service import describe_error_for_student, stream_chat_response
 from app.services.session_service import SessionService
 
 router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
+logger = logging.getLogger(__name__)
 
 # Bir xil innovatsiya bir o'quvchiga qayta-qayta ko'rsatilmasligi uchun (Redis'da "ko'rsatildi" belgisi)
 INNOVATION_SHOWN_TTL_SECONDS = 60 * 60 * 24
@@ -68,16 +70,28 @@ async def send_chat_message(
     system_prompt = build_system_prompt(student_ctx) + await _build_prompt_addendums(db, redis, user_id, subject)
 
     history = await session_service.get_history(user_id, subject)
-    rag_context = await rag_service.retrieve_relevant_context(
-        db, subject, student_ctx.current_grade, payload.message
-    )
+    try:
+        rag_context = await rag_service.retrieve_relevant_context(
+            db, subject, student_ctx.current_grade, payload.message
+        )
+    except Exception:  # noqa: BLE001 — darslik qidiruvi ishlamasa ham suhbat davom etadi
+        logger.warning("RAG qidiruvi ishlamadi", exc_info=True)
+        await db.rollback()
+        rag_context = ""
 
     async def event_stream():
         full_response = ""
-        async for delta in stream_chat_response(system_prompt, history, payload.message, rag_context):
-            full_response += delta
-            # JSON: bo'lak ichidagi "\n\n" (paragraf, ``` chizma bloki) SSE ajratgichi bilan aralashmasin.
-            yield f"data: {json.dumps(delta, ensure_ascii=False)}\n\n"
+        try:
+            async for delta in stream_chat_response(system_prompt, history, payload.message, rag_context):
+                full_response += delta
+                # JSON: bo'lak ichidagi "\n\n" (paragraf, ``` chizma bloki) SSE ajratgichi bilan aralashmasin.
+                yield f"data: {json.dumps(delta, ensure_ascii=False)}\n\n"
+        except Exception as exc:  # noqa: BLE001 — sababini o'quvchiga tushunarli qilib ko'rsatamiz
+            logger.warning("Chat javobi uzildi", exc_info=True)
+            notice = ("\n\n" if full_response else "") + "⚠️ " + describe_error_for_student(exc)
+            yield f"data: {json.dumps(notice, ensure_ascii=False)}\n\n"
+            yield "event: done\ndata: [DONE]\n\n"
+            return
 
         # Suhbat tugagach: qisqa muddatli Redis tarixini yangilaymiz
         await session_service.append_message(user_id, subject, "user", payload.message)
