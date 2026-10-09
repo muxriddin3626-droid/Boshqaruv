@@ -98,6 +98,21 @@ async def health_check():
 # Render'da sayt va API bitta xizmatda: `next build` (NEXT_OUTPUT=export) chiqargan tayyor
 # fayllar WEB_DIR dan beriladi. Papka bo'lmasa (lokal ishlab chiqish) — hech narsa ulanmaydi.
 _web_dir = Path(os.environ.get("WEB_DIR", "/app/web"))
+
+
+class _SiteFiles(StaticFiles):
+    """Sahifalar (HTML) har safar yangisi tekshiriladi — yangilanishdan keyin brauzer eski saytni
+    ko'rsatib qolmasin. `_next/static` fayllari nomida xesh bor, ular uzoq keshlanadi."""
+
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if path.startswith("_next/static/"):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif response.media_type == "text/html" or response.headers.get("content-type", "").startswith("text/html"):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 if _web_dir.is_dir():
 
     @app.get("/icon", include_in_schema=False)
@@ -105,4 +120,4 @@ if _web_dir.is_dir():
         # Next.js eksporti favicon'ni kengaytmasiz "icon" fayli qilib chiqaradi — turini aniq aytamiz.
         return FileResponse(_web_dir / "icon", media_type="image/png")
 
-    app.mount("/", StaticFiles(directory=_web_dir, html=True), name="web")
+    app.mount("/", _SiteFiles(directory=_web_dir, html=True), name="web")
