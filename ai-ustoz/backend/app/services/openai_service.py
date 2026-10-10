@@ -95,7 +95,10 @@ async def _openai_chat(**kwargs):
     return response
 
 
-async def _text_completion(messages: list[dict], temperature: float, json_mode: bool = False):
+async def _text_completion(
+    messages: list[dict], temperature: float, json_mode: bool = False, openai_model: str | None = None
+):
+    """Gemini bo'lsa — Gemini (xato/bo'sh bo'lsa OpenAI), aks holda OpenAI. Rasmli xabarlar ham (image_url)."""
     extra: dict[str, Any] = {"response_format": {"type": "json_object"}} if json_mode else {}
     gemini = gemini_client()
     if gemini is not None:
@@ -108,7 +111,15 @@ async def _text_completion(messages: list[dict], temperature: float, json_mode: 
             logger.warning("Gemini bo'sh javob qaytardi — OpenAI ishlatiladi")
         except Exception as exc:  # noqa: BLE001 — Gemini ishlamasa OpenAI bilan davom etamiz
             logger.warning("Gemini ishlamadi (%s) — OpenAI ishlatiladi", type(exc).__name__, exc_info=True)
-    return await _openai_chat(model=settings.openai_chat_model, messages=messages, temperature=temperature, **extra)
+    return await _openai_chat(
+        model=openai_model or settings.openai_chat_model, messages=messages, temperature=temperature, **extra
+    )
+
+
+def _json_content(response) -> dict[str, Any]:
+    content = response.choices[0].message.content or "{}"
+    # Ba'zi modellar JSON'ni ```json ... ``` ichida qaytaradi.
+    return json.loads(re.sub(r"^```(?:json)?\s*|\s*```$", "", content.strip()))
 
 
 async def _consume_stream(stream, model: str, messages: list[dict]) -> AsyncIterator[str]:
@@ -287,10 +298,7 @@ async def _generate_json(system_instruction: str, user_content: str, temperature
         temperature=temperature,
         json_mode=True,
     )
-    content = response.choices[0].message.content or "{}"
-    # Ba'zi modellar JSON'ni ```json ... ``` ichida qaytaradi.
-    content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content.strip())
-    return json.loads(content)
+    return _json_content(response)
 
 
 async def generate_flashcards(subject: str, lesson_title: str, lesson_content: str, card_count: int) -> list[dict]:
@@ -372,8 +380,8 @@ async def ocr_image_to_text(image_bytes: bytes, mime_type: str = "image/jpeg") -
     encoded_image = base64.b64encode(image_bytes).decode("utf-8")
     data_url = f"data:{mime_type};base64,{encoded_image}"
 
-    response = await _openai_chat(
-        model=settings.openai_vision_model,
+    response = await _text_completion(
+        openai_model=settings.openai_vision_model,
         messages=[
             {
                 "role": "system",
@@ -658,13 +666,13 @@ async def grade_homework_solutions(subject: str, topic: str, items: list[dict]) 
             content.append({"type": "text", "text": f"O'quvchining {index}-masala uchun daftar rasmi:"})
             content.append({"type": "image_url", "image_url": {"url": item["photo_data_url"]}})
 
-    response = await _openai_chat(
-        model=settings.openai_vision_model,
-        messages=[{"role": "system", "content": HOMEWORK_GRADER_RULES}, {"role": "user", "content": content}],
+    response = await _text_completion(
+        [{"role": "system", "content": HOMEWORK_GRADER_RULES}, {"role": "user", "content": content}],
         temperature=0.2,
-        response_format={"type": "json_object"},
+        json_mode=True,
+        openai_model=settings.openai_vision_model,
     )
-    result = json.loads(response.choices[0].message.content or "{}")
+    result = _json_content(response)
     by_n = {r["n"]: r for r in result.get("results", []) if isinstance(r, dict) and isinstance(r.get("n"), int)}
     return [by_n.get(index, {}) for index in range(len(items))]
 
@@ -753,8 +761,8 @@ async def is_image_unsafe_for_kids(image: bytes, mime: str) -> bool:
 async def ocr_textbook_page(image_bytes: bytes, mime_type: str = "image/jpeg") -> str:
     """Skanerlangan darslik sahifasini (GPT-4o vision) matnga o'giradi — bilim bazasi (RAG) uchun."""
     data_url = f"data:{mime_type};base64,{base64.b64encode(image_bytes).decode('utf-8')}"
-    response = await _openai_chat(
-        model=settings.openai_vision_model,
+    response = await _text_completion(
+        openai_model=settings.openai_vision_model,
         messages=[
             {
                 "role": "system",
@@ -766,7 +774,7 @@ async def ocr_textbook_page(image_bytes: bytes, mime_type: str = "image/jpeg") -
                     "Sahifa raqami, kolontitul va o'zingdan izoh yozma. Matn bo'lmasa — bo'sh javob qaytar."
                 ),
             },
-            {"role": "user", "content": [{"type": "image_url", "image_url": {"url": data_url, "detail": "high"}}]},
+            {"role": "user", "content": [{"type": "image_url", "image_url": {"url": data_url}}]},
         ],
         temperature=0.0,
     )
