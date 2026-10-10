@@ -32,7 +32,6 @@ from app.services.rate_limit import RateLimitExceededError, ensure_below_limit, 
 router = APIRouter(prefix="/api/v1/games", tags=["games"])
 
 GAMES_PER_HOUR = 40
-BANK_UNAVAILABLE_DETAIL = "Savollar hozircha tayyorlanmadi (AI xizmati javob bermayapti). Birozdan keyin urinib ko'ring."
 GAME_OVER_DETAIL = "O'yin tugagan"
 
 
@@ -106,7 +105,7 @@ async def start_millioner(
     try:
         attempt = await games.start_millioner(db, await _get_user(db, user_id), payload.subject.value, _now())
     except QuestionBankUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=BANK_UNAVAILABLE_DETAIL) from exc
+        raise HTTPException(status_code=503, detail=exc.user_message) from exc
     await register_hit(redis, limit_key, 60 * 60)
     return await _millioner_state(db, attempt)
 
@@ -180,7 +179,7 @@ async def start_blitz(
     try:
         attempt = await games.start_blitz(db, await _get_user(db, user_id), payload.subject.value, _now())
     except QuestionBankUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=BANK_UNAVAILABLE_DETAIL) from exc
+        raise HTTPException(status_code=503, detail=exc.user_message) from exc
     await register_hit(redis, limit_key, 60 * 60)
     statements = [
         BlitzStatementOut(id=str(q.id), topic=q.topic, text=q.question)
@@ -236,7 +235,7 @@ async def start_matching(
     try:
         attempt, question = await games.start_matching(db, await _get_user(db, user_id), payload.subject.value, _now())
     except QuestionBankUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=BANK_UNAVAILABLE_DETAIL) from exc
+        raise HTTPException(status_code=503, detail=exc.user_message) from exc
     await register_hit(redis, limit_key, 60 * 60)
     left, right = games.matching_columns(question, attempt.state["right_order"])
     return MatchingStartOut(

@@ -40,7 +40,6 @@ router = APIRouter(prefix="/api/v1/tests", tags=["tests"])
 # Har yangi test AI chaqiruvini keltirib chiqarishi mumkin (pullik) — soatlik chegara.
 TESTS_PER_HOUR = 15
 
-BANK_UNAVAILABLE_DETAIL = "Savollar hozircha tayyorlanmadi (AI xizmati javob bermayapti). Birozdan keyin urinib ko'ring."
 
 
 def _now() -> datetime:
@@ -160,7 +159,7 @@ async def create_test(
     except tests.TestRequestError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except QuestionBankUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=BANK_UNAVAILABLE_DETAIL) from exc
+        raise HTTPException(status_code=503, detail=exc.user_message) from exc
 
     await register_hit(redis, limit_key, 60 * 60)
     return await _session_out(db, attempt)

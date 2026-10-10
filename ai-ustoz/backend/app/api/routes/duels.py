@@ -29,7 +29,6 @@ router = APIRouter(prefix="/api/v1/duels", tags=["duels"])
 DUELS_PER_HOUR = 20
 # Noto'g'ri kod bilan qo'shilish urinishlari: begona duel kodini terib topishning oldini olish.
 JOIN_FAILURES_PER_HOUR = 30
-BANK_UNAVAILABLE_DETAIL = "Savollar hozircha tayyorlanmadi (AI xizmati javob bermayapti). Birozdan keyin urinib ko'ring."
 
 
 def _now() -> datetime:
@@ -117,7 +116,7 @@ async def create_duel(
     try:
         duel = await duels.create_duel(db, await _get_user(db, user_id), payload.subject.value, _now())
     except QuestionBankUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=BANK_UNAVAILABLE_DETAIL) from exc
+        raise HTTPException(status_code=503, detail=exc.user_message) from exc
     except duels.DuelError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     await register_hit(redis, key, 60 * 60)

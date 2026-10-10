@@ -25,16 +25,49 @@ logger = logging.getLogger(__name__)
 
 TRUE_FALSE_OPTIONS = ["To'g'ri", "Noto'g'ri"]
 MATCHING_PAIRS = 6
-# Tekshiruvda tashlanadigan savollar o'rnini to'ldirish uchun ortiqcha so'raladi.
+# Tekshiruvda tashlanadigan savollar o'rnini to'ldirish uchun ortiqcha so'raladi (kamida +2).
 GENERATION_OVERHEAD = 1.4
+MIN_EXTRA_ITEMS = 2
 MAX_ITEMS_PER_CALL = 10
-# Bo'sh bankda katta test (masalan, DTM) bir vaqtda o'nlab chaqiruv qilmasligi uchun.
-_ai_semaphore = asyncio.Semaphore(6)
+# Bo'sh bankda katta test (masalan, DTM) bir vaqtda o'nlab chaqiruv qilmasligi uchun: yangi OpenAI
+# hisoblarida daqiqalik token chegarasi kichik, ko'p parallel so'rov "429" bilan qaytadi.
+_ai_semaphore = asyncio.Semaphore(3)
+# Vaqtinchalik xatoda (daqiqalik chegara, internet) shuncha soniya kutib qayta uriniladi.
+RETRY_DELAYS_SECONDS = (5, 15)
 RECENT_ATTEMPTS_TO_AVOID = 20
+
+FAILURE_MESSAGES = {
+    "quota": "Savollar tayyorlanmadi: OpenAI hisobida mablag' tugagan. Administratorga xabar bering.",
+    "auth": "Savollar tayyorlanmadi: OpenAI kaliti noto'g'ri. Administratorga xabar bering.",
+    "rate_limit": "AI hozir juda band (daqiqalik chegara) — 1-2 daqiqadan keyin qayta urinib ko'ring.",
+    "connection": "AI xizmatiga ulanib bo'lmadi — birozdan keyin qayta urinib ko'ring.",
+}
+DEFAULT_FAILURE_MESSAGE = "Savollar hozircha tayyorlanmadi (AI xizmati javob bermayapti). Birozdan keyin urinib ko'ring."
 
 
 class QuestionBankUnavailableError(Exception):
     """Bankda yetarli savol yo'q va AI ham tuza olmadi (masalan, OpenAI kaliti yo'q)."""
+
+    def __init__(self, message: str, reason: str | None = None):
+        super().__init__(message)
+        self.reason = reason
+
+    @property
+    def user_message(self) -> str:
+        return FAILURE_MESSAGES.get(self.reason or "", DEFAULT_FAILURE_MESSAGE)
+
+
+def classify_failure(exc: BaseException) -> str:
+    """AI xatosi turi: quota | auth | rate_limit | connection | other."""
+    import openai
+
+    if isinstance(exc, openai.RateLimitError):
+        return "quota" if "insufficient_quota" in str(exc) else "rate_limit"
+    if isinstance(exc, openai.AuthenticationError):
+        return "auth"
+    if isinstance(exc, (openai.APIConnectionError, openai.APITimeoutError)):
+        return "connection"
+    return "other"
 
 
 @dataclass(frozen=True)
@@ -145,21 +178,33 @@ def _agrees(qtype: str, item: dict, answer, right_order: list[int] | None) -> bo
     return False
 
 
-async def generate_verified_items(subject: str, slot: Slot, qtype: str, needed: int) -> list[dict]:
-    """AI tuzadi -> tekshiradi -> mos kelganlarini qaytaradi (bazaga yozmaydi)."""
+async def generate_verified_items(
+    subject: str, slot: Slot, qtype: str, needed: int, failures: list[str] | None = None
+) -> list[dict]:
+    """AI tuzadi -> tekshiradi -> mos kelganlarini qaytaradi (bazaga yozmaydi).
+    Vaqtinchalik xatoda qayta urinadi; xato turi `failures` ro'yxatiga yoziladi."""
     difficulty = slot.difficulty or 3
-    to_request = min(MAX_ITEMS_PER_CALL, max(needed, int(needed * GENERATION_OVERHEAD + 0.999)))
-    try:
-        async with _ai_semaphore:
-            raw_items = await openai_service.generate_quiz_items(subject, slot.topic, qtype, to_request, difficulty)
-            items = [item for item in (normalize_item(qtype, raw) for raw in raw_items) if item]
-            if not items:
-                return []
-            view, right_orders = _solver_view(qtype, items)
-            solved = await openai_service.solve_quiz_items(subject, qtype, view)
-    except Exception:  # noqa: BLE001 — AI xatosi testni buzmasin, bank mavjudi bilan ishlaydi
-        logger.exception("Savol generatsiyasi muvaffaqiyatsiz: %s / %s / %s", subject, slot.topic, qtype)
-        return []
+    to_request = min(MAX_ITEMS_PER_CALL, max(needed + MIN_EXTRA_ITEMS, int(needed * GENERATION_OVERHEAD + 0.999)))
+    for attempt in range(len(RETRY_DELAYS_SECONDS) + 1):
+        try:
+            async with _ai_semaphore:
+                raw_items = await openai_service.generate_quiz_items(subject, slot.topic, qtype, to_request, difficulty)
+                items = [item for item in (normalize_item(qtype, raw) for raw in raw_items) if item]
+                if not items:
+                    return []
+                view, right_orders = _solver_view(qtype, items)
+                solved = await openai_service.solve_quiz_items(subject, qtype, view)
+            break
+        except Exception as exc:  # noqa: BLE001 — AI xatosi testni buzmasin, bank mavjudi bilan ishlaydi
+            kind = classify_failure(exc)
+            if kind in ("rate_limit", "connection") and attempt < len(RETRY_DELAYS_SECONDS):
+                logger.warning("Savol generatsiyasi: %s, %s s dan keyin qayta urinish (%s)", kind, RETRY_DELAYS_SECONDS[attempt], slot.topic)
+                await asyncio.sleep(RETRY_DELAYS_SECONDS[attempt])
+                continue
+            logger.exception("Savol generatsiyasi muvaffaqiyatsiz (%s): %s / %s / %s", kind, subject, slot.topic, qtype)
+            if failures is not None:
+                failures.append(kind)
+            return []
 
     verified = []
     for n, item in enumerate(items):
@@ -237,19 +282,37 @@ async def pick_questions(
         exclude.update(str(row.id) for row in rows)
         picked.append(rows)
 
-    shortages = [(i, slot, slot.count - len(picked[i])) for i, slot in enumerate(slots) if len(picked[i]) < slot.count]
-    if shortages:
+    failures: list[str] = []
+    # Ikki marta: tekshiruvda tashlangan savollar o'rni ikkinchi urinishda to'ldiriladi.
+    for _round in range(2):
+        shortages = [(i, slot, slot.count - len(picked[i])) for i, slot in enumerate(slots) if len(picked[i]) < slot.count]
+        if not shortages or any(kind in ("quota", "auth") for kind in failures):
+            break
         generated = await asyncio.gather(
-            *(generate_verified_items(subject, slot, qtype, missing) for _, slot, missing in shortages)
+            *(generate_verified_items(subject, slot, qtype, missing, failures) for _, slot, missing in shortages)
         )
         for (i, _slot, missing), items in zip(shortages, generated):
             stored = await store_items(db, subject, qtype, items)
+            exclude.update(str(row.id) for row in stored[:missing])
             picked[i].extend(stored[:missing])
+
+    # Hali ham yetmasa — shu fanning boshqa mavzularidagi tayyor savollar bilan to'ldiriladi.
+    for i, slot in enumerate(slots):
+        missing = slot.count - len(picked[i])
+        if missing <= 0:
+            continue
+        stmt = select(QuizQuestion).where(QuizQuestion.subject == subject, QuizQuestion.qtype == qtype)
+        if exclude:
+            stmt = stmt.where(QuizQuestion.id.notin_([uuid.UUID(qid) for qid in exclude]))
+        extra = list((await db.execute(stmt.order_by(func.random()).limit(missing))).scalars().all())
+        exclude.update(str(row.id) for row in extra)
+        picked[i].extend(extra)
 
     total_needed = sum(slot.count for slot in slots)
     result = [row for rows in picked for row in rows]
     if len(result) < total_needed:
-        raise QuestionBankUnavailableError(f"{len(result)}/{total_needed} savol tayyorlandi")
+        reason = next((kind for kind in ("quota", "auth", "rate_limit", "connection") if kind in failures), None)
+        raise QuestionBankUnavailableError(f"{len(result)}/{total_needed} savol tayyorlandi", reason)
     return result
 
 
