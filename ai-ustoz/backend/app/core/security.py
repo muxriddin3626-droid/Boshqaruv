@@ -16,6 +16,7 @@ from fastapi import Header, HTTPException
 from jose import JWTError, jwt
 
 from app.core.config import get_settings
+from app.services import ai_budget
 
 settings = get_settings()
 
@@ -87,6 +88,9 @@ async def get_current_user_id(authorization: str = Header(...)) -> uuid.UUID:
         payload = jwt.decode(
             token, settings.jwt_secret, algorithms=[settings.jwt_algorithm], options={"verify_aud": False}
         )
-        return uuid.UUID(payload["sub"])
+        user_id = uuid.UUID(payload["sub"])
     except (JWTError, KeyError, ValueError) as exc:
         raise HTTPException(status_code=401, detail="Token yaroqsiz yoki muddati o'tgan") from exc
+    # Shu so'rovdagi AI xarajati shu o'quvchining oylik byudjetiga yoziladi.
+    ai_budget.bill_to(user_id)
+    return user_id

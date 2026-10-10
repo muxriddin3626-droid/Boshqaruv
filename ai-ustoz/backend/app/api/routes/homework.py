@@ -21,6 +21,7 @@ from app.models.schemas import (
 )
 from app.services import homework_service as hw
 from app.services.question_bank_service import QuestionBankUnavailableError, load_by_ids
+from app.services import ai_budget
 from app.services.rate_limit import RateLimitExceededError, ensure_below_limit, register_hit
 
 router = APIRouter(prefix="/api/v1/homework", tags=["homework"])
@@ -117,6 +118,7 @@ async def assign_homework(
         return await _homework_out(db, existing)
 
     key = f"homework_assign:{user_id}"
+    await ai_budget.ensure_budget(db, user_id)
     try:
         await ensure_below_limit(redis, key, ASSIGNS_PER_HOUR)
     except RateLimitExceededError as exc:
@@ -156,6 +158,7 @@ async def submit_homework(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     rate_key = f"homework_submit:{user_id}"
+    await ai_budget.ensure_budget(db, user_id)
     try:
         await ensure_below_limit(redis, rate_key, SUBMITS_PER_HOUR)
     except RateLimitExceededError as exc:

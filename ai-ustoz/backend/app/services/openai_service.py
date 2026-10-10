@@ -13,17 +13,116 @@ OpenAI integratsiyasi:
 import base64
 import io
 import json
-from collections.abc import AsyncGenerator
+import logging
+import re
+from collections.abc import AsyncGenerator, AsyncIterator
 from typing import Any
 
 import httpx
+import openai
 from openai import AsyncOpenAI
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from app.core.config import get_settings
+from app.services import ai_budget
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 client = AsyncOpenAI(api_key=settings.openai_api_key)
+
+
+# --- Matnli model: Google Gemini (arzon, ixtiyoriy) yoki OpenAI --------------------------
+# GEMINI_API_KEY qo'yilsa, suhbat va JSON generatsiya (testlar, vazifalar, ma'ruzalar) Gemini'ning
+# OpenAI'ga mos API'si orqali ishlaydi. Gemini xato bersa — o'sha so'rov OpenAI'da bajariladi.
+
+GEMINI_FALLBACK_MODEL = "gemini-2.5-flash"
+_GEMINI_SKIP_WORDS = ("lite", "image", "tts", "live", "audio", "embedding", "vision", "thinking", "exp", "computer", "robotics", "native")
+_gemini: AsyncOpenAI | None = None
+_gemini_model: str | None = None
+
+
+def gemini_client() -> AsyncOpenAI | None:
+    global _gemini
+    if not settings.gemini_api_key:
+        return None
+    if _gemini is None:
+        _gemini = AsyncOpenAI(api_key=settings.gemini_api_key, base_url=settings.gemini_base_url, max_retries=1)
+    return _gemini
+
+
+def pick_gemini_model(model_ids: list[str]) -> str | None:
+    """Ro'yxatdan eng yangi oddiy "flash" modeli (lite/tts/image va h.k. emas); teng bo'lsa — barqarori."""
+    best, best_key = None, None
+    for raw in model_ids:
+        name = raw.removeprefix("models/")
+        match = re.match(r"gemini-(\d+(?:\.\d+)?)-flash", name)
+        if not match or any(word in name for word in _GEMINI_SKIP_WORDS):
+            continue
+        key = (float(match.group(1)), "preview" not in name, -len(name))
+        if best_key is None or key > best_key:
+            best, best_key = name, key
+    return best
+
+
+async def gemini_model(gemini: AsyncOpenAI) -> str:
+    global _gemini_model
+    if settings.gemini_model != "auto":
+        return settings.gemini_model
+    if _gemini_model is None:
+        try:
+            ids = [model.id async for model in gemini.models.list()]
+        except Exception:  # noqa: BLE001 — ro'yxat olinmasa, ma'lum model bilan urinib ko'ramiz
+            logger.warning("Gemini modellar ro'yxati olinmadi", exc_info=True)
+            return GEMINI_FALLBACK_MODEL
+        _gemini_model = pick_gemini_model(ids) or GEMINI_FALLBACK_MODEL
+        logger.info("Gemini modeli tanlandi: %s", _gemini_model)
+    return _gemini_model
+
+
+async def _gemini_create(gemini: AsyncOpenAI, **kwargs):
+    """O'ylash (thinking) kam — tezroq va arzonroq. Qo'shimcha parametrlarni qabul qilmasa — ularsiz."""
+    try:
+        return await gemini.chat.completions.create(reasoning_effort="low", **kwargs)
+    except openai.BadRequestError:
+        kwargs.pop("stream_options", None)
+        return await gemini.chat.completions.create(**kwargs)
+
+
+async def _openai_chat(**kwargs):
+    """OpenAI chat chaqiruvi + narxini o'quvchi hisobiga yozish."""
+    response = await client.chat.completions.create(**kwargs)
+    await ai_budget.charge(ai_budget.usage_cost(kwargs["model"], response.usage))
+    return response
+
+
+async def _text_completion(messages: list[dict], temperature: float, json_mode: bool = False):
+    extra: dict[str, Any] = {"response_format": {"type": "json_object"}} if json_mode else {}
+    gemini = gemini_client()
+    if gemini is not None:
+        model = await gemini_model(gemini)
+        try:
+            response = await _gemini_create(gemini, model=model, messages=messages, temperature=temperature, **extra)
+            await ai_budget.charge(ai_budget.usage_cost(model, response.usage))
+            if response.choices and response.choices[0].message.content:
+                return response
+            logger.warning("Gemini bo'sh javob qaytardi — OpenAI ishlatiladi")
+        except Exception as exc:  # noqa: BLE001 — Gemini ishlamasa OpenAI bilan davom etamiz
+            logger.warning("Gemini ishlamadi (%s) — OpenAI ishlatiladi", type(exc).__name__, exc_info=True)
+    return await _openai_chat(model=settings.openai_chat_model, messages=messages, temperature=temperature, **extra)
+
+
+async def _consume_stream(stream, model: str, messages: list[dict]) -> AsyncIterator[str]:
+    usage, output_chars = None, 0
+    async for chunk in stream:
+        if getattr(chunk, "usage", None):
+            usage = chunk.usage
+        if chunk.choices:
+            delta = chunk.choices[0].delta.content
+            if delta:
+                output_chars += len(delta)
+                yield delta
+    prompt_chars = sum(len(str(message.get("content", ""))) for message in messages)
+    await ai_budget.charge(ai_budget.usage_cost(model, usage, prompt_chars, output_chars))
 
 OPENAI_REALTIME_CLIENT_SECRETS_URL = "https://api.openai.com/v1/realtime/client_secrets"
 
@@ -49,17 +148,34 @@ async def stream_chat_response(
     """Modeldan token-token (delta) javob oqimini qaytaradi — SSE endpoint uchun."""
     messages = _build_messages(system_prompt, history, user_message, rag_context)
 
+    gemini = gemini_client()
+    if gemini is not None:
+        model = await gemini_model(gemini)
+        started = False
+        try:
+            stream = await _gemini_create(
+                gemini, model=model, messages=messages, temperature=0.6, stream=True, stream_options={"include_usage": True}
+            )
+            async for delta in _consume_stream(stream, model, messages):
+                started = True
+                yield delta
+            if started:
+                return
+            logger.warning("Gemini bo'sh javob qaytardi — OpenAI ishlatiladi")
+        except Exception as exc:  # noqa: BLE001
+            if started:
+                raise
+            logger.warning("Gemini suhbati ishlamadi (%s) — OpenAI ishlatiladi", type(exc).__name__, exc_info=True)
+
     stream = await client.chat.completions.create(
         model=settings.openai_chat_model,
         messages=messages,
         temperature=0.6,
         stream=True,
+        stream_options={"include_usage": True},
     )
-
-    async for chunk in stream:
-        delta = chunk.choices[0].delta.content
-        if delta:
-            yield delta
+    async for delta in _consume_stream(stream, settings.openai_chat_model, messages):
+        yield delta
 
 
 def describe_error_for_student(exc: Exception) -> str:
@@ -155,6 +271,8 @@ async def create_realtime_voice_session(
     if response.status_code >= 400:
         raise RealtimeSessionError(_realtime_error_message(response), response.status_code)
     data = response.json()
+    # Ovozli suhbat narxi tokenlardan hisoblanmaydi (audio brauzer va OpenAI orasida) — taxminiy.
+    await ai_budget.charge(settings.voice_session_cost_usd)
     return {
         "client_secret": data["value"],
         "expires_at": data["expires_at"],
@@ -163,17 +281,16 @@ async def create_realtime_voice_session(
 
 
 async def _generate_json(system_instruction: str, user_content: str, temperature: float = 0.4) -> dict[str, Any]:
-    """OpenAI'dan qat'iy JSON formatdagi javob so'raydigan umumiy yordamchi funksiya."""
-    response = await client.chat.completions.create(
-        model=settings.openai_chat_model,
-        messages=[
-            {"role": "system", "content": system_instruction},
-            {"role": "user", "content": user_content},
-        ],
+    """Qat'iy JSON formatdagi javob so'raydigan umumiy yordamchi funksiya (Gemini yoki OpenAI)."""
+    response = await _text_completion(
+        [{"role": "system", "content": system_instruction}, {"role": "user", "content": user_content}],
         temperature=temperature,
-        response_format={"type": "json_object"},
+        json_mode=True,
     )
-    return json.loads(response.choices[0].message.content)
+    content = response.choices[0].message.content or "{}"
+    # Ba'zi modellar JSON'ni ```json ... ``` ichida qaytaradi.
+    content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content.strip())
+    return json.loads(content)
 
 
 async def generate_flashcards(subject: str, lesson_title: str, lesson_content: str, card_count: int) -> list[dict]:
@@ -255,7 +372,7 @@ async def ocr_image_to_text(image_bytes: bytes, mime_type: str = "image/jpeg") -
     encoded_image = base64.b64encode(image_bytes).decode("utf-8")
     data_url = f"data:{mime_type};base64,{encoded_image}"
 
-    response = await client.chat.completions.create(
+    response = await _openai_chat(
         model=settings.openai_vision_model,
         messages=[
             {
@@ -357,6 +474,7 @@ async def text_to_speech(text: str, voice: str = "onyx") -> bytes:
         voice=voice,
         input=text,
     )
+    await ai_budget.charge(len(text) * settings.tts_cost_per_million_chars_usd / 1_000_000)
     return response.read()
 
 
@@ -540,7 +658,7 @@ async def grade_homework_solutions(subject: str, topic: str, items: list[dict]) 
             content.append({"type": "text", "text": f"O'quvchining {index}-masala uchun daftar rasmi:"})
             content.append({"type": "image_url", "image_url": {"url": item["photo_data_url"]}})
 
-    response = await client.chat.completions.create(
+    response = await _openai_chat(
         model=settings.openai_vision_model,
         messages=[{"role": "system", "content": HOMEWORK_GRADER_RULES}, {"role": "user", "content": content}],
         temperature=0.2,
@@ -615,6 +733,7 @@ async def generate_illustration(subject: str, description: str) -> bytes:
         # gpt-image-1 parametrlari kutubxonaning eski versiyasida yo'q — so'rov tanasiga qo'shiladi.
         extra_body={"quality": "medium", "output_format": "jpeg", "output_compression": 80, "moderation": "auto"},
     )
+    await ai_budget.charge(settings.illustration_cost_usd)
     return base64.b64decode(response.data[0].b64_json)
 
 
@@ -634,7 +753,7 @@ async def is_image_unsafe_for_kids(image: bytes, mime: str) -> bool:
 async def ocr_textbook_page(image_bytes: bytes, mime_type: str = "image/jpeg") -> str:
     """Skanerlangan darslik sahifasini (GPT-4o vision) matnga o'giradi — bilim bazasi (RAG) uchun."""
     data_url = f"data:{mime_type};base64,{base64.b64encode(image_bytes).decode('utf-8')}"
-    response = await client.chat.completions.create(
+    response = await _openai_chat(
         model=settings.openai_vision_model,
         messages=[
             {

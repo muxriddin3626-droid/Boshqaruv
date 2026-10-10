@@ -22,6 +22,7 @@ from app.models.schemas import (
     SubjectSchema,
 )
 from app.services import lecture_service, media_storage
+from app.services import ai_budget
 from app.services.rate_limit import RateLimitExceededError, ensure_below_limit, register_hit
 
 router = APIRouter(prefix="/api/v1/lectures", tags=["lectures"])
@@ -95,6 +96,7 @@ async def request_lecture(
     """Tayyor bo'lsa — 200 va audio havola; tayyorlanayotgan bo'lsa — 202, frontend GET bilan so'rab turadi."""
     user = await _get_user(db, user_id)
     key = f"lecture_generate:{user_id}"
+    await ai_budget.ensure_budget(db, user_id)
     try:
         await ensure_below_limit(redis, key, GENERATIONS_PER_HOUR)
     except RateLimitExceededError as exc:

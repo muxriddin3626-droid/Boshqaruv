@@ -66,6 +66,24 @@ Tamom! Sayt manzilini o'quvchilarga yuboring.
 
 ---
 
+## Arzonroq AI: Google Gemini (ixtiyoriy, tavsiya etiladi)
+
+Suhbat, testlar va vazifalar Gemini'da bir necha barobar arzon ishlaydi (ovozli suhbat OpenAI'da qoladi).
+
+1. **aistudio.google.com** ni oching, Google akkaunt bilan kiring.
+2. **Get API key → Create API key** ni bosing va kalitni nusxalang.
+3. Render → `ai-ustoz` → **Environment** → **Add Environment Variable**:
+   `GEMINI_API_KEY` = shu kalit. **Save** ni bosing (sayt o'zi yangilanadi).
+
+Gemini ishlamay qolsa, o'sha savol avtomatik OpenAI'da bajariladi.
+
+## Xarajat chegarasi
+
+Har bir o'quvchiga **oyiga 4 $** AI byudjeti bor (server xarajati bunga kirmaydi). Tugasa, oy oxirigacha
+suhbat, ovozli suhbat va rasm to'xtaydi; testlar va o'yinlar ishlayveradi. Administrator cheklanmaydi.
+O'zgartirish: Environment'da `AI_BUDGET_PER_USER_PER_MONTH_USD` (masalan `3`). Kunlik chegaralar:
+`CHAT_MESSAGES_PER_USER_PER_DAY` (50), `VOICE_SESSIONS_PER_USER_PER_DAY` (3).
+
 ## Yangilanishlar
 
 GitHub'dagi shu tarmoqqa yangi o'zgarish kelsa, Render saytni **o'zi yangilaydi**.

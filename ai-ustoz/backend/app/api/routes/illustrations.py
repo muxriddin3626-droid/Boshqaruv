@@ -13,6 +13,7 @@ from app.db.session import get_db
 from app.models.database import Illustration
 from app.models.schemas import IllustrationOut, IllustrationRequestIn
 from app.services import illustration_service, media_storage
+from app.services import ai_budget
 from app.services.rate_limit import RateLimitExceededError, ensure_below_limit, register_hit
 
 router = APIRouter(prefix="/api/v1/illustrations", tags=["illustrations"])
@@ -45,6 +46,7 @@ async def request_illustration(
 
     user_key = f"illustrations_user:{user_id}"
     global_key = f"illustrations_global:{datetime.now(timezone.utc):%Y%m%d}"
+    await ai_budget.ensure_budget(db, user_id)
     try:
         await ensure_below_limit(redis, user_key, settings.illustrations_per_user_per_day)
         await ensure_below_limit(redis, global_key, settings.illustrations_global_per_day)

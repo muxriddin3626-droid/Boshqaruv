@@ -25,6 +25,22 @@ class Settings(BaseSettings):
     chat_messages_global_per_day: int = 1500
     voice_sessions_per_user_per_day: int = 3
     voice_sessions_global_per_day: int = 100
+    # Har bir o'quvchiga oylik AI byudjeti ($). Tugasa, oy oxirigacha pullik AI amallari to'xtaydi.
+    # 0 — cheklanmaydi. Server (Render) xarajati bunga kirmaydi.
+    ai_budget_per_user_per_month_usd: float = 4.0
+    # Narxi tokenlardan hisoblanmaydigan amallar uchun taxminiy narx ($).
+    voice_session_cost_usd: float = 0.15
+    illustration_cost_usd: float = 0.04
+    tts_cost_per_million_chars_usd: float = 15.0
+
+    # Google Gemini (ixtiyoriy): kalit qo'yilsa, matnli suhbat va testlar Gemini'da ishlaydi —
+    # OpenAI'dan bir necha barobar arzon. Ovoz, rasm, embedding — OpenAI'da qoladi.
+    # GEMINI_MODEL=auto — kalit bilan mavjud modellardan eng yangi "flash" tanlanadi.
+    gemini_api_key: str = ""
+    gemini_model: str = "auto"
+    gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
+    gemini_price_input_per_m: float = 0.50
+    gemini_price_output_per_m: float = 3.00
     # Internetdagi haqiqiy rasmlar (Wikimedia Commons, bepul). Wikimedia so'rovlarda ilova
     # nomi va aloqa (sayt yoki email) yozilgan User-Agent talab qiladi — productionda o'zingiznikini qo'ying.
     commons_user_agent: str = "AIUstozBot/1.0 (educational tutor app; https://github.com/muxriddin3626-droid/Boshqaruv)"

@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.models.schemas import AudioLectureGenerateIn, AudioLectureOut, AudioLectureUpdateIn, SubjectSchema
 from app.models.database import UserAudioLecture
 from app.services import audio_service, media_storage
+from app.services import ai_budget
 from app.services.rate_limit import RateLimitExceededError, ensure_below_limit, register_hit
 
 router = APIRouter(prefix="/api/v1/audio-lectures", tags=["audio-lectures"])
@@ -32,6 +33,7 @@ async def generate_audio_lecture(
 ):
     """Ma'ruza matnini (masalan, AI Ustozning chatdagi javobini) audio(MP3)ga aylantirib, shaxsiy kutubxonaga saqlaydi."""
     key = f"answer_audio:{user_id}"
+    await ai_budget.ensure_budget(db, user_id)
     try:
         await ensure_below_limit(redis, key, GENERATIONS_PER_HOUR)
     except RateLimitExceededError as exc:

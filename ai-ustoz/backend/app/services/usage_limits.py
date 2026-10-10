@@ -13,7 +13,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.models.database import User
+from app.services.ai_budget import ensure_budget, is_admin
 from app.services.rate_limit import RateLimitExceededError, ensure_below_limit, register_hit
 from app.services.xp_service import tashkent_today
 
@@ -54,13 +54,9 @@ def voice_limit() -> DailyLimit:
     )
 
 
-async def is_admin(db: AsyncSession, user_id: uuid.UUID) -> bool:
-    user = await db.get(User, user_id)
-    return user is not None and user.phone in settings.admin_phone_set
-
-
 async def use_daily(redis: Redis, db: AsyncSession, user_id: uuid.UUID, limit: DailyLimit) -> None:
-    """Chegaradan oshgan bo'lsa 429, aks holda bitta foydalanishni hisoblaydi."""
+    """Chegaradan (yoki oylik AI byudjetidan) oshgan bo'lsa 429, aks holda bitta foydalanishni hisoblaydi."""
+    await ensure_budget(db, user_id)
     if await is_admin(db, user_id):
         return
     day = tashkent_today(datetime.now(timezone.utc)).isoformat()
