@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "katex/dist/katex.min.css";
+
+html,
+body {
+  background-color: #0a0a12;
+  color: #e5e7eb;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(168, 85, 247, 0.4);
+  border-radius: 9999px;
+}
+
+/* Mermaid diagrammalarni qora fonga moslashtirish */
+.mermaid-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* AI Ustoz yuzchasi (components/voice/TutorMascot.tsx) */
+.mascot-float {
+  animation: mascot-float 3s ease-in-out infinite;
+}
+.mascot-shake {
+  animation: mascot-shake 0.35s linear infinite;
+}
+.mascot-bounce {
+  animation: mascot-bounce 0.4s ease-in-out infinite;
+}
+.mascot-pop {
+  animation: mascot-pop 0.35s ease-out;
+}
+.mascot-flame {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: mascot-flicker 0.5s ease-in-out infinite alternate;
+}
+.mascot-dot {
+  animation: mascot-dot 1.2s ease-in-out infinite;
+}
+.mascot-float rect {
+  transition: stroke 0.25s ease;
+}
+
+@keyframes mascot-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes mascot-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+@keyframes mascot-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes mascot-pop {
+  0% { transform: scale(0.85); }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+@keyframes mascot-flicker {
+  from { transform: scaleY(0.88) skewX(-3deg); }
+  to { transform: scaleY(1.12) skewX(3deg); }
+}
+@keyframes mascot-dot {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot-float,
+  .mascot-shake,
+  .mascot-bounce,
+  .mascot-pop,
+  .mascot-flame,
+  .mascot-dot {
+    animation: none;
+  }
+}
+
+/* Chizmalar: elementlar ketma-ket "chizilib" chiqadi (doskadagidek). */
+@keyframes visual-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.visual-pop {
+  animation: visual-pop 0.35s ease-out both;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes atom-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.atom-orbit {
+  animation: atom-orbit linear infinite;
+}
+@keyframes cell-highlight {
+  50% {
+    opacity: 0.7;
+  }
+}
+.cell-highlight {
+  animation: cell-highlight 1.6s ease-in-out infinite;
+}
+@keyframes process-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.process-spin {
+  transform-box: view-box;
+  animation: process-spin 6s linear infinite;
+}
+@keyframes process-ray {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+.process-ray {
+  stroke-dasharray: 4 4;
+  animation: process-ray 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .visual-pop,
+  .atom-orbit,
+  .cell-highlight {
+    animation: none;
+  }
+  .particle-atom,
+  .division-move {
+    transition: none !important;
+  }
+  .process-spin,
+  .process-ray {
+    animation: none;
+  }
+}
