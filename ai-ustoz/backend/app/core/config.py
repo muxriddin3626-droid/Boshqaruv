@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     ai_budget_per_user_per_month_usd: float = 4.0
     # Narxi tokenlardan hisoblanmaydigan amallar uchun taxminiy narx ($).
     voice_session_cost_usd: float = 0.15
+    voice_max_output_tokens: int = 1200
     illustration_cost_usd: float = 0.04
     tts_cost_per_million_chars_usd: float = 15.0
 

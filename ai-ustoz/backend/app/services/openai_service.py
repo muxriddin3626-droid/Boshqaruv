@@ -276,6 +276,8 @@ async def create_realtime_voice_session(
                     "audio": {"output": {"voice": voice}},
                     "tools": tools or [],
                     "tool_choice": "auto",
+                    # Bitta javob ~1 daqiqadan uzun bo'lmasin (qisqa gapir qoidasi + xarajat chegarasi).
+                    "max_output_tokens": settings.voice_max_output_tokens,
                 },
             },
         )

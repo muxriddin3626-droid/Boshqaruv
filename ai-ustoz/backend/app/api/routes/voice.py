@@ -52,7 +52,7 @@ async def create_voice_session(
         exam_addendum = build_exam_feedback_addendum(
             exam_status.exam_completed, exam_status.feedback_provided, is_exam_today
         )
-        instructions = (build_system_prompt(student_ctx) or DEFAULT_VOICE_INSTRUCTIONS) + exam_addendum
+        instructions = (build_system_prompt(student_ctx, for_voice=True) or DEFAULT_VOICE_INSTRUCTIONS) + exam_addendum
 
     try:
         session = await create_realtime_voice_session(

@@ -13,6 +13,8 @@ import { useAudioVisualizer } from "./useAudioVisualizer";
 const OPENAI_REALTIME_CALLS_URL = "https://api.openai.com/v1/realtime/calls";
 // Bitta sessiya chegarasi: Realtime API daqiqasiga pullik, cheksiz ochiq qolmasin.
 const SESSION_LIMIT_SECONDS = 10 * 60;
+// O'quvchi ham, ustoz ham shuncha vaqt jim bo'lsa — suhbat o'zi yopiladi (ochiq qolib pul ketmasin).
+const IDLE_LIMIT_SECONDS = 90;
 const CAPTION_MAX_CHARS = 220;
 
 const PHASE_LABEL: Record<Phase, string> = {
@@ -66,6 +68,7 @@ export default function VoiceSession({ token, subject }: { token: string; subjec
   const [phase, setPhase] = useState<Phase>("listening");
   const [caption, setCaption] = useState("");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const lastActivityRef = useRef(0);
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
@@ -98,10 +101,17 @@ export default function VoiceSession({ token, subject }: { token: string; subjec
   }, [isConnected]);
 
   useEffect(() => {
-    if (elapsedSeconds >= SESSION_LIMIT_SECONDS) stopVoiceSession();
-  }, [elapsedSeconds, stopVoiceSession]);
+    if (elapsedSeconds >= SESSION_LIMIT_SECONDS) {
+      stopVoiceSession();
+    } else if (isConnected && Date.now() - lastActivityRef.current >= IDLE_LIMIT_SECONDS * 1000) {
+      stopVoiceSession();
+      setError("Uzoq jimlik bo'ldi — suhbat to'xtatildi. Davom etish uchun qaytadan boshlang.");
+    }
+  }, [elapsedSeconds, isConnected, stopVoiceSession]);
 
   function applyUpdate(update: RealtimeUpdate) {
+    // Gap, javob yoki subtitr — suhbat tirik.
+    if (update.phase || update.captionAppend) lastActivityRef.current = Date.now();
     if (update.emotion) setEmotion(update.emotion);
     if (update.phase) setPhase(update.phase);
     if (update.captionReset) setCaption("");
@@ -169,6 +179,7 @@ export default function VoiceSession({ token, subject }: { token: string; subjec
       const answerSdp = await sdpResponse.text();
       await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
 
+      lastActivityRef.current = Date.now();
       setIsConnected(true);
     } catch (err) {
       const isMicDenied = err instanceof DOMException && err.name === "NotAllowedError";

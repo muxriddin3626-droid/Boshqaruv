@@ -401,8 +401,13 @@ def format_weak_spots(weak_spots: list[WeakSpot]) -> str:
     return "\n".join(lines)
 
 
-def build_system_prompt(ctx: StudentContext, today: date | None = None) -> str:
-    """StudentContext asosida to'liq system promptni yig'ib qaytaradi."""
+# Ovozli rejimda formatlash va chizma bloklari kerak emas (ekranda faqat yuzcha) — ular olib tashlanadi:
+# prompt ~2 barobar qisqaradi, har bir ovozli javob arzonroq.
+VOICE_PERSONA = BASE_PERSONA.split("FORMATLASH QOIDALARI:")[0].rstrip() + "\n"
+
+
+def build_system_prompt(ctx: StudentContext, today: date | None = None, for_voice: bool = False) -> str:
+    """StudentContext asosida to'liq system promptni yig'ib qaytaradi (`for_voice` — chizmalarsiz qisqa)."""
     goal_block = format_goal_block(ctx, today or date.today())
     grade_label = f"{ctx.current_grade} (maktabni tugatgan abituriyent)" if ctx.is_graduate else str(ctx.current_grade)
     score_line = (
@@ -422,7 +427,7 @@ def build_system_prompt(ctx: StudentContext, today: date | None = None) -> str:
         else "Hali test natijalari yo'q."
     )
 
-    return f"""{BASE_PERSONA}
+    return f"""{VOICE_PERSONA if for_voice else BASE_PERSONA}
 
 JORIY O'QUVCHI HAQIDA MA'LUMOT:
 - Ism: {ctx.full_name}
