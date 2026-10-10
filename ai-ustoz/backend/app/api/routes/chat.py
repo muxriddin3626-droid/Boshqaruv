@@ -20,6 +20,7 @@ from app.prompts.system_prompt import build_system_prompt
 from app.services import exam_pipeline_service, progress_service, rag_service, research_service, weakness_service
 from app.services.openai_service import describe_error_for_student, stream_chat_response
 from app.services.session_service import SessionService
+from app.services.usage_limits import chat_limit, use_daily
 
 router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
 logger = logging.getLogger(__name__)
@@ -63,6 +64,7 @@ async def send_chat_message(
     O'quvchi xabarini qabul qiladi va AI Ustoz javobini SSE (text/event-stream)
     orqali token-token qaytaradi. Frontend shu oqimni o'qib, chatga jonli chiqaradi.
     """
+    await use_daily(redis, db, user_id, chat_limit())
     session_service = SessionService(redis)
     subject = payload.subject.value
 

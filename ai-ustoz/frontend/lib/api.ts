@@ -81,6 +81,13 @@ function decodeChunk(raw: string): string {
   }
 }
 
+/** Chat so'rovi rad etildi (masalan, kunlik chegara) — `message` o'quvchiga ko'rsatiladi. */
+export class ChatLimitError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
 export async function streamChatMessage(
   token: string,
   subject: Subject,
@@ -95,7 +102,9 @@ export async function streamChatMessage(
   });
 
   if (!response.ok || !response.body) {
-    throw new Error("Server javob oqimini qaytarmadi");
+    // Masalan, kunlik savollar chegarasi (429) — sababini o'quvchiga ko'rsatamiz.
+    const body = await response.json().catch(() => null);
+    throw new ChatLimitError(typeof body?.detail === "string" ? body.detail : "Server javob oqimini qaytarmadi", response.status);
   }
 
   const reader = response.body.getReader();

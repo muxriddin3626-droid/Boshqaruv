@@ -4,9 +4,11 @@ from datetime import date
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_current_user_id
+from app.db.redis_client import get_redis
 from app.db.session import get_db
 from app.models.schemas import VoiceMode, VoiceSessionIn, VoiceSessionOut
 from app.prompts.debate_prompt import build_debate_system_prompt
@@ -15,6 +17,7 @@ from app.prompts.system_prompt import build_system_prompt
 from app.prompts.voice_persona import SET_EMOTION_TOOL, VOICE_ADDENDUM
 from app.services import exam_pipeline_service, progress_service
 from app.services.openai_service import DEFAULT_VOICE_INSTRUCTIONS, RealtimeSessionError, create_realtime_voice_session
+from app.services.usage_limits import use_daily, voice_limit
 
 router = APIRouter(prefix="/api/v1/voice", tags=["voice"])
 
@@ -24,6 +27,7 @@ async def create_voice_session(
     payload: VoiceSessionIn,
     user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
 ):
     """
     Frontend WebRTC ulanishni boshlashdan oldin shu endpointni chaqiradi.
@@ -37,6 +41,7 @@ async def create_voice_session(
     - "debate" — MUNOZARA rejimi (2-modul): AI atayin noto'g'ri gipoteza \
       aytadi, o'quvchi uni ovozli ravishda rad etishi kerak (debate_prompt.py).
     """
+    await use_daily(redis, db, user_id, voice_limit())
     student_ctx = await progress_service.get_student_context(db, user_id, payload.subject.value)
 
     if payload.mode == VoiceMode.DEBATE:

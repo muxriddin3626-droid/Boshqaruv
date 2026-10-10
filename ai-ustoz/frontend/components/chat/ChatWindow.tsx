@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { fetchPlan, fetchProgress, generateAudioLecture, streamChatMessage } from "@/lib/api";
+import { ChatLimitError, fetchPlan, fetchProgress, generateAudioLecture, streamChatMessage } from "@/lib/api";
 import type { ChatMessage, ProgressResponse, Subject } from "@/lib/types";
 
 import MessageBubble from "./MessageBubble";
@@ -100,13 +100,16 @@ export default function ChatWindow({
         },
         () => setIsSending(false)
       );
-    } catch {
+    } catch (err) {
       setIsSending(false);
       setMessages((prev) => {
         const updated = [...prev];
         updated[updated.length - 1] = {
           role: "assistant",
-          content: "Serverga ulanishda xatolik yuz berdi. Qayta urinib ko'r.",
+          content:
+            err instanceof ChatLimitError && err.status === 429
+              ? `⏳ ${err.message}`
+              : "Serverga ulanishda xatolik yuz berdi. Qayta urinib ko'r.",
         };
         return updated;
       });

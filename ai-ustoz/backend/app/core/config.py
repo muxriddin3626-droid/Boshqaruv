@@ -17,8 +17,14 @@ class Settings(BaseSettings):
     openai_tts_model: str = "tts-1"  # ma'ruzani audio(TTS)ga aylantirish (Modul 8)
     openai_image_model: str = "gpt-image-1"  # darsdagi rasmlar (illyustratsiyalar)
     # Rasm chizish pullik (~$0.04): bitta o'quvchiga va butun platformaga kunlik chegara.
-    illustrations_per_user_per_day: int = 15
-    illustrations_global_per_day: int = 300
+    illustrations_per_user_per_day: int = 5
+    illustrations_global_per_day: int = 60
+    # OpenAI xarajatini nazorat qilish: kunlik chegaralar (administratorlarga taalluqli emas).
+    # Suhbatdagi bitta xabar ~2 sent (gpt-4o), ovozli suhbat (10 daqiqagacha) ~10-50 sent.
+    chat_messages_per_user_per_day: int = 50
+    chat_messages_global_per_day: int = 1500
+    voice_sessions_per_user_per_day: int = 3
+    voice_sessions_global_per_day: int = 100
     # Internetdagi haqiqiy rasmlar (Wikimedia Commons, bepul). Wikimedia so'rovlarda ilova
     # nomi va aloqa (sayt yoki email) yozilgan User-Agent talab qiladi — productionda o'zingiznikini qo'ying.
     commons_user_agent: str = "AIUstozBot/1.0 (educational tutor app; https://github.com/muxriddin3626-droid/Boshqaruv)"
