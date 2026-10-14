@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1f6f5c">
+  <meta name="description" content="Rus va nemis tilini jonli suhbat orqali o'rganing. Xatolaringiz o'zbek tilida tushuntiriladi.">
+  <title>Til Ustoz</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icon.svg" alt="" width="28" height="28">
+      <span>Til Ustoz</span>
+    </div>
+    <div class="actions" id="chatActions" hidden>
+      <span class="lang-badge" id="langBadge"></span>
+      <button type="button" class="ghost" id="newChatBtn" aria-label="Yangi suhbat">Yangi<span class="long"> suhbat</span></button>
+      <button type="button" class="ghost" id="changeLangBtn" aria-label="Tilni almashtirish"><span class="long">Tilni almashtirish</span><span class="short">Til</span></button>
+    </div>
+  </header>
+
+  <main id="welcome" class="welcome">
+    <h1>Rus va nemis tilini suhbat orqali o'rganing</h1>
+    <p class="lead">Ustoz bilan tanlagan tilingizda yozishasiz. Xatolaringiz darhol tuzatiladi va <strong>o'zbek tilida</strong> tushuntiriladi.</p>
+
+    <div class="lang-cards">
+      <button type="button" class="lang-card" data-lang="ru">
+        <span class="flag">🇷🇺</span>
+        <span class="lang-name">Rus tili</span>
+        <span class="lang-native">Русский язык</span>
+      </button>
+      <button type="button" class="lang-card" data-lang="de">
+        <span class="flag">🇩🇪</span>
+        <span class="lang-name">Nemis tili</span>
+        <span class="lang-native">Deutsch</span>
+      </button>
+    </div>
+
+    <ul class="how">
+      <li><b>1.</b> Tilni tanlang. Ustoz siz bilan salomlashadi.</li>
+      <li><b>2.</b> O'sha tilda javob yozing, xato qilishdan qo'rqmang.</li>
+      <li><b>3.</b> Ustoz xatoni to'g'rilaydi, qoidani o'zbekcha tushuntiradi va yangi savol beradi.</li>
+    </ul>
+  </main>
+
+  <main id="chat" class="chat" hidden>
+    <div class="messages" id="messages" aria-live="polite"></div>
+    <form class="composer" id="composer">
+      <textarea id="input" rows="1" maxlength="2000" placeholder="Xabar yozing..." aria-label="Xabar" autocomplete="off"></textarea>
+      <button type="submit" id="sendBtn" aria-label="Yuborish">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6l.1 6.5L15 12 3.5 13.9z" fill="currentColor"/></svg>
+      </button>
+    </form>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: til-sayt
+    runtime: node
+    plan: free
+    rootDir: til-sayt
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
