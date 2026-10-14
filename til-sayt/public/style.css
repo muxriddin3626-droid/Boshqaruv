@@ -1144,3 +1144,5 @@ h1 {
 }
 
 #limitDialog { text-align: center; }
+
+.offline-banner { position: sticky; top: 0; z-index: 5; padding: 6px 12px; background: #23262b; color: #fff; text-align: center; font-size: 13px; }

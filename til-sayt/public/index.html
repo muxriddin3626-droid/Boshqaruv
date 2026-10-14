@@ -8,9 +8,12 @@
   <title>Til Ustoz</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div class="offline-banner" id="offlineBanner" hidden>📴 Internet yo'q — takrorlash, daftar va natijalar ishlaydi</div>
   <header class="topbar">
     <span class="brand">tilustoz</span>
     <button type="button" class="icon-btn" id="themeBtn" aria-label="Rangni almashtirish">
@@ -150,6 +153,7 @@
       <button type="button" class="link-btn" id="notebookBtn">📒 Daftar</button>
       <button type="button" class="link-btn" id="certBtn">📜 Sertifikatlar</button>
       <button type="button" class="link-btn" id="reminderBtn">⏰ Eslatma</button>
+      <button type="button" class="link-btn" id="installBtn" hidden>📲 Ilovani o'rnatish</button>
       <button type="button" class="link-btn" id="menuHomeBtn">🌐 Tilni almashtirish</button>
     </div>
   </main>
@@ -582,5 +586,6 @@
   <script src="exam.js"></script>
   <script src="cert.js"></script>
   <script src="account-ui.js"></script>
+  <script src="pwa.js"></script>
 </body>
 </html>

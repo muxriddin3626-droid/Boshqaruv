@@ -117,7 +117,8 @@ function serveStatic(req, res) {
       res.writeHead(404).end('Topilmadi');
       return;
     }
-    res.writeHead(200, { 'Content-Type': type });
+    // Brauzer har safar yangilanganini tekshiradi; oflayn nusxani sw.js saqlaydi.
+    res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'no-cache' });
     res.end(data);
   });
 }
