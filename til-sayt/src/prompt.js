@@ -46,6 +46,8 @@ const TOPICS = {
   food: 'Restoranda — taom buyurtma qilish, hisob so\'rash',
   travel: "Sayohat — aeroport, mehmonxona, yo'l so'rash",
   job: "Ish suhbati — o'zini tanishtirish, tajriba, kuchli tomonlar",
+  migrant:
+    "Chet elda ishlovchi migrant hayoti (Rossiya yoki Germaniyada — tanlangan tilga qarab) — politsiya hujjat tekshiruvi, ish beruvchi bilan suhbat va ish haqi, migratsiya xizmati (Rossiyada MFC/МВД, Germaniyada Ausländerbehörde), shifokor, kvartira ijarasi, bank va pul o'tkazmasi. Amaliy, kundalik iboralar.",
 };
 
 const LEVELS = {
@@ -393,8 +395,9 @@ const CHOICE_SCHEMA = {
                 question: { type: 'string' },
                 correct: { type: 'string' },
                 wrong: { type: 'array', items: { type: 'string' } },
+                explanation: { type: 'string' },
               },
-              required: ['question', 'correct', 'wrong'],
+              required: ['question', 'correct', 'wrong', 'explanation'],
               additionalProperties: false,
             },
           },
@@ -443,6 +446,8 @@ const SECTION_TASKS = {
   grammar: `1 ta passage ber: title bo'sh qolishi mumkin, text — bo'sh satr (""). questions — 10 ta gap; har birida bo'sh joy ___ bilan belgilangan, correct — to'g'ri shakl, wrong — 3 ta noto'g'ri shakl.`,
   reading: `2-3 ta passage ber: har birida title va o'rganilayotgan tildagi matn (darajaga mos uzunlikda), va 3-4 ta savol. Savollar o'rganilayotgan tilda; correct — to'g'ri javob, wrong — 2 ta noto'g'ri javob. Jami 9-10 ta savol.`,
   listening: `3-4 ta passage ber: text — ovoz chiqarib o'qiladigan dialog yoki e'lon (dialogda gapiruvchilarni "— " bilan boshla, ism yozma). title — vaziyat (masalan "Vokzalda"). Har biriga 2-3 ta savol, o'rganilayotgan tilda; wrong — 2 ta noto'g'ri javob. Jami 8-10 ta savol. Javobni faqat eshitib bilsa bo'ladigan qil.`,
+  history: `1 ta passage ber: title bo'sh, text — bo'sh satr (""). questions — 8 ta savol, o'rganilayotgan tilda (rus tilida, oddiy so'zlar bilan); correct — to'g'ri javob, wrong — 2 ta noto'g'ri javob. Faqat aniq va umumqabul qilingan faktlar haqida so'ra (davlat ramzlari, poytaxt, bayramlar sanasi, mashhur shaxslar, mashhur tarixiy voqealar). Munozarali siyosiy mavzular va so'nggi yillar voqealaridan qoch.`,
+  law: `1 ta passage ber: title bo'sh, text — bo'sh satr (""). questions — 8 ta savol, rus tilida, oddiy so'zlar bilan; correct — to'g'ri javob, wrong — 2 ta noto'g'ri javob. Barqaror umumiy qoidalar haqida so'ra: huquq va majburiyatlar, ishlash uchun patent yoki ruxsatnoma kerakligi, mehnat shartnomasi, patent uchun soliqni o'z vaqtida to'lash, migratsiya hisobiga turish majburiyati, qonun va urf-odatlarni hurmat qilish, favqulodda raqamlar (112, 101, 102, 103). Tez o'zgaradigan aniq muddatlar, jarima summalari va narxlar haqida SO'RAMA.`,
   writing: `Bitta yozma topshiriq ber: task — o'rganilayotgan tilda topshiriq matni (vaziyat), task_uz — uning o'zbekcha tarjimasi, points — javobda albatta bo'lishi kerak bo'lgan 3 ta nuqta (o'zbekcha), min_words — kerakli so'zlar soni.`,
   speaking: `3 ta og'zaki topshiriq ber, osondan qiyinga: prompt — imtihon oluvchining savoli yoki vaziyat (o'rganilayotgan tilda), prompt_uz — o'zbekcha tarjimasi.`,
 };
@@ -452,7 +457,7 @@ function examSectionPrompt(lang, exam, section) {
     `Sen ${exam.name} imtihonining tajribali tuzuvchisisan. O'zbek tilida so'zlashuvchi o'quvchi uchun haqiqiy imtihonga iloji boricha o'xshash SINOV topshiriq tuz.`,
     `Daraja: ${exam.level}. O'rganilayotgan til: ${LANGUAGES[lang]}.`,
     `Bo'lim: ${section.format}`,
-    "instructions_uz — o'quvchiga o'zbekcha qisqa yo'riqnoma (nima qilish kerak). Har bir savolning faqat bitta aniq to'g'ri javobi bo'lsin. Har safar yangi mavzu va vaziyat o'yla.",
+    "instructions_uz — o'quvchiga o'zbekcha qisqa yo'riqnoma (nima qilish kerak). Har bir savolning faqat bitta aniq to'g'ri javobi bo'lsin; explanation — nega shu javob to'g'ri, o'zbekcha bir-ikki gap. Har safar yangi mavzu va vaziyat o'yla.",
     SECTION_TASKS[section.id],
   ].join('\n\n');
 }

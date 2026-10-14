@@ -12,6 +12,8 @@ window.Exam = (() => {
     reading: { label: '📖 Hikoya', run: () => window.Practice.startStory() },
     listening: { label: '🎧 Eshitib top', run: () => window.Games.start('listen') },
     writing: { label: "✍️ Yozish bo'limini qayta ishlash", run: null },
+    history: { label: "📜 Tarix bo'limini mashq qilish", run: null },
+    law: { label: "⚖️ Qonunchilik bo'limini mashq qilish", run: null },
     speaking: { label: '🎙️ Ovozli dars', run: () => App.startLesson() },
   };
 
@@ -51,6 +53,7 @@ window.Exam = (() => {
       const card = el('section', 'exam-item');
       card.appendChild(el('h2', '', exam.name));
       card.appendChild(el('p', 'act-desc', exam.about));
+      if (exam.note) card.appendChild(el('p', 'disclaimer left', `⚠️ ${exam.note}`));
       const total = exam.sections.reduce((n, s) => n + s.minutes, 0);
       const chips = el('div', 'chips');
       for (const s of exam.sections) {
@@ -58,7 +61,7 @@ window.Exam = (() => {
         chips.appendChild(button('chip', `${info.icon} ${info.title} · ${s.minutes} daq`, () => start(exam, [s.id])));
       }
       card.appendChild(button('primary big', `To'liq sinov · ${total} daqiqa`, () => start(exam)));
-      card.appendChild(el('p', 'hint-left', "Yoki faqat bitta bo'limni mashq qiling:"));
+      card.appendChild(el('p', 'hint-left', "Yoki bitta bo'limni mashq qiling (har savoldan keyin o'zbekcha izoh bilan):"));
       card.appendChild(chips);
       const tries = history.filter((h) => h.exam === exam.id && h.full).slice(0, 3);
       if (tries.length) {
@@ -207,14 +210,28 @@ window.Exam = (() => {
         answers.push({ q, chosen: null });
         box.appendChild(el('p', 'exam-q', `${n}. ${q.question}`));
         const opts = el('div', 'options compact');
+        const why = el('p', 'exam-why');
+        why.hidden = true;
         const buttons = shuffle([q.correct, ...q.wrong]).map((opt) =>
-          button('option', opt, () => {
+          button('option', opt, (e) => {
             answers[qi].chosen = opt;
-            buttons.forEach((b) => b.classList.toggle('chosen', b === buttons.find((x) => x.textContent === opt)));
+            if (full) {
+              // To'liq sinovda javobni o'zgartirish mumkin, natija oxirida chiqadi.
+              buttons.forEach((b) => b.classList.toggle('chosen', b === e.currentTarget));
+              return;
+            }
+            // Mashq rejimi: darhol to'g'ri javob va o'zbekcha izoh.
+            buttons.forEach((b) => {
+              b.disabled = true;
+              if (b.textContent === q.correct) b.classList.add('correct');
+            });
+            if (opt !== q.correct) e.currentTarget.classList.add('wrong');
+            why.textContent = `${opt === q.correct ? '✅' : `❌ To'g'risi: ${q.correct}.`} ${q.explanation || ''}`;
+            why.hidden = false;
           })
         );
         buttons.forEach((b) => opts.appendChild(b));
-        box.appendChild(opts);
+        box.append(opts, why);
       }
       body.appendChild(box);
     });
@@ -226,7 +243,7 @@ window.Exam = (() => {
         score,
         correct: answers.length - mistakes.length,
         count: answers.length,
-        mistakes: mistakes.map((a) => ({ question: a.q.question, chosen: a.chosen, correct: a.q.correct })),
+        mistakes: mistakes.map((a) => ({ question: a.q.question, chosen: a.chosen, correct: a.q.correct, explanation: a.q.explanation })),
       });
     };
   }
@@ -386,7 +403,11 @@ window.Exam = (() => {
   function showResults() {
     const total = Math.round(results.reduce((n, r) => n + r.score, 0) / results.length);
     const passLine = Math.round(exam.pass * 100);
-    const passed = exam.rule === 'each' ? results.every((r) => r.score >= passLine) : total >= passLine;
+    // Ba'zi bo'limlardan alohida eng kam ball talab qilinadi (masalan, patentda tinglash va gapirish).
+    const required = exam.required || {};
+    const failedRequired = results.filter((r) => required[r.id] && r.score < required[r.id] * 100);
+    const passed =
+      (exam.rule === 'each' ? results.every((r) => r.score >= passLine) : total >= passLine) && !failedRequired.length;
     const weakest = results.slice().sort((a, b) => a.score - b.score)[0];
     const name = App.tutor().name;
 
@@ -399,6 +420,10 @@ window.Exam = (() => {
     else verdict = "🔴 Haqiqiy imtihondan o'tish ehtimoli: HOZIRCHA PAST — tayyorgarlikni davom ettiramiz";
     if (full && exam.rule === 'each' && !passed && total >= passLine) {
       verdict += `. Eslatma: bu imtihonda HAR bir bo'limdan ${passLine}% kerak.`;
+    }
+    if (full && failedRequired.length) {
+      const names = failedRequired.map((r) => E.SECTION_INFO[r.id].title.toLowerCase()).join(' va ');
+      verdict += `. ${names[0].toUpperCase()}${names.slice(1)} bo'limidan kamida ${Math.round(required[failedRequired[0].id] * 100)}% kerak.`;
     }
     $('examVerdict').textContent = verdict;
     $('examVerdict').className = `verdict ${passed || (!full && total >= passLine) ? 'pass' : 'fail'}`;
@@ -451,6 +476,7 @@ window.Exam = (() => {
           li.appendChild(el('span', '', m.question));
           li.appendChild(el('s', 'wrong', m.chosen || '— javob berilmagan'));
           li.appendChild(el('b', 'correct', m.correct));
+          if (m.explanation) li.appendChild(el('span', 'why', m.explanation));
           ul.appendChild(li);
           // Xato javoblardagi qisqa iboralar takrorlash daftariga tushadi.
           if (m.correct.split(/\s+/).length <= 4) window.Learn.addWord(App.lang(), m.correct, m.question, { lapse: true });

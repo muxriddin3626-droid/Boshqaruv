@@ -7,6 +7,8 @@
     listening: { title: 'Tinglash', icon: '🎧', kind: 'choice' },
     writing: { title: 'Yozish', icon: '✍️', kind: 'writing' },
     speaking: { title: 'Gapirish', icon: '🗣️', kind: 'speaking' },
+    history: { title: 'Rossiya tarixi', icon: '📜', kind: 'choice' },
+    law: { title: 'Qonunchilik asoslari', icon: '⚖️', kind: 'choice' },
   };
 
   const EXAMS = {
@@ -43,6 +45,27 @@
       },
     ],
     ru: [
+      {
+        id: 'patent',
+        name: 'Patent imtihoni (rus tili, tarix, qonunchilik)',
+        short: 'Patent',
+        level: 'A1-A2',
+        pass: 0.8,
+        rule: 'total',
+        // Haqiqiy imtihonda tinglash va gapirishdan alohida eng kam ball kerak (aniq qiymati rasmiy manbada).
+        required: { listening: 0.5, speaking: 0.5 },
+        about: "Rossiyada ishlash uchun patent olishda topshiriladigan imtihon: rus tili, Rossiya tarixi va qonunchilik asoslari. 2026 yildan faqat kompyuterda.",
+        note: "O'tish chegarasi taxminiy (≈80% va tinglash/gapirishdan alohida minimum). Qoidalar, muddat va jarimalar o'zgarib turadi — imtihondan oldin rasmiy manbadan (МВД, Рособрнадзор, test markazi) tekshiring.",
+        sections: [
+          { id: 'reading', minutes: 8, format: "Чтение: kundalik hayotdagi qisqa matnlar — e'lon, yozuv, jadval (dorixona, avtobus, ish e'loni, do'kon). Matndan aniq ma'lumotni topish, 3 variantli savollar." },
+          { id: 'grammar', minutes: 8, format: "Лексика и грамматика: kundalik va ish hayotiga oid gaplarda bo'sh joyga to'g'ri shaklni tanlash (kelishiklar: на стройке, в магазине; fe'l shakli; sonlar), 3 variant." },
+          { id: 'listening', minutes: 8, format: "Аудирование: 4 ta qisqa dialog yoki e'lon (ish beruvchi bilan suhbat, do'kon, transport e'loni, shifokor). Har biriga 1-2 savol, 3 variantli." },
+          { id: 'writing', minutes: 8, format: "Письмо: anketa yoki blankani to'ldirish (Фамилия, Имя, Гражданство, Дата рождения, Адрес, Профессия) va 3-4 gaplik qisqa xabar yozish (masalan, ish beruvchiga yoki do'stga)." },
+          { id: 'speaking', minutes: 5, format: "Говорение: imtihon oluvchining savollariga javob (ism, qayerdan, kim bo'lib ishlaydi, oila) va vaziyatda gapirish (do'konda narsa so'rash, shifokorga nima og'riyotganini aytish, yo'l so'rash)." },
+          { id: 'history', minutes: 6, format: "История России: davlat ramzlari (bayroq, gerb, madhiya), poytaxt, asosiy bayramlar (9 May — G'alaba kuni, 12 Iyun — Rossiya kuni, Yangi yil), mashhur shaxslar (Pyotr I, Gagarin, Pushkin), muhim tarixiy voqealar. 3 variantli savollar." },
+          { id: 'law', minutes: 6, format: "Основы законодательства: chet el fuqarosining huquq va majburiyatlari, ishlash uchun patent kerakligi, mehnat shartnomasi, patent uchun soliq to'lash, migratsiya hisobiga turish, favqulodda telefon raqamlari (112), qonunlarga rioya qilish. 3 variantli savollar." },
+        ],
+      },
       {
         id: 'trki-a1',
         name: 'ТРКИ — Элементарный уровень (A1)',

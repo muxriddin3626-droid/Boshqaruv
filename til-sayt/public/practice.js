@@ -85,6 +85,9 @@ window.Practice = (() => {
       doneCount === C.UNITS.length ? "Kurs tugadi! 🎓 Takrorlashni davom eting" : `${cur + 1}-bosqich: ${unit.icon} ${unit.title} (${unit.level})`;
     $('courseCount').textContent = `${doneCount}/${C.UNITS.length}`;
 
+    $('examCardDesc').textContent =
+      lang === 'ru' ? '🛂 Patent imtihoni va ТРКИ formatida sinov' : 'Goethe-Zertifikat formatida sinov';
+
     const stats = Learn.deckStats(lang);
     $('reviewDesc').textContent = stats.total
       ? stats.due

@@ -59,6 +59,17 @@ Bu ma'lumotlarning hammasi foydalanuvchi brauzerida (localStorage) saqlanadi.
   olish yoki telefondan ulashish mumkin. Sertifikatda "rasmiy til sertifikati emas"
   deb aniq yozilgan — u ТРКИ yoki Goethe-Zertifikat o'rnini bosmaydi.
 
+- 🛂 **Patent imtihoni** (rus tili) — Rossiyada ishlash uchun patent olishda
+  topshiriladigan imtihon formatida: rus tili (o'qish, grammatika, tinglash,
+  blanka to'ldirish, gapirish), 📜 Rossiya tarixi va ⚖️ qonunchilik asoslari.
+  Tinglash va gapirishdan alohida eng kam ball talab qilinadi. O'tish chegarasi
+  taxminiy — qoidalar o'zgarib turadi, rasmiy manbadan tekshiring. Qonunchilik
+  savollari faqat barqaror umumiy qoidalar haqida (aniq muddat va jarimalarsiz).
+- **Mashq rejimi:** bitta bo'lim tanlansa, har savoldan keyin darhol to'g'ri javob
+  va o'zbekcha izoh chiqadi. To'liq sinovda izohlar oxirida, natija bilan birga.
+- Ovozli dars va o'yinlar uchun **"🛂 Migrant hayoti"** mavzusi: politsiya hujjat
+  tekshiruvi, ish beruvchi, migratsiya xizmati, shifokor, kvartira, bank.
+
 Rasmiy sertifikat faqat imtihon markazida topshirib olinadi: nemis tili —
 Goethe-Institut (Toshkentda bor), shuningdek telc, ÖSD, TestDaF; rus tili — ТРКИ
 (TORFL) test markazlari. Sana va narxlarni markazning rasmiy saytidan tekshiring.

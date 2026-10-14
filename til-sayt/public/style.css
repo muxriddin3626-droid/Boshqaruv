@@ -1061,3 +1061,7 @@ h1 {
 .stop-btn { white-space: nowrap; }
 .game-title { min-width: 0; text-align: center; font-size: 15px; line-height: 1.25; }
 .exam-run .game-bar { display: grid; grid-template-columns: auto 1fr auto; }
+
+.disclaimer.left { margin: 0; text-align: left; }
+.exam-why { margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--bg); font-size: 14px; }
+.exam-mistakes .why { color: var(--muted); font-size: 13px; }

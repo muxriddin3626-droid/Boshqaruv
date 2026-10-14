@@ -441,7 +441,12 @@ function cleanExamSection(kind, raw) {
         questions: (Array.isArray(p && p.questions) ? p.questions : [])
           .map((q) => {
             const correct = str(q && q.correct, 160);
-            return { question: str(q && q.question, 400), correct, wrong: cleanWrong(q && q.wrong, correct) };
+            return {
+              question: str(q && q.question, 400),
+              correct,
+              wrong: cleanWrong(q && q.wrong, correct),
+              explanation: str(q && q.explanation, 400),
+            };
           })
           .filter((q) => q.question && q.correct && q.wrong.length >= 2)
           .slice(0, 12),
