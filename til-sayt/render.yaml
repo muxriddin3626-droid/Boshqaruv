@@ -13,3 +13,19 @@ services:
         sync: false
       - key: AZURE_SPEECH_REGION
         sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_SECRET
+        generateValue: true
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      - key: PREMIUM_CONTACT
+        sync: false
+      - key: PREMIUM_PRICE
+        sync: false

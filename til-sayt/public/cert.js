@@ -64,11 +64,7 @@ window.Cert = (() => {
 
   function open() {
     const certs = checkNew();
-    let name = '';
-    try {
-      name = localStorage.getItem(NAME_KEY) || '';
-    } catch {}
-    $('certName').value = name;
+    $('certName').value = window.Store.get(NAME_KEY, '') || '';
     const list = $('certList');
     list.textContent = '';
     for (const level of LEVELS) {
@@ -105,9 +101,7 @@ window.Cert = (() => {
       window.Practice.toast('✏️ Avval ism-familiyangizni yozing');
       return;
     }
-    try {
-      localStorage.setItem(NAME_KEY, name);
-    } catch {}
+    window.Store.set(NAME_KEY, name);
     selected = level;
     draw(level, name);
     $('certPreview').hidden = false;

@@ -9,20 +9,8 @@ window.Learn = (() => {
   const MAX_CARDS = 1000;
   const MAX_NOTES = 30;
 
-  function read(key, fallback) {
-    try {
-      const v = JSON.parse(localStorage.getItem(key));
-      return v == null ? fallback : v;
-    } catch {
-      return fallback;
-    }
-  }
-
-  function write(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch {}
-  }
+  const read = (key, fallback) => window.Store.get(key, fallback);
+  const write = (key, value) => window.Store.set(key, value);
 
   const norm = (s) =>
     String(s || '')

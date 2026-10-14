@@ -39,10 +39,22 @@
       </button>
     </div>
     <p class="hint">Mikrofonga ruxsat so'raladi. Eng yaxshi ishlashi uchun Chrome brauzeridan foydalaning.</p>
+    <div class="login-hint" id="startLogin" hidden>
+      <p>🔐 Natijalaringiz yo'qolmasligi va boshqa telefonda ham ochilishi uchun kiring:</p>
+      <div class="tg-slot" data-tg-slot></div>
+    </div>
   </main>
 
   <!-- 2. Menyu -->
   <main id="menuScreen" class="screen menu" hidden>
+    <button type="button" class="account-bar" id="accountBar" hidden>
+      <span class="avatar" id="accountAvatar">👤</span>
+      <span class="account-text">
+        <b id="accountName">Kirish</b>
+        <span id="accountPlan">Natijalarni saqlash uchun</span>
+      </span>
+      <span class="plan-badge" id="planBadge"></span>
+    </button>
     <div class="face-slot" id="menuFace" data-face="happy" data-state="idle"></div>
     <h1 id="menuTitle">Anna bilan rus tili</h1>
 
@@ -473,6 +485,78 @@
     <p class="disclaimer">Til Ustoz sertifikati o'quv yutug'ingizni tasdiqlaydi, lekin rasmiy til sertifikati (ТРКИ, Goethe-Zertifikat) emas va ularning o'rnini bosmaydi.</p>
   </main>
 
+  <!-- 16. Akkaunt va Premium -->
+  <main id="accountScreen" class="screen account" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">👤 Akkaunt</span>
+      <span></span>
+    </div>
+
+    <section class="panel" id="loginPanel">
+      <h2>🔐 Kirish</h2>
+      <p>Telegram orqali kiring — so'zlaringiz, streak, kurs va sertifikatlar saqlanadi va istalgan telefonda ochiladi. Parol kerak emas.</p>
+      <div class="tg-slot" data-tg-slot></div>
+      <p class="hint-left" id="loginOff" hidden>Telegram orqali kirish hali sozlanmagan (sayt egasi uchun: README → "Akkaunt").</p>
+    </section>
+
+    <section class="panel" id="profilePanel" hidden>
+      <div class="profile">
+        <span class="avatar big" id="profileAvatar">👤</span>
+        <div>
+          <b id="profileName"></b>
+          <p class="hint-left" id="syncState">☁️ Natijalar saqlanmoqda</p>
+        </div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="ratingToggle">
+        <span>Umumiy reytingda ko'rinish</span>
+      </label>
+      <button type="button" class="link-btn" id="logoutBtn">Chiqish</button>
+    </section>
+
+    <section class="panel premium-panel" id="premiumPanel">
+      <h2>⭐ Premium</h2>
+      <p class="plan-state" id="planState"></p>
+      <ul class="usage" id="usageList"></ul>
+      <ul class="benefits">
+        <li>♾️ Cheksiz ovozli darslar, o'yinlar va hikoyalar</li>
+        <li>🎓 Cheksiz imtihon sinovlari (patent, ТРКИ, Goethe)</li>
+        <li>❤️ Loyihani qo'llab-quvvatlash</li>
+      </ul>
+      <p class="premium-buy" id="premiumBuy"></p>
+      <form class="code-form" id="codeForm">
+        <input type="text" id="codeInput" placeholder="Premium kod: TU-XXXX-XXXX" autocomplete="off" maxlength="20">
+        <button type="submit" class="primary">Faollashtirish</button>
+      </form>
+    </section>
+
+    <section class="panel" id="invitePanel" hidden>
+      <h2>👥 Do'stlarni taklif qiling</h2>
+      <p id="inviteText"></p>
+      <div class="invite-link">
+        <input type="text" id="inviteLink" readonly>
+        <button type="button" class="secondary" id="inviteShare">📤 Ulashish</button>
+      </div>
+      <form class="code-form" id="friendForm">
+        <input type="text" id="friendInput" placeholder="Do'stingizning kodi" autocomplete="off" maxlength="10">
+        <button type="submit" class="secondary">Do'st qo'shish</button>
+      </form>
+    </section>
+  </main>
+
+  <dialog class="sheet" id="limitDialog">
+    <form method="dialog">
+      <div class="face-slot small" id="limitFace" data-face="surprised" data-state="idle"></div>
+      <h2>Bugungi bepul limit tugadi</h2>
+      <p id="limitText">Premium bilan cheksiz mashq qiling yoki ertaga davom eting. Takrorlash kartochkalari va daftar bepul va cheksiz!</p>
+      <div class="end-actions">
+        <button type="button" class="primary" id="limitPremium">⭐ Premium haqida</button>
+        <button type="submit" class="secondary">Keyinroq</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog class="sheet" id="reminderDialog">
     <form method="dialog">
       <h2>⏰ Har kuni eslatsin</h2>
@@ -488,6 +572,7 @@
   <div class="toast" id="toast" role="status" hidden></div>
 
   <script src="face.js"></script>
+  <script src="store.js"></script>
   <script src="course.js"></script>
   <script src="exams.js"></script>
   <script src="learn.js"></script>
@@ -496,5 +581,6 @@
   <script src="practice.js"></script>
   <script src="exam.js"></script>
   <script src="cert.js"></script>
+  <script src="account-ui.js"></script>
 </body>
 </html>

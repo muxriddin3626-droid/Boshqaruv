@@ -28,6 +28,7 @@
     exam: $('examScreen'),
     examResult: $('examResultScreen'),
     cert: $('certScreen'),
+    account: $('accountScreen'),
   };
   const face = $('face');
   const statusText = $('statusText');
@@ -43,6 +44,7 @@
   let lang = null;
   let settings = loadSettings();
   let history = [];
+  let lessonToken = null; // server bergan dars tokeni (kunlik limit uchun)
   let phase = 'idle'; // idle | speaking | listening | thinking
   let speakLang = 'target'; // target | uz
   let showSubs = true;
@@ -56,12 +58,14 @@
   let stopCurrentSound = null;
   let serverVoice = false; // serverda tabiiy (Azure) ovoz sozlanganmi
 
-  fetch('/api/config')
+  // Server sozlamalari: tabiiy ovoz, Telegram orqali kirish, limitlar.
+  const configReady = fetch('/api/config')
     .then((r) => r.json())
     .then((c) => {
       serverVoice = Boolean(c.voice);
+      return c;
     })
-    .catch(() => {});
+    .catch(() => ({}));
 
   // ---------- Umumiy ----------
 
@@ -93,17 +97,11 @@
 
   function loadSettings() {
     const defaults = { mode: 'kind', topic: 'free', level: 'auto' };
-    try {
-      return { ...defaults, ...JSON.parse(localStorage.getItem(SETTINGS_KEY)) };
-    } catch {
-      return defaults;
-    }
+    return { ...defaults, ...Store.get(SETTINGS_KEY, {}) };
   }
 
   function saveSettings() {
-    try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    } catch {}
+    Store.set(SETTINGS_KEY, settings);
   }
 
   async function postJson(url, data) {
@@ -113,6 +111,8 @@
       body: JSON.stringify(data),
     });
     const json = await res.json().catch(() => ({}));
+    // Kunlik bepul limit tugadi — Premium oynasini ko'rsatamiz.
+    if (res.status === 402 && json.limit && window.AccountUI) window.AccountUI.onLimit(json);
     if (!res.ok) throw new Error(json.error || "Javob kelmadi. Qayta urinib ko'ring.");
     return json;
   }
@@ -124,19 +124,8 @@
     return chip ? chip.textContent : '';
   }
 
-  function loadStored(key) {
-    try {
-      return JSON.parse(localStorage.getItem(key));
-    } catch {
-      return null;
-    }
-  }
-
-  function store(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch {}
-  }
+  const loadStored = (key) => Store.get(key, null);
+  const store = (key, value) => Store.set(key, value);
 
   // Ustoz eslab qolgan narsalar: o'quvchining xatolari va yaxshi yodlanmagan so'zlari.
   function loadFocus() {
@@ -460,6 +449,7 @@
         settings: { ...settings, unit: lessonUnit },
         memory: Learn.memory(lang),
         messages: history,
+        lessonToken,
       });
       if (!Array.isArray(data.segments)) throw new Error("Javob kelmadi. Qayta urinib ko'ring.");
     } catch (err) {
@@ -476,7 +466,8 @@
     }
     if (ended) return;
 
-    history.push({ role: 'assistant', content: JSON.stringify(data) });
+    if (data.lessonToken) lessonToken = data.lessonToken;
+    history.push({ role: 'assistant', content: JSON.stringify({ mood: data.mood, segments: data.segments }) });
     Face.set(face, data.mood);
     const finished = await speakReply(data.segments);
     if (!finished || ended) return;
@@ -500,6 +491,7 @@
     lessonUnit = opts.unit || null;
     const unit = lessonUnit && COURSE.byId(lessonUnit);
     history = [];
+    lessonToken = null;
     userTurns = 0;
     timeUp = false;
     ended = false;
@@ -729,8 +721,15 @@
     focus: loadFocus,
     startLesson,
     locale: () => LOCALES[lang],
+    config: () => configReady,
     bestKey: () => BEST_KEY + lang,
   };
+
+  // Boshqa qurilmadan ma'lumot kelganda sozlamalar va menyuni yangilaymiz.
+  Store.onChange(() => {
+    settings = loadSettings();
+    if (!screens.menu.hidden) openMenu();
+  });
 
   // Sahifa yopilsa yoki boshqa ilovaga o'tilsa, ovozni to'xtatamiz.
   window.addEventListener('pagehide', () => {

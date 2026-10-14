@@ -3,6 +3,8 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
+const account = require('./account');
+const auth = require('./auth');
 const {
   TUTOR_PROMPT,
   LANGUAGES,
@@ -34,6 +36,9 @@ const client = new Anthropic();
 
 const MODEL = process.env.CLAUDE_MODEL || 'claude-opus-5-5';
 const EFFORT = process.env.CLAUDE_EFFORT || 'medium';
+// O'yin, hikoya, hisobot va imtihon topshiriqlarini tuzish uchun tezroq va arzonroq model.
+const FAST_MODEL = process.env.CLAUDE_FAST_MODEL || 'claude-sonnet-5-5';
+const FAST_EFFORT = process.env.CLAUDE_FAST_EFFORT || 'low';
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
@@ -187,12 +192,12 @@ function sendClaudeError(res, err) {
 
 // Claude'ga JSON sxemasi bilan so'rov yuboradi va tayyor obyektni qaytaradi.
 // Xavfsizlik filtri rad etsa null qaytaradi.
-async function askJson({ system, messages, schema }) {
+async function askJson({ system, messages, schema, fast = false }) {
   const response = await client.beta.messages.create({
-    model: MODEL,
-    max_tokens: 4000,
+    model: fast ? FAST_MODEL : MODEL,
+    max_tokens: fast ? 8000 : 4000,
     output_config: {
-      effort: EFFORT,
+      effort: fast ? FAST_EFFORT : EFFORT,
       format: { type: 'json_schema', schema },
     },
     // Xavfsizlik filtri so'rovni rad etsa, server boshqa modelda qayta urinadi.
@@ -236,6 +241,20 @@ async function handleChat(req, res) {
     return;
   }
 
+  // Yangi dars kunlik limitdan hisoblanadi; davomidagi xabarlar dars tokeni bilan keladi.
+  const isNew = !history.some((m) => m.role === 'assistant');
+  let q = null;
+  if (isNew) {
+    q = await account.quota(req, 'lesson');
+    if (!q.ok) {
+      account.sendLimit(res, q);
+      return;
+    }
+  } else if (!auth.checkLessonToken(body.lessonToken)) {
+    sendJson(res, 403, { error: 'Dars vaqti tugadi. Yangi dars boshlang.', expired: true });
+    return;
+  }
+
   try {
     const reply = await askJson({
       system: [
@@ -245,13 +264,15 @@ async function handleChat(req, res) {
       messages,
       schema: REPLY_SCHEMA,
     });
+    const lessonToken = isNew ? auth.lessonToken() : body.lessonToken;
     if (!reply) {
-      sendJson(res, 200, REFUSAL_REPLY);
+      sendJson(res, 200, { ...REFUSAL_REPLY, lessonToken });
       return;
     }
     const segments = (reply.segments || []).filter((s) => s && typeof s.text === 'string' && s.text.trim());
     if (!segments.length) throw new Error("Bo'sh javob");
-    sendJson(res, 200, { mood: MOODS.includes(reply.mood) ? reply.mood : 'calm', segments });
+    if (q) await q.commit();
+    sendJson(res, 200, { mood: MOODS.includes(reply.mood) ? reply.mood : 'calm', segments, lessonToken });
   } catch (err) {
     sendClaudeError(res, err);
   }
@@ -296,6 +317,7 @@ async function handleReport(req, res) {
         },
       ],
       schema: REPORT_SCHEMA,
+      fast: true,
     });
     if (!report) {
       sendJson(res, 502, { error: 'Hisobot tayyorlab bo\'lmadi.' });
@@ -405,12 +427,20 @@ async function handleGame(req, res) {
     sendJson(res, 400, { error: "Noto'g'ri so'rov." });
     return;
   }
+  // Kurs bosqichi imtihoni imtihon limitidan, qolganlari mashq limitidan hisoblanadi.
+  const settings = cleanSettings(body.settings);
+  const q = await account.quota(req, settings.exam ? 'exam' : 'practice');
+  if (!q.ok) {
+    account.sendLimit(res, q);
+    return;
+  }
 
   try {
     const raw = await askJson({
-      system: gamePrompt(lang, type, cleanSettings(body.settings), cleanFocus(body.focus)),
+      system: gamePrompt(lang, type, settings, cleanFocus(body.focus)),
       messages: [{ role: 'user', content: "Mashqni tayyorla." }],
       schema: GAMES[type].schema,
+      fast: true,
     });
     const game = raw && cleanGame(type, raw);
     const size = game && (game.pairs || game.items || game.sentences).length;
@@ -418,6 +448,7 @@ async function handleGame(req, res) {
       sendJson(res, 502, { error: "Mashqni tayyorlab bo'lmadi, qayta urinib ko'ring." });
       return;
     }
+    await q.commit();
     sendJson(res, 200, game);
   } catch (err) {
     sendClaudeError(res, err);
@@ -481,17 +512,24 @@ async function handleExamSection(req, res) {
     sendJson(res, 400, { error: "Noto'g'ri so'rov." });
     return;
   }
+  const q = await account.quota(req, 'exam');
+  if (!q.ok) {
+    account.sendLimit(res, q);
+    return;
+  }
   try {
     const raw = await askJson({
       system: examSectionPrompt(body.lang, found.exam, found.section),
       messages: [{ role: 'user', content: "Topshiriqni tayyorla." }],
       schema: EXAM_SCHEMAS[found.kind],
+      fast: true,
     });
     const content = raw && cleanExamSection(found.kind, raw);
     if (!content) {
       sendJson(res, 502, { error: "Topshiriqni tayyorlab bo'lmadi, qayta urinib ko'ring." });
       return;
     }
+    await q.commit();
     sendJson(res, 200, content);
   } catch (err) {
     sendClaudeError(res, err);
@@ -611,17 +649,22 @@ const ROUTES = {
   '/api/tts': handleTts,
 };
 
+function runRoute(route, req, res) {
+  route(req, res).catch((err) => {
+    console.error('Server xatoligi:', err);
+    if (!res.headersSent) sendJson(res, 500, { error: 'Server xatoligi.' });
+  });
+}
+
 const server = http.createServer((req, res) => {
-  const route = ROUTES[req.url];
-  if (route && req.method === 'POST') {
-    route(req, res).catch((err) => {
-      console.error('Server xatoligi:', err);
-      if (!res.headersSent) sendJson(res, 500, { error: 'Server xatoligi.' });
-    });
+  const url = req.url.split('?')[0];
+  const route = req.method === 'POST' ? ROUTES[url] || account.POST_ROUTES[url] : account.GET_ROUTES[url];
+  if (route) {
+    runRoute(route, req, res);
     return;
   }
-  if (req.url === '/api/config' && req.method === 'GET') {
-    sendJson(res, 200, { voice: Boolean(AZURE_KEY && AZURE_REGION) });
+  if (url === '/api/config' && req.method === 'GET') {
+    sendJson(res, 200, { voice: Boolean(AZURE_KEY && AZURE_REGION), ...account.config() });
     return;
   }
   if (req.method === 'GET' || req.method === 'HEAD') {
@@ -631,9 +674,14 @@ const server = http.createServer((req, res) => {
   res.writeHead(405).end();
 });
 
-server.listen(PORT, () => {
+account.ready.then(() => server.listen(PORT, () => {
   console.log(`Sayt ishga tushdi: http://localhost:${PORT}`);
+  if (!auth.enabled) console.log("Telegram orqali kirish sozlanmagan — natijalar faqat brauzerda saqlanadi.");
+  else if (auth.secretIsRandom) console.log('Diqqat: SESSION_SECRET berilmagan — server qayta ishga tushsa, hamma qaytadan kirishi kerak.');
   if (!AZURE_KEY || !AZURE_REGION) {
     console.log("Azure ovozi sozlanmagan — brauzer o'z ovozida o'qiydi.");
   }
+})).catch((err) => {
+  console.error("Bazaga ulanib bo'lmadi:", err);
+  process.exit(1);
 });

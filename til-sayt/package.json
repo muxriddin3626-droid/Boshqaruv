@@ -5,10 +5,12 @@
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "codes": "node src/make-codes.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
+    "@libsql/client": "^0.17.4",
     "dotenv": "^16.4.5"
   }
 }
