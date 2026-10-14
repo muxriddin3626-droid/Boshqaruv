@@ -74,6 +74,36 @@ Rasmiy sertifikat faqat imtihon markazida topshirib olinadi: nemis tili —
 Goethe-Institut (Toshkentda bor), shuningdek telc, ÖSD, TestDaF; rus tili — ТРКИ
 (TORFL) test markazlari. Sana va narxlarni markazning rasmiy saytidan tekshiring.
 
+### Kasbiy kurslar va rolli vaziyatlar
+
+- 💼 **Kasbiy kurslar** — 8 ta kasb: quruvchi, haydovchi, oshpaz va ofitsiant,
+  sotuvchi va kassir, kuryer va omborchi, hamshira va parvarishchi, zavod
+  ishchisi, tozalash xizmati. Har kasbda 4 ta mavzu (masalan quruvchi: asboblar,
+  xavfsizlik, brigadir bilan suhbat, ish haqi), har mavzuda 4 qadam: 🧩 so'zlar,
+  📝 test, 🎙️ ustoz bilan dars va 🎭 rolli vaziyat (`public/scenarios.js`).
+- 🎭 **Rolli vaziyatlar** — ustoz rol o'ynaydi (politsiyachi, ish beruvchi,
+  kvartira egasi, shifokor, migratsiya xizmati xodimi, bank, ishga kirish suhbati,
+  do'kon). O'quvchi 5 daqiqada maqsadga erishishi kerak; erishsa — vaziyat
+  g'alaba bilan tugaydi. Ustoz xatoni darhol tuzatmaydi (haqiqiy hayotdagidek),
+  faqat yordam so'ralsa o'zbekcha maslahat beradi; oxirida 0-100 baho va xatolar.
+
+### Akkaunt, Premium va do'stlar
+
+- 🔐 **Telegram orqali kirish** — parolsiz. Natijalar (so'zlar, streak, kurs,
+  sertifikatlar, sozlamalar) bazaga sinxronlanadi va istalgan qurilmada ochiladi.
+  Kirmasdan ham ishlatish mumkin — unda natijalar faqat shu brauzerda qoladi.
+- ⭐ **Kunlik bepul limit va Premium** — bepul: kuniga 2 ta ovozli dars, 6 ta
+  o'yin/hikoya, 10 ta imtihon bo'limi (sozlanadi). Takrorlash va daftar doim
+  cheksiz. Premium — cheksiz. Premium **aktivatsiya kodlari** orqali beriladi:
+  foydalanuvchi sizga to'laydi (Payme, Click yoki karta), siz unga kod berasiz.
+- 👥 **Do'stlar va reyting** — har foydalanuvchining taklif havolasi bor; do'st
+  shu havola orqali kirsa, ikkalasi do'st bo'ladi va 3 kun Premium oladi.
+  Haftalik XP reytingi: do'stlar orasida va umumiy (dushanba kuni yangilanadi).
+- 🏅 **Yutuq nishonlari** — 17 ta nishon (streak, so'zlar, talaffuz, kurs,
+  imtihonlar, rolli vaziyatlar...) progress bilan.
+- 📲 **Ilova sifatida o'rnatish va oflayn** — sayt telefonga ilova kabi
+  o'rnatiladi; internetsiz ham ochiladi (takrorlash, daftar, natijalar ishlaydi).
+
 ### O'yinlar va testlar
 
 Menyuda ovozli darsdan tashqari o'yinlar bor:
@@ -97,8 +127,13 @@ O'qituvchining qoidalari va o'yin topshiriqlari `src/prompt.js` faylida turadi.
   `practice.js` — kurs, takrorlash, daftar, hikoya, kunlik maqsad, `learn.js` —
   brauzerda saqlanadigan o'rganish ma'lumotlari, `course.js` — kurs bosqichlari,
   `exams.js` va `exam.js` — sinov imtihonlari, `cert.js` — sertifikat)
-- `src/server.js` — sahifani ko'rsatadi va `/api/chat` orqali Claude bilan
-  bog'lanadi. API kalit faqat serverda turadi, brauzerga chiqmaydi.
+- `public/` (davomi): `store.js` — saqlash va sinxronlash, `account-ui.js` —
+  akkaunt va Premium, `social.js` — nishonlar va reyting, `roles.js` va
+  `scenarios.js` — kasbiy kurslar va rolli vaziyatlar, `sw.js` va `pwa.js` — oflayn
+  ishlash va o'rnatish
+- `src/server.js` — sahifani ko'rsatadi va Claude bilan bog'lanadi. API kalit
+  faqat serverda turadi, brauzerga chiqmaydi. `src/account.js`, `src/auth.js`,
+  `src/db.js` — akkaunt, Telegram kirish, limitlar, Premium, do'stlar va baza.
 
 Ovozni tanish brauzerning o'zida ishlaydi (Web Speech API). Eng yaxshi natija —
 Chrome (Android va kompyuter).
@@ -138,6 +173,45 @@ npm start
 ```
 
 Brauzerda http://localhost:3000 ni oching (mikrofon `localhost` yoki `https` manzilda ishlaydi).
+
+## Akkaunt (Telegram orqali kirish) sozlash
+
+1. Telegram'da @BotFather → `/newbot` — bot yarating (masalan `TilUstozBot`),
+   tokenni oling.
+2. @BotFather → `/setdomain` → botni tanlang → sayt manzilini kiriting
+   (masalan `til-sayt.onrender.com`). Telegram tugmasi faqat shu domenda ishlaydi.
+3. Muhit o'zgaruvchilari: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME` va
+   `SESSION_SECRET` (uzun tasodifiy satr).
+4. Doimiy baza uchun Turso (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`) — `hisob-bot`
+   README'sidagi kabi. Usiz baza lokal faylda (`til-sayt.db`) bo'ladi va Render'ning
+   bepul tarifida qayta ishga tushganda o'chib ketadi.
+
+## Premium kodlari
+
+Kod yaratish (30 kunlik 10 ta):
+
+```bash
+npm run codes -- 10 30
+```
+
+yoki sayt ishlab turganda (Render'da) `ADMIN_SECRET` bilan:
+
+```bash
+curl -X POST https://SIZNING-SAYT/api/admin/codes \
+  -d '{"secret":"ADMIN_SECRET_QIYMATI","count":10,"days":30}'
+```
+
+Foydalanuvchi kodni "👤 Akkaunt → ⭐ Premium" bo'limida kiritadi. Narx va
+bog'lanish uchun `PREMIUM_PRICE` va `PREMIUM_CONTACT` (masalan `@sizning_telegram`)
+ni belgilang. Limitlarni `FREE_LESSONS`, `FREE_PRACTICE`, `FREE_EXAM_SECTIONS`
+bilan o'zgartirish yoki `FREE_LIMITS=off` bilan butunlay o'chirish mumkin.
+
+## Xarajat
+
+Ovozli dars va yozish/gapirishni baholash asosiy modelda (`CLAUDE_MODEL`,
+standart `claude-opus-5-5`), o'yin, hikoya, hisobot va imtihon topshiriqlari esa
+tezroq va arzonroq modelda (`CLAUDE_FAST_MODEL`, standart `claude-sonnet-5-5`)
+tuziladi.
 
 ## Internetga joylashtirish (Render)
 

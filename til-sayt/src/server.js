@@ -16,6 +16,7 @@ const {
   REPORT_PROMPT,
   REPORT_SCHEMA,
   COURSE,
+  SC,
   EXAMS,
   EXAM_SCHEMAS,
   GRADE_SCHEMA,
@@ -166,6 +167,8 @@ function cleanSettings(raw) {
     topic: Object.hasOwn(TOPICS, s.topic) ? s.topic : 'free',
     level: Object.hasOwn(LEVELS, s.level) ? s.level : 'auto',
     unit: typeof s.unit === 'string' && COURSE.byId(s.unit) ? s.unit : null,
+    prof: typeof s.prof === 'string' && SC.findTheme(s.prof) ? s.prof : null,
+    scenario: typeof s.scenario === 'string' && SC.findScenario(s.scenario) ? s.scenario : null,
     exam: s.exam === true,
   };
 }
@@ -273,7 +276,12 @@ async function handleChat(req, res) {
     const segments = (reply.segments || []).filter((s) => s && typeof s.text === 'string' && s.text.trim());
     if (!segments.length) throw new Error("Bo'sh javob");
     if (q) await q.commit();
-    sendJson(res, 200, { mood: MOODS.includes(reply.mood) ? reply.mood : 'calm', segments, lessonToken });
+    sendJson(res, 200, {
+      mood: MOODS.includes(reply.mood) ? reply.mood : 'calm',
+      segments,
+      goal_reached: reply.goal_reached === true,
+      lessonToken,
+    });
   } catch (err) {
     sendClaudeError(res, err);
   }
@@ -304,6 +312,8 @@ async function handleReport(req, res) {
     return;
   }
 
+  const scenario = SC.findScenario(cleanSettings(body.settings).scenario);
+  const scenarioNote = scenario ? `\nBu rolli vaziyat edi: "${scenario.title}". Ustoz rolni o'ynadi: ${scenario.role}. O'quvchining maqsadi: ${scenario.goal}.` : '';
   const transcript = history
     .map((m) => (m.role === 'user' ? `O'quvchi: ${m.content}` : `Ustoz: ${assistantText(m.content)}`))
     .join('\n');
@@ -314,7 +324,7 @@ async function handleReport(req, res) {
       messages: [
         {
           role: 'user',
-          content: `O'rganilayotgan til: ${LANGUAGES[lang]}.\n\nDars yozuvi:\n<transcript>\n${transcript}\n</transcript>`,
+          content: `O'rganilayotgan til: ${LANGUAGES[lang]}.${scenarioNote}\n\nDars yozuvi:\n<transcript>\n${transcript}\n</transcript>`,
         },
       ],
       schema: REPORT_SCHEMA,

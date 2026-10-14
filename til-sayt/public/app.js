@@ -1,5 +1,6 @@
 (() => {
   const LESSON_SECONDS = 10 * 60;
+  const ROLEPLAY_SECONDS = 5 * 60;
   const LOCALES = { ru: 'ru-RU', de: 'de-DE', uz: 'uz-UZ' };
   const TUTORS = {
     ru: { name: 'Anna', speakLabel: 'Ruscha', lang: 'rus tili' },
@@ -31,6 +32,9 @@
     account: $('accountScreen'),
     badges: $('badgesScreen'),
     rating: $('ratingScreen'),
+    profList: $('profListScreen'),
+    prof: $('profScreen'),
+    roles: $('rolesScreen'),
   };
   const face = $('face');
   const statusText = $('statusText');
@@ -214,9 +218,9 @@
   }
 
   function tick() {
-    const passed = Math.min(LESSON_SECONDS, Math.floor((Date.now() - startedAt) / 1000));
-    timerEl.textContent = `${fmt(passed)} / ${fmt(LESSON_SECONDS)}`;
-    if (passed >= LESSON_SECONDS && !timeUp) {
+    const passed = Math.min(lessonSeconds, Math.floor((Date.now() - startedAt) / 1000));
+    timerEl.textContent = `${fmt(passed)} / ${fmt(lessonSeconds)}`;
+    if (passed >= lessonSeconds && !timeUp) {
       timeUp = true;
       // Ustoz gapirayotgan yoki o'ylayotgan bo'lsa, gapini tugatgach dars yopiladi.
       if (phase === 'idle' || phase === 'listening') endLesson();
@@ -448,7 +452,7 @@
     try {
       data = await postJson('/api/chat', {
         lang,
-        settings: { ...settings, unit: lessonUnit },
+        settings: { ...settings, ...lessonOpts },
         memory: Learn.memory(lang),
         messages: history,
         lessonToken,
@@ -473,6 +477,12 @@
     Face.set(face, data.mood);
     const finished = await speakReply(data.segments);
     if (!finished || ended) return;
+    // Rolli vaziyatda maqsadga erishildi — darsni g'alaba bilan yakunlaymiz.
+    if (data.goal_reached && lessonOpts.scenario) {
+      goalReached = true;
+      endLesson();
+      return;
+    }
     if (timeUp) endLesson();
     else listen(true);
   }
@@ -486,12 +496,21 @@
 
   // ---------- Dars boshlanishi va tugashi ----------
 
-  let lessonUnit = null; // kurs bosqichi darsi bo'lsa, bosqich id'si
+  // Dars turi: kurs bosqichi (unit), kasb mavzusi (prof) yoki rolli vaziyat (scenario).
+  let lessonOpts = {};
+  let lessonUnit = null;
+  let lessonSeconds = LESSON_SECONDS;
+  let goalReached = false;
 
   function startLesson(opts = {}) {
     const t = TUTORS[lang];
-    lessonUnit = opts.unit || null;
+    lessonOpts = { unit: opts.unit || null, prof: opts.prof || null, scenario: opts.scenario || null };
+    lessonUnit = lessonOpts.unit;
+    lessonSeconds = lessonOpts.scenario ? ROLEPLAY_SECONDS : LESSON_SECONDS;
+    goalReached = false;
     const unit = lessonUnit && COURSE.byId(lessonUnit);
+    const scenario = lessonOpts.scenario && SCENARIOS.findScenario(lessonOpts.scenario);
+    const theme = lessonOpts.prof && SCENARIOS.findTheme(lessonOpts.prof);
     history = [];
     lessonToken = null;
     userTurns = 0;
@@ -501,9 +520,13 @@
     document.querySelectorAll('.pill').forEach((p) => p.classList.toggle('active', p.dataset.speak === 'target'));
     $('speakTarget').textContent = t.speakLabel;
     const topic = document.querySelector(`[data-group="topic"] [data-value="${settings.topic}"]`);
-    $('lessonInfo').textContent = unit
-      ? `${t.name} · ${unit.icon} ${unit.title}`
-      : `${t.name} · ${MODE_LABELS[settings.mode]} · ${topic ? topic.textContent : ''}`;
+    $('lessonInfo').textContent = scenario
+      ? `🎭 ${scenario.title}`
+      : theme
+        ? `${t.name} · ${theme.prof.icon} ${theme.theme.title}`
+        : unit
+          ? `${t.name} · ${unit.icon} ${unit.title}`
+          : `${t.name} · ${MODE_LABELS[settings.mode]} · ${topic ? topic.textContent : ''}`;
     typeForm.hidden = true;
     setSubtitle('');
     Face.set(face, 'calm');
@@ -525,13 +548,27 @@
     stopSpeaking();
     setPhase('idle');
     const minutes = Math.max(1, Math.round((Date.now() - startedAt) / 60000));
+    const roleplay = Boolean(lessonOpts.scenario);
+    $('endTitle').textContent = roleplay ? (goalReached ? '🎉 Maqsadga erishdingiz!' : 'Vaziyat tugadi') : 'Dars tugadi!';
     $('endText').textContent =
-      userTurns > 0
-        ? `${minutes} daqiqa ichida ${userTurns} marta gapirdingiz. Ofarin, shunday davom eting!`
-        : "Bu safar gaplashmadik. Keyingi safar mikrofonni bosib, bemalol gapiring!";
-    Face.set(document.querySelector('#endScreen .face-slot'), userTurns > 0 ? 'excited' : 'calm');
-    $('endMenuBtn').textContent = lessonUnit ? '← Bosqichga qaytish' : "O'yinlar va menyu";
+      userTurns === 0
+        ? "Bu safar gaplashmadik. Keyingi safar mikrofonni bosib, bemalol gapiring!"
+        : roleplay && !goalReached
+          ? `${userTurns} marta gapirdingiz, lekin maqsadga hali yetmadik. Hisobotni ko'rib, yana urinib ko'ring!`
+          : `${minutes} daqiqa ichida ${userTurns} marta gapirdingiz. Ofarin, shunday davom eting!`;
+    Face.set(document.querySelector('#endScreen .face-slot'), userTurns > 0 && (!roleplay || goalReached) ? 'excited' : 'calm');
+    $('endMenuBtn').textContent = lessonUnit
+      ? '← Bosqichga qaytish'
+      : lessonOpts.prof || lessonOpts.scenario
+        ? '← Orqaga'
+        : "O'yinlar va menyu";
+    $('againBtn').textContent = roleplay ? 'Yana urinish' : 'Yana gaplashish';
     show('end');
+    if (roleplay && goalReached) {
+      Learn.bumpStat('roleplayWins');
+      window.Roles.markDone(lessonOpts.scenario, 'role');
+    }
+    if (lessonOpts.prof && userTurns >= 3) window.Roles.markDone(lessonOpts.prof, 'lesson');
     if (userTurns > 0) {
       // Har gap uchun XP; kurs darsi kamida 3 ta gap bo'lsa bajarilgan hisoblanadi.
       Learn.bumpStat('lessons');
@@ -553,7 +590,7 @@
     $('reportLoading').textContent = `${TUTORS[lang].name} hisobot tayyorlayapti...`;
     $('reportBody').hidden = true;
     try {
-      const r = await postJson('/api/report', { lang, settings, messages });
+      const r = await postJson('/api/report', { lang, settings: { ...settings, ...lessonOpts }, messages });
       if (token !== reportToken) return;
       renderReport(r);
       Learn.recordReport(lang, r);
@@ -578,6 +615,12 @@
 
   function renderReport(r) {
     $('reportLevel').textContent = r.level || '—';
+    const scoreEl = $('reportScore');
+    scoreEl.hidden = !lessonOpts.scenario || typeof r.score !== 'number';
+    if (!scoreEl.hidden) {
+      scoreEl.textContent = `Vaziyat bahosi: ${r.score}/100`;
+      window.Roles.saveScore(lessonOpts.scenario, r.score);
+    }
     $('reportSummary').textContent = r.summary || '';
 
     const mistakes = $('reportMistakes');
@@ -646,9 +689,10 @@
   face.addEventListener('click', onMic);
 
   $('stopBtn').addEventListener('click', endLesson);
-  $('againBtn').addEventListener('click', () => startLesson({ unit: lessonUnit }));
+  $('againBtn').addEventListener('click', () => startLesson(lessonOpts));
   $('endMenuBtn').addEventListener('click', () => {
     if (lessonUnit) window.Practice.openUnit(lessonUnit);
+    else if (lessonOpts.prof || lessonOpts.scenario) window.Roles.back(lessonOpts);
     else openMenu();
   });
 

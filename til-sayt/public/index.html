@@ -100,6 +100,23 @@
       </span>
     </button>
 
+    <div class="card-pair">
+      <button type="button" class="big-card prof-card" id="profCard">
+        <span class="act-icon">💼</span>
+        <span class="act-text">
+          <span class="act-title">Kasbiy kurslar</span>
+          <span class="act-desc">Quruvchi, haydovchi, oshpaz...</span>
+        </span>
+      </button>
+      <button type="button" class="big-card role-card" id="roleCard">
+        <span class="act-icon">🎭</span>
+        <span class="act-text">
+          <span class="act-title">Rolli vaziyatlar</span>
+          <span class="act-desc">Politsiya, ish beruvchi, shifokor...</span>
+        </span>
+      </button>
+    </div>
+
     <h2 class="section-title">Erkin mashq</h2>
     <button type="button" class="settings-summary" id="settingsSummary">
       <span id="settingsText"></span>
@@ -262,7 +279,7 @@
   <!-- 4b. Dars tugadi -->
   <main id="endScreen" class="screen end" hidden>
     <div class="face-slot" data-face="excited" data-state="idle"></div>
-    <h1>Dars tugadi!</h1>
+    <h1 id="endTitle">Dars tugadi!</h1>
     <p class="lead" id="endText"></p>
 
     <section class="report" id="report" hidden>
@@ -270,6 +287,7 @@
       <div id="reportBody" hidden>
         <div class="report-head">
           <span class="level-badge" id="reportLevel"></span>
+          <span class="level-badge score" id="reportScore" hidden></span>
           <p id="reportSummary"></p>
         </div>
         <div class="report-block" id="mistakesBlock">
@@ -583,6 +601,40 @@
     <ol class="rank-list" id="ratingList"></ol>
   </main>
 
+  <!-- 19. Kasblar -->
+  <main id="profListScreen" class="screen prof-list" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">💼 Kasbiy kurslar</span>
+      <span></span>
+    </div>
+    <p class="lead small">Ish joyida kerak bo'ladigan so'zlar, suhbatlar va vaziyatlar. Kasbingizni tanlang:</p>
+    <div class="prof-grid" id="profGrid"></div>
+  </main>
+
+  <!-- 20. Bitta kasb -->
+  <main id="profScreen" class="screen prof" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="profBackBtn">← Kasblar</button>
+      <span class="game-title" id="profTitle"></span>
+      <span></span>
+    </div>
+    <div class="unit-icon" id="profIcon"></div>
+    <p class="lead small">Har mavzuda: so'zlar, test, ustoz bilan dars va rolli vaziyat.</p>
+    <div class="theme-list" id="themeList"></div>
+  </main>
+
+  <!-- 21. Rolli vaziyatlar -->
+  <main id="rolesScreen" class="screen roles" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">🎭 Rolli vaziyatlar</span>
+      <span></span>
+    </div>
+    <p class="lead small">Ustoz rol o'ynaydi — politsiyachi, ish beruvchi, shifokor. Siz maqsadga erishishingiz kerak! 5 daqiqa, oxirida baho va xatolar tahlili.</p>
+    <div class="role-list" id="roleList"></div>
+  </main>
+
   <dialog class="sheet" id="limitDialog">
     <form method="dialog">
       <div class="face-slot small" id="limitFace" data-face="surprised" data-state="idle"></div>
@@ -612,6 +664,7 @@
   <script src="face.js"></script>
   <script src="store.js"></script>
   <script src="course.js"></script>
+  <script src="scenarios.js"></script>
   <script src="exams.js"></script>
   <script src="learn.js"></script>
   <script src="app.js"></script>
@@ -621,6 +674,7 @@
   <script src="cert.js"></script>
   <script src="account-ui.js"></script>
   <script src="social.js"></script>
+  <script src="roles.js"></script>
   <script src="pwa.js"></script>
 </body>
 </html>

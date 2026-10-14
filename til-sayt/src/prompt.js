@@ -1,4 +1,5 @@
 const COURSE = require('../public/course.js');
+const SC = require('../public/scenarios.js');
 
 const TUTOR_PROMPT = `Sen professional va tajribali rus va nemis tili o'qituvchisisiz. Sening vazifang foydalanuvchiga rus yoki nemis tillarini jonli muloqot orqali o'rgatish.
 
@@ -18,7 +19,8 @@ Bu OVOZLI dars: foydalanuvchi mikrofon orqali gapiradi, sening javobing esa ovoz
   calm — oddiy suhbat; happy — foydalanuvchi to'g'ri aytdi; excited — juda yaxshi javob yoki yutuq;
   thinking — biror narsani tushuntiryapsan; surprised — kutilmagan yoki qiziq javob;
   angry — foydalanuvchi bir xil xatoni takrorladi yoki hazillashib tentaklik qildi. Bunda o'yinchoq, hazil aralash "jahl" qil, lekin hech qachon haqorat qilma va qo'pol so'z ishlatma.
-- Dars foydalanuvchining "Salom" xabari bilan boshlanadi: o'zingni ismingni aytib tanishtir, mavzuni qisqa e'lon qil va birinchi oddiy savolni ber.`;
+- Dars foydalanuvchining "Salom" xabari bilan boshlanadi: o'zingni ismingni aytib tanishtir, mavzuni qisqa e'lon qil va birinchi oddiy savolni ber.
+- "goal_reached" — faqat rolli vaziyatda ishlatiladi (pastda aytiladi); oddiy darsda doim false.`;
 
 const LANGUAGES = {
   ru: 'rus tili',
@@ -67,7 +69,31 @@ function topicLines(lang, settings, levels) {
       `Daraja: ${unit.level}.`,
     ];
   }
+  const found = settings.prof && SC.findTheme(settings.prof);
+  if (found) {
+    return [
+      `Kasbiy kurs: ${found.prof.title}. Mavzu: "${found.theme.title}" — ${found.theme.topic}. O'quvchi chet elda shu kasbda ishlaydi yoki ishlamoqchi: ish joyida kerak bo'ladigan amaliy so'z va iboralarni o'rgat.`,
+      `Daraja: ${levels[settings.level]}`,
+    ];
+  }
   return [`Mavzu: ${TOPICS[settings.topic]}.`, `Daraja: ${levels[settings.level]}`];
+}
+
+// Rolli vaziyat: ustoz rolni o'ynaydi, o'quvchi maqsadga erishishga harakat qiladi.
+function roleplayLines(scenario) {
+  return [
+    `ROLLI VAZIYAT: "${scenario.title}". Bu safar sen oddiy ustoz emassan — quyidagi rolni o'ynaysan: ${scenario.role}.`,
+    `O'quvchining maqsadi: ${scenario.goal}.`,
+    [
+      'Qoidalar:',
+      `- Rolda qol: qisqa (1-2 gap), tabiiy, faqat o'rganilayotgan tilda gapir. Haqiqiy hayotdagidek savol ber, aniqlashtir, kerak bo'lsa biroz qiyinchilik tug'dir, lekin o'quvchi to'g'ri harakat qilsa — yon ber.`,
+      `- Xatolarni darhol tuzatma (ular dars oxiridagi hisobotda tuzatiladi). Faqat o'quvchi tushunmasa, 'yordam' so'rasa yoki o'zbekcha gapirsa — bitta qisqa 'uz' segmentida qanday aytish mumkinligini maslahat ber, so'ng rolga qayt.`,
+      `- Birinchi javobingda salomlashishni kutma: darhol rolingdagi birinchi gap bilan vaziyatni boshla (masalan, politsiyachi: «Здравствуйте, ваши документы, пожалуйста»).`,
+      `- mood: rolingga mos (qattiq politsiyachi — calm yoki angry, xursand mijoz — happy).`,
+      `- O'quvchi maqsadga to'liq erishganda goal_reached: true qo'y va rolni yakunlovchi qisqa gap ayt, oxirida bitta 'uz' segmentida tabrikla. Aks holda goal_reached: false.`,
+      `- Har javob oxirida savol berish shart emas — rolga mos bo'lsa bo'ldi.`,
+    ].join('\n'),
+  ];
 }
 
 function memoryLines(memory) {
@@ -90,6 +116,15 @@ function memoryLines(memory) {
 
 function sessionPrompt(lang, settings, memory) {
   const p = PERSONAS[lang];
+  const scenario = settings.scenario && SC.findScenario(settings.scenario);
+  if (scenario) {
+    return [
+      `Foydalanuvchi tanlagan til: ${LANGUAGES[lang]}. Suhbatni shu tilda olib bor.`,
+      `Sening asl isming ${p.name} (ustoz), lekin hozir rol o'ynaysan.`,
+      ...roleplayLines(scenario),
+      `Foydalanuvchi darajasi: ${LEVELS[settings.level]} Darajaga mos so'zlar ishlat.`,
+    ].join('\n\n');
+  }
   const [topic, ...rest] = topicLines(lang, settings, LEVELS);
   return [
     `Foydalanuvchi tanlagan til: ${LANGUAGES[lang]}. Suhbatni shu tilda olib bor.`,
@@ -107,6 +142,7 @@ const REPLY_SCHEMA = {
   type: 'object',
   properties: {
     mood: { type: 'string', enum: MOODS },
+    goal_reached: { type: 'boolean' },
     segments: {
       type: 'array',
       items: {
@@ -120,7 +156,7 @@ const REPLY_SCHEMA = {
       },
     },
   },
-  required: ['mood', 'segments'],
+  required: ['mood', 'segments', 'goal_reached'],
   additionalProperties: false,
 };
 
@@ -131,7 +167,8 @@ O'ZBEK TILIDA (lotin yozuvida) qisqa hisobot tayyorla:
 - level: o'quvchining taxminiy CEFR darajasi, masalan "A1" yoki "A2".
 - mistakes: o'quvchining eng muhim xatolari, ko'pi bilan 6 ta. wrong — o'quvchi aytgan variant, correct — to'g'ri variant, explanation — o'zbekcha bir gaplik izoh. Xato bo'lmasa, bo'sh ro'yxat.
 - words: darsda uchragan, o'quvchiga foydali yangi so'z yoki iboralar, ko'pi bilan 8 ta, o'zbekcha tarjimasi bilan.
-- tip: keyingi dars uchun bitta aniq maslahat.`;
+- tip: keyingi dars uchun bitta aniq maslahat.
+- score: dars natijasi 0 dan 100 gacha butun son (topshiriq yoki maqsadga erishish, til sifati, ravonlik). Rolli vaziyat bo'lsa, asosan o'quvchi maqsadga qanchalik erishgani va qanchalik tushunarli gapirganiga qarab bahola.`;
 
 const REPORT_SCHEMA = {
   type: 'object',
@@ -164,8 +201,9 @@ const REPORT_SCHEMA = {
       },
     },
     tip: { type: 'string' },
+    score: { type: 'integer' },
   },
-  required: ['summary', 'level', 'mistakes', 'words', 'tip'],
+  required: ['summary', 'level', 'mistakes', 'words', 'tip', 'score'],
   additionalProperties: false,
 };
 
@@ -491,6 +529,7 @@ function examGradePrompt(lang, exam, section) {
 }
 
 module.exports = {
+  SC,
   EXAMS,
   EXAM_SCHEMAS,
   GRADE_SCHEMA,

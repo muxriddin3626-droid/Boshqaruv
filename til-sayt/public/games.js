@@ -36,7 +36,7 @@ window.Games = (() => {
   let streak = 0;
   let onNext = null;
   let loadToken = 0;
-  let ctx = {}; // { unit, exam } — kurs bosqichidan ochilgan bo'lsa
+  let ctx = {}; // { unit, exam, prof } — kurs bosqichi yoki kasb mavzusidan ochilgan bo'lsa
 
   // Xato qilingan so'z yoki gap takrorlash daftariga tushadi.
   function remember(word, translation) {
@@ -506,7 +506,7 @@ window.Games = (() => {
 
   async function start(nextType, opts = {}) {
     type = nextType;
-    ctx = { unit: opts.unit || null, exam: Boolean(opts.exam) };
+    ctx = { unit: opts.unit || null, exam: Boolean(opts.exam), prof: opts.prof || null };
     const token = ++loadToken;
     App.unlockAudio();
     stopRecognition();
@@ -525,7 +525,7 @@ window.Games = (() => {
       const result = await App.postJson('/api/game', {
         lang: App.lang(),
         type,
-        settings: { ...App.settings(), unit: ctx.unit, exam: ctx.exam },
+        settings: { ...App.settings(), unit: ctx.unit, exam: ctx.exam, prof: ctx.prof },
         focus: App.focus(),
       });
       if (token !== loadToken) return;
@@ -560,7 +560,7 @@ window.Games = (() => {
     $('resultStars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
     $('resultTitle').textContent = title || `${t} dan ${s} ta to'g'ri!`;
     $('resultText').textContent = text;
-    $('resultMenuBtn').textContent = unit ? '← Bosqichga qaytish' : 'Menyu';
+    $('resultMenuBtn').textContent = unit ? '← Orqaga' : 'Menyu';
     Face.set($('resultFace'), ratio >= 0.9 ? 'excited' : ratio >= 0.6 ? 'happy' : mode() === 'strict' ? 'angry' : 'calm');
     App.show('result');
   }
@@ -599,6 +599,8 @@ window.Games = (() => {
       } else {
         window.Learn.completeStep(lang, ctx.unit, type === 'speak' ? 'speak' : 'words');
       }
+    } else if (ctx.prof) {
+      window.Roles.markDone(ctx.prof, type === 'quiz' ? 'quiz' : 'words');
     } else {
       const key = App.bestKey();
       const best = App.loadStored(key) || {};
@@ -621,8 +623,13 @@ window.Games = (() => {
     const unit = ctx.unit;
     const again = { type, ctx: { ...ctx } };
     replay = () => start(again.type, again.ctx);
-    resultBack = unit ? () => window.Practice.openUnit(unit) : () => App.openMenu();
-    showResult({ score, total, title, text, unit });
+    const prof = ctx.prof;
+    resultBack = unit
+      ? () => window.Practice.openUnit(unit)
+      : prof
+        ? () => window.Roles.back({ prof })
+        : () => App.openMenu();
+    showResult({ score, total, title, text, unit: unit || prof });
   }
 
   $('gameBackBtn').addEventListener('click', () => {
@@ -631,6 +638,7 @@ window.Games = (() => {
     stopRecognition();
     hideFeedback();
     if (ctx.unit) window.Practice.openUnit(ctx.unit);
+    else if (ctx.prof) window.Roles.back({ prof: ctx.prof });
     else App.openMenu();
   });
   $('replayBtn').addEventListener('click', () => replay && replay());

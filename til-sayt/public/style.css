@@ -1167,3 +1167,31 @@ h1 {
 .rank.empty { justify-content: center; color: var(--muted); }
 .place { width: 28px; text-align: center; font-weight: 700; }
 .rank-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Kasbiy kurslar va rolli vaziyatlar */
+
+.card-pair { width: 100%; max-width: 520px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.card-pair .big-card { margin-bottom: 0; flex-direction: column; align-items: flex-start; gap: 6px; }
+.prof-card { border-color: #2fb36d; background: color-mix(in srgb, #2fb36d 9%, var(--surface)); }
+.role-card { border-color: #ef3b2d; background: color-mix(in srgb, #ef3b2d 8%, var(--surface)); }
+
+.prof-grid { width: 100%; max-width: 560px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.prof-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 10px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+.prof-item:hover { border-color: var(--text); }
+.prof-icon { font-size: 34px; line-height: 1.1; }
+
+.theme-list, .role-list { width: 100%; max-width: 560px; display: grid; gap: 10px; text-align: left; }
+.theme { padding: 14px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+.theme-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.theme p { margin: 4px 0 10px; }
+.theme-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.step-chip { padding: 8px 4px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); font-size: 13px; }
+.step-chip.done { border-color: #2fb36d; color: #2fb36d; font-weight: 600; }
+
+.role-item { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); text-align: left; }
+.role-item:hover { border-color: var(--text); }
+.level-badge.score { background: #ef3b2d; }
+
+@media (max-width: 380px) {
+  .theme-steps { grid-template-columns: repeat(2, 1fr); }
+}
