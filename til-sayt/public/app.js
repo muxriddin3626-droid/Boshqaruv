@@ -1,13 +1,21 @@
 (() => {
   const LESSON_SECONDS = 10 * 60;
   const LOCALES = { ru: 'ru-RU', de: 'de-DE', uz: 'uz-UZ' };
-  const TARGET_LABELS = { ru: 'Ruscha', de: 'Nemischa' };
-  // Til tanlangach ustoz o'zi gap boshlashi uchun yuboriladigan (ko'rinmaydigan) xabar.
-  const STARTER = 'Salom! Men boshlovchiman, keling suhbatni boshlaymiz.';
+  const TUTORS = {
+    ru: { name: 'Anna', speakLabel: 'Ruscha', lang: 'rus tili' },
+    de: { name: 'Hans', speakLabel: 'Nemischa', lang: 'nemis tili' },
+  };
+  const MODE_LABELS = { kind: 'Mehribon', strict: "Qattiqqo'l" };
   const THEME_KEY = 'til-ustoz-theme';
+  const SETTINGS_KEY = 'til-ustoz-settings';
 
   const $ = (id) => document.getElementById(id);
-  const screens = { start: $('startScreen'), lesson: $('lessonScreen'), end: $('endScreen') };
+  const screens = {
+    start: $('startScreen'),
+    setup: $('setupScreen'),
+    lesson: $('lessonScreen'),
+    end: $('endScreen'),
+  };
   const face = $('face');
   const statusText = $('statusText');
   const subtitle = $('subtitle');
@@ -20,6 +28,7 @@
   const tts = window.speechSynthesis;
 
   let lang = null;
+  let settings = loadSettings();
   let history = [];
   let phase = 'idle'; // idle | speaking | listening | thinking
   let speakLang = 'target'; // target | uz
@@ -31,11 +40,21 @@
   let ended = true;
   let recognition = null;
   let speakToken = 0;
+  let stopCurrentSound = null;
+  let serverVoice = false; // serverda tabiiy (Azure) ovoz sozlanganmi
+
+  fetch('/api/config')
+    .then((r) => r.json())
+    .then((c) => {
+      serverVoice = Boolean(c.voice);
+    })
+    .catch(() => {});
 
   // ---------- Umumiy ----------
 
   function show(name) {
     for (const [key, el] of Object.entries(screens)) el.hidden = key !== name;
+    window.scrollTo(0, 0);
   }
 
   function setPhase(next, text) {
@@ -59,6 +78,75 @@
     subtitle.appendChild(document.createTextNode(text));
   }
 
+  function loadSettings() {
+    const defaults = { mode: 'kind', topic: 'free', level: 'auto' };
+    try {
+      return { ...defaults, ...JSON.parse(localStorage.getItem(SETTINGS_KEY)) };
+    } catch {
+      return defaults;
+    }
+  }
+
+  function saveSettings() {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } catch {}
+  }
+
+  async function postJson(url, data) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || "Javob kelmadi. Qayta urinib ko'ring.");
+    return json;
+  }
+
+  // ---------- Sozlamalar ekrani ----------
+
+  function openSetup(nextLang) {
+    lang = nextLang;
+    const t = TUTORS[lang];
+    $('setupTitle').textContent = `${t.name} bilan ${t.lang} darsi`;
+    $('setupLead').textContent = `${t.name} — sizning ustozingiz. Qanday dars bo'lishini tanlang.`;
+    renderSettings();
+    show('setup');
+  }
+
+  function renderSettings() {
+    document.querySelectorAll('.mode-card').forEach((card) => {
+      const on = card.dataset.mode === settings.mode;
+      card.classList.toggle('selected', on);
+      card.setAttribute('aria-checked', String(on));
+    });
+    document.querySelectorAll('.chips').forEach((group) => {
+      group.querySelectorAll('.chip').forEach((chip) => {
+        chip.classList.toggle('selected', chip.dataset.value === settings[group.dataset.group]);
+      });
+    });
+    Face.set($('setupFace'), settings.mode === 'strict' ? 'angry' : 'happy');
+  }
+
+  document.querySelectorAll('.mode-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      settings.mode = card.dataset.mode;
+      saveSettings();
+      renderSettings();
+    });
+  });
+
+  document.querySelectorAll('.chips').forEach((group) => {
+    group.addEventListener('click', (e) => {
+      const chip = e.target.closest('.chip');
+      if (!chip) return;
+      settings[group.dataset.group] = chip.dataset.value;
+      saveSettings();
+      renderSettings();
+    });
+  });
+
   // ---------- Taymer ----------
 
   function fmt(sec) {
@@ -79,6 +167,28 @@
 
   // ---------- Ovoz chiqarib o'qish ----------
 
+  // Telefonlarda ovoz faqat bosishdan keyin chiqadi, shuning uchun bitta audio
+  // elementini birinchi bosishda "uyg'otib" qo'yamiz va keyin shuni ishlatamiz.
+  const player = new Audio();
+  player.preload = 'auto';
+
+  function silentWav() {
+    const bytes = new Uint8Array([
+      82, 73, 70, 70, 38, 0, 0, 0, 87, 65, 86, 69, 102, 109, 116, 32, 16, 0, 0, 0, 1, 0, 1, 0,
+      64, 31, 0, 0, 64, 31, 0, 0, 1, 0, 8, 0, 100, 97, 116, 97, 2, 0, 0, 0, 128, 128,
+    ]);
+    return 'data:audio/wav;base64,' + btoa(String.fromCharCode(...bytes));
+  }
+
+  function unlockAudio() {
+    player.src = silentWav();
+    player.play().catch(() => {});
+    if (tts) {
+      tts.cancel();
+      tts.speak(new SpeechSynthesisUtterance(''));
+    }
+  }
+
   let voices = [];
   function loadVoices() {
     voices = tts ? tts.getVoices() : [];
@@ -89,54 +199,110 @@
   }
 
   function pickVoice(code) {
-    const locale = LOCALES[code];
+    const locale = LOCALES[code].toLowerCase();
     const byLang = (prefix) => voices.find((v) => v.lang.toLowerCase().replace('_', '-').startsWith(prefix));
     // O'zbek ovozi ko'p qurilmalarda yo'q — lotin yozuvini eng yaqin o'qiydigani turkcha ovoz.
-    return byLang(locale.toLowerCase()) || byLang(code) || (code === 'uz' ? byLang('tr') : null) || null;
+    return byLang(locale) || byLang(code) || (code === 'uz' ? byLang('tr') : null) || null;
   }
 
-  function speakOne(seg, token) {
+  // Bitta ovozni oxirigacha kutadi; to'xtatilsa yoki brauzer "tugadi" demasa ham davom etadi.
+  function waitSound(start, stop, maxMs) {
     return new Promise((resolve) => {
-      if (token !== speakToken) return resolve();
-      // Taxminiy davomiylik: ovoz bo'lmasa yoki brauzer "tugadi" demasa ham davom etamiz.
-      const fallbackMs = 2500 + seg.text.length * 85;
-      if (!tts) {
-        setTimeout(resolve, fallbackMs);
-        return;
-      }
-      const u = new SpeechSynthesisUtterance(seg.text);
-      u.lang = LOCALES[seg.lang];
-      const voice = pickVoice(seg.lang);
-      if (voice) u.voice = voice;
-      u.rate = seg.lang === 'uz' ? 1 : 0.92;
       let done = false;
       const finish = () => {
         if (done) return;
         done = true;
         clearTimeout(watchdog);
+        if (stopCurrentSound === cancel) stopCurrentSound = null;
         resolve();
       };
-      const watchdog = setTimeout(finish, fallbackMs * 2);
-      u.onend = finish;
-      u.onerror = finish;
-      tts.speak(u);
+      const cancel = () => {
+        stop();
+        finish();
+      };
+      const watchdog = setTimeout(finish, maxMs);
+      stopCurrentSound = cancel;
+      start(finish);
     });
+  }
+
+  function speakBrowser(seg) {
+    const maxMs = 5000 + seg.text.length * 170;
+    if (!tts) return new Promise((r) => setTimeout(r, maxMs / 2));
+    return waitSound(
+      (finish) => {
+        const u = new SpeechSynthesisUtterance(seg.text);
+        u.lang = LOCALES[seg.lang];
+        const voice = pickVoice(seg.lang);
+        if (voice) u.voice = voice;
+        u.rate = seg.lang === 'uz' ? 1 : 0.92;
+        u.onend = finish;
+        u.onerror = finish;
+        tts.speak(u);
+      },
+      () => tts.cancel(),
+      maxMs
+    );
+  }
+
+  function playUrl(url) {
+    return waitSound(
+      (finish) => {
+        player.onended = finish;
+        player.onerror = finish;
+        player.src = url;
+        player.play().catch(finish);
+      },
+      () => player.pause(),
+      60_000
+    );
+  }
+
+  // Serverdagi tabiiy ovozni oladi. Sozlanmagan bo'lsa null qaytaradi.
+  async function fetchVoice(seg) {
+    if (!serverVoice) return null;
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tutor: lang, lang: seg.lang, text: seg.text }),
+      });
+      if (res.status === 501) {
+        serverVoice = false;
+        return null;
+      }
+      if (!res.ok) return null;
+      return URL.createObjectURL(await res.blob());
+    } catch {
+      return null;
+    }
   }
 
   async function speakReply(segments) {
     const token = ++speakToken;
-    setPhase('speaking', 'Ustoz gapiryapti...');
-    for (const seg of segments) {
-      if (token !== speakToken) return false;
-      setSubtitle(seg.text, seg.lang);
-      await speakOne(seg, token);
+    setPhase('speaking', `${TUTORS[lang].name} gapiryapti...`);
+    // Barcha bo'laklarning ovozini birdaniga so'raymiz — biri o'qilayotganda keyingisi tayyor bo'ladi.
+    const pending = segments.map(fetchVoice);
+    try {
+      for (let i = 0; i < segments.length; i++) {
+        if (token !== speakToken) return false;
+        const url = await pending[i];
+        if (token !== speakToken) return false;
+        setSubtitle(segments[i].text, segments[i].lang);
+        if (url) await playUrl(url);
+        else await speakBrowser(segments[i]);
+      }
+      return token === speakToken;
+    } finally {
+      pending.forEach((p) => p.then((url) => url && URL.revokeObjectURL(url)));
     }
-    return token === speakToken;
   }
 
   function stopSpeaking() {
     speakToken++;
+    if (stopCurrentSound) stopCurrentSound();
     if (tts) tts.cancel();
+    player.pause();
   }
 
   // ---------- Tinglash ----------
@@ -158,6 +324,7 @@
     rec.maxAlternatives = 1;
 
     let finalText = '';
+    let permissionError = false;
     rec.onresult = (e) => {
       let interim = '';
       finalText = '';
@@ -168,9 +335,7 @@
       setSubtitle((finalText + ' ' + interim).trim(), null, true);
     };
     rec.onerror = (e) => {
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-        rec.permissionError = !auto;
-      }
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') permissionError = !auto;
     };
     rec.onend = () => {
       if (recognition === rec) recognition = null;
@@ -184,7 +349,7 @@
         endLesson();
         return;
       }
-      if (rec.permissionError) {
+      if (permissionError) {
         typeForm.hidden = false;
         setPhase('idle', "Mikrofonga ruxsat berilmadi — javobni yozishingiz mumkin");
       } else {
@@ -217,22 +382,18 @@
     Face.set(face, 'thinking');
     let data;
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lang, messages: history }),
-      });
-      data = await res.json().catch(() => ({}));
-      if (!res.ok || !Array.isArray(data.segments)) {
-        throw new Error(data.error || "Javob kelmadi. Qayta urinib ko'ring.");
-      }
+      data = await postJson('/api/chat', { lang, settings, messages: history });
+      if (!Array.isArray(data.segments)) throw new Error("Javob kelmadi. Qayta urinib ko'ring.");
     } catch (err) {
       if (ended) return;
       // Javobsiz qolgan xabarni olib tashlaymiz, foydalanuvchi qayta gapiradi.
-      if (history.length && history[history.length - 1].role === 'user' && history.length > 1) history.pop();
+      if (history.length && history[history.length - 1].role === 'user') {
+        history.pop();
+        userTurns = Math.max(0, userTurns - 1);
+      }
       Face.set(face, 'surprised');
       setSubtitle(err instanceof TypeError ? "Internet bilan aloqa yo'q." : err.message);
-      setPhase('idle', 'Qayta gapirish uchun mikrofonni bosing');
+      setPhase('idle', history.length ? 'Qayta gapirish uchun mikrofonni bosing' : 'Boshlash uchun mikrofonni bosing');
       return;
     }
     if (ended) return;
@@ -254,26 +415,23 @@
 
   // ---------- Dars boshlanishi va tugashi ----------
 
-  function startLesson(nextLang) {
-    lang = nextLang;
-    history = [{ role: 'user', content: STARTER }];
+  function startLesson() {
+    const t = TUTORS[lang];
+    history = [];
     userTurns = 0;
     timeUp = false;
     ended = false;
     speakLang = 'target';
     document.querySelectorAll('.pill').forEach((p) => p.classList.toggle('active', p.dataset.speak === 'target'));
-    $('speakTarget').textContent = TARGET_LABELS[lang];
+    $('speakTarget').textContent = t.speakLabel;
+    const topic = document.querySelector(`[data-group="topic"] [data-value="${settings.topic}"]`);
+    $('lessonInfo').textContent = `${t.name} · ${MODE_LABELS[settings.mode]} · ${topic ? topic.textContent : ''}`;
     typeForm.hidden = true;
     setSubtitle('');
     Face.set(face, 'calm');
     show('lesson');
 
-    // Telefonlarda ovoz faqat bosishdan keyin ishlaydi — shu bosishda "uyg'otib" qo'yamiz.
-    if (tts) {
-      tts.cancel();
-      tts.speak(new SpeechSynthesisUtterance(''));
-    }
-
+    unlockAudio();
     startedAt = Date.now();
     clearInterval(timerId);
     timerId = setInterval(tick, 500);
@@ -295,13 +453,82 @@
         : "Bu safar gaplashmadik. Keyingi safar mikrofonni bosib, bemalol gapiring!";
     Face.set(document.querySelector('#endScreen .face-slot'), userTurns > 0 ? 'excited' : 'calm');
     show('end');
+    if (userTurns > 0) loadReport(history.slice());
+    else $('report').hidden = true;
+  }
+
+  // ---------- Hisobot ----------
+
+  let reportToken = 0;
+
+  async function loadReport(messages) {
+    const token = ++reportToken;
+    $('report').hidden = false;
+    $('reportLoading').hidden = false;
+    $('reportLoading').textContent = `${TUTORS[lang].name} hisobot tayyorlayapti...`;
+    $('reportBody').hidden = true;
+    try {
+      const r = await postJson('/api/report', { lang, settings, messages });
+      if (token !== reportToken) return;
+      renderReport(r);
+    } catch {
+      if (token !== reportToken) return;
+      $('reportLoading').textContent = "Hisobotni tayyorlab bo'lmadi. Keyingi darsda albatta!";
+    }
+  }
+
+  function li(parent, build) {
+    const item = document.createElement('li');
+    build(item);
+    parent.appendChild(item);
+  }
+
+  function span(cls, text) {
+    const el = document.createElement('span');
+    el.className = cls;
+    el.textContent = text;
+    return el;
+  }
+
+  function renderReport(r) {
+    $('reportLevel').textContent = r.level || '—';
+    $('reportSummary').textContent = r.summary || '';
+
+    const mistakes = $('reportMistakes');
+    mistakes.textContent = '';
+    for (const m of r.mistakes || []) {
+      li(mistakes, (item) => {
+        item.append(span('wrong', m.wrong), ' → ', span('correct', m.correct), span('why', m.explanation));
+      });
+    }
+    if (!mistakes.children.length) {
+      li(mistakes, (item) => item.append('Xato topilmadi — zo\'r! 🎉'));
+    }
+
+    const words = $('reportWords');
+    words.textContent = '';
+    for (const w of r.words || []) {
+      li(words, (item) => {
+        const b = document.createElement('b');
+        b.textContent = w.word;
+        item.append(b, span('', w.translation));
+      });
+    }
+    $('wordsBlock').hidden = !words.children.length;
+
+    $('reportTip').textContent = r.tip || '';
+    $('reportLoading').hidden = true;
+    $('reportBody').hidden = false;
   }
 
   // ---------- Tugmalar ----------
 
   document.querySelectorAll('.lang-card').forEach((btn) => {
-    btn.addEventListener('click', () => startLesson(btn.dataset.lang));
+    btn.addEventListener('click', () => openSetup(btn.dataset.lang));
   });
+
+  $('beginBtn').addEventListener('click', startLesson);
+  $('backBtn').addEventListener('click', () => show('start'));
 
   function onMic() {
     if (ended) return;
@@ -311,6 +538,11 @@
       return;
     }
     if (phase === 'thinking') return;
+    // Birinchi javob kelmay qolgan bo'lsa, darsni qaytadan boshlashga urinamiz.
+    if (!history.length) {
+      requestReply();
+      return;
+    }
     listen(false);
   }
 
@@ -318,7 +550,8 @@
   face.addEventListener('click', onMic);
 
   $('stopBtn').addEventListener('click', endLesson);
-  $('againBtn').addEventListener('click', () => startLesson(lang));
+  $('againBtn').addEventListener('click', startLesson);
+  $('setupBtn').addEventListener('click', () => openSetup(lang));
   $('homeBtn').addEventListener('click', () => show('start'));
 
   document.querySelectorAll('.pill').forEach((pill) => {

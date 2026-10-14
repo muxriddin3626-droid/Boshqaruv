@@ -29,20 +29,71 @@
         <span class="flag">🇷🇺</span>
         <span class="lang-name">Rus tili</span>
         <span class="lang-native">Русский</span>
+        <span class="lang-tutor">Ustoz: Anna</span>
       </button>
       <button type="button" class="lang-card" data-lang="de">
         <span class="flag">🇩🇪</span>
         <span class="lang-name">Nemis tili</span>
         <span class="lang-native">Deutsch</span>
+        <span class="lang-tutor">Ustoz: Hans</span>
       </button>
     </div>
     <p class="hint">Mikrofonga ruxsat so'raladi. Eng yaxshi ishlashi uchun Chrome brauzeridan foydalaning.</p>
   </main>
 
-  <!-- 2. Dars -->
+  <!-- 2. Dars sozlamalari -->
+  <main id="setupScreen" class="screen setup" hidden>
+    <div class="face-slot" id="setupFace" data-face="happy" data-state="idle"></div>
+    <h1 id="setupTitle">Anna bilan dars</h1>
+    <p class="lead" id="setupLead"></p>
+
+    <section class="option-group">
+      <h2>Ustoz qanaqa bo'lsin?</h2>
+      <div class="mode-cards" role="radiogroup" aria-label="Ustoz rejimi">
+        <button type="button" class="mode-card selected" data-mode="kind" role="radio" aria-checked="true">
+          <span class="mode-title">😊 Mehribon</span>
+          <span class="mode-text">Sabrli, ko'p maqtaydi, xatoni yumshoq tuzatadi</span>
+        </button>
+        <button type="button" class="mode-card" data-mode="strict" role="radio" aria-checked="false">
+          <span class="mode-title">🔥 Qattiqqo'l</span>
+          <span class="mode-text">Talabchan, hazil aralash koyiydi, lekin so'kinmaydi</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="option-group">
+      <h2>Mavzu</h2>
+      <div class="chips" data-group="topic">
+        <button type="button" class="chip selected" data-value="free">💬 Erkin suhbat</button>
+        <button type="button" class="chip" data-value="meet">👋 Tanishuv</button>
+        <button type="button" class="chip" data-value="shop">🛒 Do'konda</button>
+        <button type="button" class="chip" data-value="food">🍽️ Restoranda</button>
+        <button type="button" class="chip" data-value="travel">✈️ Sayohat</button>
+        <button type="button" class="chip" data-value="job">💼 Ish suhbati</button>
+      </div>
+    </section>
+
+    <section class="option-group">
+      <h2>Darajangiz</h2>
+      <div class="chips" data-group="level">
+        <button type="button" class="chip selected" data-value="auto">🤔 Bilmayman — aniqlab ber</button>
+        <button type="button" class="chip" data-value="a1">Boshlang'ich</button>
+        <button type="button" class="chip" data-value="b1">O'rta</button>
+        <button type="button" class="chip" data-value="b2">Yuqori</button>
+      </div>
+    </section>
+
+    <div class="end-actions">
+      <button type="button" class="primary big" id="beginBtn">Darsni boshlash</button>
+      <button type="button" class="secondary" id="backBtn">Orqaga</button>
+    </div>
+  </main>
+
+  <!-- 3. Dars -->
   <main id="lessonScreen" class="screen lesson" hidden>
     <div class="lesson-bar">
       <span class="timer" id="timer">00:00 / 10:00</span>
+      <span class="lesson-info" id="lessonInfo"></span>
       <button type="button" class="stop-btn" id="stopBtn"><span class="square"></span>Stop</button>
     </div>
 
@@ -78,13 +129,37 @@
     </div>
   </main>
 
-  <!-- 3. Dars tugadi -->
+  <!-- 4. Dars tugadi -->
   <main id="endScreen" class="screen end" hidden>
     <div class="face-slot" data-face="excited" data-state="idle"></div>
     <h1>Dars tugadi!</h1>
     <p class="lead" id="endText"></p>
+
+    <section class="report" id="report" hidden>
+      <p class="report-loading" id="reportLoading">Ustoz hisobot tayyorlayapti...</p>
+      <div id="reportBody" hidden>
+        <div class="report-head">
+          <span class="level-badge" id="reportLevel"></span>
+          <p id="reportSummary"></p>
+        </div>
+        <div class="report-block" id="mistakesBlock">
+          <h2>Xatolar ustida ishlaymiz</h2>
+          <ul class="mistakes" id="reportMistakes"></ul>
+        </div>
+        <div class="report-block" id="wordsBlock">
+          <h2>Yangi so'zlar</h2>
+          <ul class="words" id="reportWords"></ul>
+        </div>
+        <div class="report-block tip">
+          <h2>Keyingi dars uchun maslahat</h2>
+          <p id="reportTip"></p>
+        </div>
+      </div>
+    </section>
+
     <div class="end-actions">
       <button type="button" class="primary" id="againBtn">Yana gaplashish</button>
+      <button type="button" class="secondary" id="setupBtn">Boshqa mavzu</button>
       <button type="button" class="secondary" id="homeBtn">Tilni almashtirish</button>
     </div>
   </main>
