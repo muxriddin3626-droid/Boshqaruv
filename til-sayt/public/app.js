@@ -29,6 +29,8 @@
     examResult: $('examResultScreen'),
     cert: $('certScreen'),
     account: $('accountScreen'),
+    badges: $('badgesScreen'),
+    rating: $('ratingScreen'),
   };
   const face = $('face');
   const statusText = $('statusText');
@@ -532,6 +534,7 @@
     show('end');
     if (userTurns > 0) {
       // Har gap uchun XP; kurs darsi kamida 3 ta gap bo'lsa bajarilgan hisoblanadi.
+      Learn.bumpStat('lessons');
       window.Practice.awardXp(Math.min(60, 10 + userTurns * 4), 'Ovozli dars');
       if (lessonUnit && userTurns >= 3) Learn.completeStep(lang, lessonUnit, 'lesson');
     }

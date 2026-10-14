@@ -50,6 +50,8 @@ window.Practice = (() => {
   }
 
   function awardXp(amount, label) {
+    // Yutuq nishonlarini tekshiramiz (statistika yangilangandan keyin).
+    setTimeout(() => window.Social && window.Social.check(), 400);
     if (amount <= 0) return;
     const r = Learn.addXp(amount);
     if (r.reachedNow) {
@@ -239,6 +241,7 @@ window.Practice = (() => {
   $('gradeBad').addEventListener('click', () => gradeCard(false));
 
   function finishReview() {
+    Learn.bumpStat('reviews');
     const total = reviewed - Object.keys(requeued).length;
     awardXp(2 + known, 'Takrorlash');
     const stats = Learn.deckStats(App.lang());
@@ -465,6 +468,7 @@ window.Practice = (() => {
   });
 
   function finishStory(correct, total) {
+    Learn.bumpStat('stories');
     storyToken++;
     App.stopSpeaking();
     awardXp(10 + correct * 5, 'Hikoya');

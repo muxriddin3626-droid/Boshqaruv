@@ -290,7 +290,25 @@ window.Learn = (() => {
     ].join('\r\n');
   }
 
+  // ---------- Statistika (yutuq nishonlari uchun) ----------
+
+  const STATS_KEY = 'tu-stats';
+  const stats = () => read(STATS_KEY, {});
+
+  function bumpStat(name, n = 1) {
+    const st = stats();
+    st[name] = (st[name] || 0) + n;
+    write(STATS_KEY, st);
+  }
+
+  function totalXp() {
+    return Object.values(loadXp().days).reduce((sum, v) => sum + (Number(v) || 0), 0);
+  }
+
   return {
+    stats,
+    bumpStat,
+    totalXp,
     norm,
     addWord,
     dueCards,

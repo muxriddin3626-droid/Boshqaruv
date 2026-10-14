@@ -507,6 +507,10 @@ window.Exam = (() => {
     const history = App.loadStored(historyKey()) || [];
     history.unshift({ exam: exam.id, date: Date.now(), total, passed, full, sections: results.map((r) => ({ id: r.id, score: r.score })) });
     App.store(historyKey(), history.slice(0, 20));
+    if (full && passed) {
+      window.Learn.bumpStat('mockPassed');
+      if (exam.id === 'patent') window.Learn.bumpStat('patentPassed');
+    }
     window.Practice.awardXp(full ? 40 : 10, full ? 'Sinov imtihoni' : "Imtihon bo'limi");
 
     const again = { exam, only: full ? null : results.map((r) => r.id) };

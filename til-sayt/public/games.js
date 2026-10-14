@@ -433,6 +433,7 @@ window.Games = (() => {
       heard.textContent = `Siz: «${said}» — ${Math.round(ratio * 100)}%`;
       if (ratio >= 0.8) {
         scored = true;
+        if (ratio === 1) window.Learn.bumpStat('perfectSpeak');
         react(true);
         showFeedback(ratio === 1 ? 'Mukammal talaffuz! 🎯' : "Juda yaxshi! Qizil so'zlarga yana e'tibor bering.", step);
       } else {
@@ -577,6 +578,7 @@ window.Games = (() => {
     let text;
     let title;
 
+    window.Learn.bumpStat('games');
     window.Practice.awardXp(5 + score * 3, TITLES[type]);
 
     if (ctx.unit) {

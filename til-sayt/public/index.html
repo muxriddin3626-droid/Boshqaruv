@@ -68,6 +68,10 @@
       </div>
       <div class="xp-bar"><div class="xp-fill" id="xpFill"></div></div>
       <div class="week" id="week"></div>
+      <div class="daily-links">
+        <button type="button" class="link-btn" id="ratingBtn">🏆 Haftalik reyting</button>
+        <button type="button" class="link-btn" id="badgesBtn">🏅 Yutuqlar</button>
+      </div>
     </section>
 
     <button type="button" class="big-card course-card" id="courseCard">
@@ -549,6 +553,36 @@
     </section>
   </main>
 
+  <!-- 17. Yutuqlar -->
+  <main id="badgesScreen" class="screen badges-screen" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">🏅 Yutuqlar</span>
+      <span></span>
+    </div>
+    <p class="lead small" id="badgeCount"></p>
+    <div class="badge-grid" id="badgeGrid"></div>
+  </main>
+
+  <!-- 18. Reyting -->
+  <main id="ratingScreen" class="screen rating" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">🏆 Haftalik reyting</span>
+      <span></span>
+    </div>
+    <div class="speak-lang tabs" role="tablist">
+      <button type="button" class="pill active" data-tab="friends">👥 Do'stlar</button>
+      <button type="button" class="pill" data-tab="global">🌍 Hammasi</button>
+    </div>
+    <div class="login-hint" id="ratingLogin" hidden>
+      <p>Reytingda qatnashish va do'stlar bilan bellashish uchun Telegram orqali kiring.</p>
+      <button type="button" class="primary" id="ratingLoginBtn">🔐 Kirish</button>
+    </div>
+    <p class="lead small" id="ratingNote"></p>
+    <ol class="rank-list" id="ratingList"></ol>
+  </main>
+
   <dialog class="sheet" id="limitDialog">
     <form method="dialog">
       <div class="face-slot small" id="limitFace" data-face="surprised" data-state="idle"></div>
@@ -586,6 +620,7 @@
   <script src="exam.js"></script>
   <script src="cert.js"></script>
   <script src="account-ui.js"></script>
+  <script src="social.js"></script>
   <script src="pwa.js"></script>
 </body>
 </html>
