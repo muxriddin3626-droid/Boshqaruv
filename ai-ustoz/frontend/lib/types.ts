@@ -22,6 +22,18 @@ export interface ProgressResponse {
 
 export type VoiceMode = "tutor" | "debate";
 
+export interface VoiceTurnResponse {
+  text: string;
+  emotion: string;
+  audio_base64: string | null;
+  audio_mime: string;
+}
+
+export interface VoiceOptions {
+  premium_allowed: boolean;
+  turns_per_day: number;
+}
+
 export interface VoiceSessionResponse {
   client_secret: string;
   expires_at: number;

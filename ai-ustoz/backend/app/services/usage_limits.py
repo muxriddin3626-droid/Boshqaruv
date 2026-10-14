@@ -54,6 +54,16 @@ def voice_limit() -> DailyLimit:
     )
 
 
+def voice_turn_limit() -> DailyLimit:
+    return DailyLimit(
+        "voice_turn",
+        settings.voice_turns_per_user_per_day,
+        settings.voice_turns_global_per_day,
+        "Bugungi ovozli dars vaqti tugadi (~30 daqiqa). Ertaga davom etamiz! Matnli suhbatda yozishingiz mumkin.",
+        "Bugun ovozli darslar chegarasi tugadi — matnli suhbatda davom eting.",
+    )
+
+
 async def use_daily(redis: Redis, db: AsyncSession, user_id: uuid.UUID, limit: DailyLimit) -> None:
     """Chegaradan (yoki oylik AI byudjetidan) oshgan bo'lsa 429, aks holda bitta foydalanishni hisoblaydi."""
     await ensure_budget(db, user_id)

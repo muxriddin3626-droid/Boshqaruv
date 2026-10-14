@@ -45,7 +45,9 @@ import type {
   TestResult,
   TestSession,
   VoiceMode,
+  VoiceOptions,
   VoiceSessionResponse,
+  VoiceTurnResponse,
 } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -155,6 +157,46 @@ export async function createVoiceSession(
     throw new Error(typeof body?.detail === "string" ? body.detail : "Ovozli sessiya yaratib bo'lmadi");
   }
   return response.json();
+}
+
+async function detailOrThrow(response: Response, fallback: string): Promise<Response> {
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(typeof body?.detail === "string" ? body.detail : fallback);
+  }
+  return response;
+}
+
+export async function fetchVoiceOptions(token: string): Promise<VoiceOptions> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/voice/options`, { headers: authHeaders(token) });
+  return (await detailOrThrow(response, "Ovozli rejim sozlamalarini olib bo'lmadi")).json();
+}
+
+/** Tejamkor ovozli rejim: o'quvchi gapi -> ustoz javobi (matn, kayfiyat, MP3). Bo'sh matn — suhbat boshi. */
+export async function voiceTurn(
+  token: string,
+  payload: { subject: Subject; mode: VoiceMode; text: string; reset?: boolean },
+  signal?: AbortSignal
+): Promise<VoiceTurnResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/voice/turn`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+    signal,
+  });
+  return (await detailOrThrow(response, "Ustoz javob bera olmadi")).json();
+}
+
+/** Brauzer nutqni o'zi taniy olmasa: yozib olingan ovoz -> matn (serverda). */
+export async function voiceTranscribe(token: string, audio: Blob): Promise<string> {
+  const form = new FormData();
+  form.append("audio", audio, audio.type.includes("mp4") ? "gap.mp4" : "gap.webm");
+  const response = await fetch(`${API_BASE_URL}/api/v1/voice/transcribe`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  return (await (await detailOrThrow(response, "Ovozni tushunib bo'lmadi")).json()).text;
 }
 
 // ---------------------------------------------------------------------------

@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     # Narxi tokenlardan hisoblanmaydigan amallar uchun taxminiy narx ($).
     voice_session_cost_usd: float = 0.15
     voice_max_output_tokens: int = 1200
+    # Arzon ovozli rejim (brauzer nutqni taniydi + matnli AI + TTS): kuniga javoblar soni (~30 daqiqa).
+    voice_turns_per_user_per_day: int = 150
+    voice_turns_global_per_day: int = 6000
+    economy_voice_name: str = "onyx"
+    # OpenAI jonli (Realtime) ovozi qimmat (~2-3 sent/daqiqa): o'quvchilarga ochiqmi? Admin har doim ishlata oladi.
+    realtime_voice_for_students: bool = False
     illustration_cost_usd: float = 0.04
     tts_cost_per_million_chars_usd: float = 15.0
 

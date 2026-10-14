@@ -4,6 +4,7 @@ Ovozli rejim: AI Ustoz yuzchasining kayfiyati va jonli suhbat qoidalari.
 Model kayfiyatini `set_emotion` funksiyasini chaqirib bildiradi; frontend shu
 chaqiruvni WebRTC data channel orqali ushlab, yuzchani almashtiradi.
 """
+import re
 
 VOICE_EMOTIONS = ["neutral", "thinking", "happy", "laughing", "shocked", "angry"]
 
@@ -59,3 +60,18 @@ QAT'IY CHEGARA: so'kinish, haqoratli yoki qo'pol so'zlar (rus tilidagi so'kinish
 ham), shaxsni kamsitish, tashqi ko'rinish yoki oila haqida hazil — HECH QACHON. \
 O'quvchilar 10-17 yoshli bolalar.
 """
+
+
+# Arzon (tejamkor) ovozli rejim: funksiya chaqiruvi yo'q — kayfiyat javob boshidagi teg bilan beriladi,
+# matn keyin ovozga aylantiriladi (TTS). Narx gapirilgan belgilar soniga bog'liq — shuning uchun qisqa.
+ECONOMY_VOICE_ADDENDUM = re.sub(
+    r"- Har bir javobing boshida, gapirishdan OLDIN `set_emotion`.*?robot emas\.",
+    "- Har bir javobingni kayfiyat tegi bilan boshla, masalan: [happy] Barakalla! ... "
+    "Teg: " + ", ".join(f"[{emotion}]" for emotion in VOICE_EMOTIONS) + " — faqat bittasi, "
+    "eng boshida. Undan keyin faqat ovoz chiqarib aytiladigan matn yoz (emoji, belgilar, ro'yxat yo'q). "
+    "Javob 1-3 gapdan, ko'pi bilan 350 belgidan oshmasin.",
+    VOICE_ADDENDUM,
+    count=1,
+    flags=re.S,
+)
+assert ECONOMY_VOICE_ADDENDUM != VOICE_ADDENDUM, "set_emotion qoidasi topilmadi"
