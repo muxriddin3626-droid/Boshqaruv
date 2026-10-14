@@ -4,7 +4,14 @@ window.Games = (() => {
   const App = window.App;
   const $ = (id) => document.getElementById(id);
 
-  const TITLES = { quiz: '📝 Test', match: "🧩 So'z juftlash", order: '🔤 Gap tuzish', listen: '🎧 Eshitib top' };
+  const TITLES = {
+    quiz: '📝 Test',
+    match: "🧩 So'z juftlash",
+    order: '🔤 Gap tuzish',
+    listen: '🎧 Eshitib top',
+    speak: '🗣️ Talaffuz',
+  };
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const PRAISE = {
     kind: ['Barakalla!', "Zo'r!", 'Ofarin!', "To'ppa-to'g'ri!", 'Juda yaxshi!'],
     strict: ['Hmm, nihoyat!', 'Mana bu boshqa gap.', "Yomon emas... davom et.", 'Qoyil, kutmagandim!'],
@@ -29,6 +36,12 @@ window.Games = (() => {
   let streak = 0;
   let onNext = null;
   let loadToken = 0;
+  let ctx = {}; // { unit, exam } — kurs bosqichidan ochilgan bo'lsa
+
+  // Xato qilingan so'z yoki gap takrorlash daftariga tushadi.
+  function remember(word, translation) {
+    window.Learn.addWord(App.lang(), word, translation, { lapse: true });
+  }
 
   // ---------- Yordamchilar ----------
 
@@ -152,6 +165,7 @@ window.Games = (() => {
     body.appendChild(el('p', 'question', q.question));
     body.appendChild(
       optionButtons(shuffle([q.correct, ...q.wrong]), q.correct, (ok) => {
+        if (!ok && q.correct.split(/\s+/).length <= 4) remember(q.correct, q.explanation);
         showFeedback(ok ? q.explanation : `To'g'ri javob: ${q.correct}. ${q.explanation}`, step);
       })
     );
@@ -167,7 +181,8 @@ window.Games = (() => {
     play.addEventListener('click', () => speakTarget(q.text));
     body.appendChild(play);
     body.appendChild(
-      optionButtons(shuffle([q.text, ...q.wrong]), q.text, () => {
+      optionButtons(shuffle([q.text, ...q.wrong]), q.text, (ok) => {
+        if (!ok) remember(q.text, q.translation);
         showFeedback(`${q.text} — ${q.translation}`, step);
       })
     );
@@ -227,6 +242,7 @@ window.Games = (() => {
       const ok = normalize(built) === normalize(q.sentence);
       answer.classList.add(ok ? 'correct' : 'wrong');
       react(ok);
+      if (!ok) remember(q.sentence, q.translation);
       speakTarget(q.sentence);
       showFeedback(ok ? q.sentence : `To'g'risi: ${q.sentence}`, step);
     });
@@ -294,6 +310,10 @@ window.Games = (() => {
           nextBtn.textContent = 'Keyingi raund';
         }
       } else {
+        if (!missed.has(word.dataset.pair)) {
+          const pair = round[Number(word.dataset.pair)];
+          remember(pair.word, pair.translation);
+        }
         missed.add(word.dataset.pair);
         [a, card].forEach((c) => {
           c.classList.add('shake');
@@ -307,6 +327,170 @@ window.Games = (() => {
     body.appendChild(grid);
   }
 
+  // ---------- 5. Talaffuz ----------
+
+  const words = (s) =>
+    s
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      .replace(/ß/g, 'ss')
+      .replace(/[.,!?;:«»"„“”¿¡()–—-]/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean);
+
+  // Aytilgan gapdagi so'zlarni namunaga moslaydi (eng uzun umumiy ketma-ketlik).
+  // Qaysi so'zlar to'g'ri aytilganini (true/false ro'yxat) qaytaradi.
+  function matchWords(target, said) {
+    const a = words(target);
+    const b = words(said);
+    const dp = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+    for (let i = a.length - 1; i >= 0; i--) {
+      for (let j = b.length - 1; j >= 0; j--) {
+        dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+    const ok = new Array(a.length).fill(false);
+    let i = 0;
+    let j = 0;
+    while (i < a.length && j < b.length) {
+      if (a[i] === b[j]) {
+        ok[i] = true;
+        i++;
+        j++;
+      } else if (dp[i + 1][j] >= dp[i][j + 1]) i++;
+      else j++;
+    }
+    return ok;
+  }
+
+  let recognition = null;
+
+  function stopRecognition() {
+    if (recognition) {
+      recognition.onend = null;
+      try { recognition.abort(); } catch {}
+      recognition = null;
+    }
+  }
+
+  function renderSpeak() {
+    const q = data.items[index];
+    let attempts = 0;
+    let scored = false;
+
+    body.appendChild(el('p', 'question', 'Tinglang va ovoz chiqarib takrorlang:'));
+    const phrase = el('p', 'speak-phrase');
+    const paint = (marks) => {
+      phrase.textContent = '';
+      // Matnni so'zlarga bo'lib, har birini aytilgan-aytilmaganiga qarab bo'yaymiz.
+      const tokens = q.text.split(/\s+/);
+      let w = 0;
+      tokens.forEach((tok, k) => {
+        const span = el('span', 'sw', tok);
+        const hasWord = words(tok).length > 0;
+        if (marks && hasWord) span.classList.add(marks[w] ? 'ok' : 'miss');
+        if (hasWord) w += words(tok).length;
+        phrase.appendChild(span);
+        if (k < tokens.length - 1) phrase.appendChild(document.createTextNode(' '));
+      });
+    };
+    paint(null);
+    body.appendChild(phrase);
+    body.appendChild(el('p', 'speak-tr', q.translation));
+    if (q.tip) body.appendChild(el('p', 'speak-tip', `💡 ${q.tip}`));
+
+    const heard = el('p', 'heard');
+    const row = el('div', 'control-row');
+    const play = el('button', 'round-btn', '🔊');
+    play.type = 'button';
+    play.setAttribute('aria-label', 'Eshitish');
+    play.addEventListener('click', () => speakTarget(q.text));
+    const mic = el('button', 'mic-btn');
+    mic.type = 'button';
+    mic.setAttribute('aria-label', 'Takrorlash');
+    mic.innerHTML = '<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-2.1A7 7 0 0 0 19 12z" fill="currentColor"/></svg>';
+    const skip = el('button', 'round-btn', '⏭');
+    skip.type = 'button';
+    skip.setAttribute('aria-label', "O'tkazib yuborish");
+    skip.addEventListener('click', () => {
+      stopRecognition();
+      if (!scored) remember(q.text, q.translation);
+      step();
+    });
+    row.append(play, mic, skip);
+    body.append(row, heard);
+
+    if (!SR) {
+      mic.disabled = true;
+      heard.textContent = "Bu brauzer ovozni tanimaydi. Chrome'da oching yoki tinglab, o'zingiz takrorlang.";
+    }
+
+    const evaluate = (said) => {
+      attempts++;
+      const marks = matchWords(q.text, said);
+      const ratio = marks.length ? marks.filter(Boolean).length / marks.length : 0;
+      paint(marks);
+      heard.textContent = `Siz: «${said}» — ${Math.round(ratio * 100)}%`;
+      if (ratio >= 0.8) {
+        scored = true;
+        react(true);
+        showFeedback(ratio === 1 ? 'Mukammal talaffuz! 🎯' : "Juda yaxshi! Qizil so'zlarga yana e'tibor bering.", step);
+      } else {
+        react(false);
+        if (attempts >= 3) {
+          remember(q.text, q.translation);
+          showFeedback("Hechqisi yo'q — bu iborani takrorlash daftaringizga qo'shdim.", step);
+        } else {
+          reaction.textContent += ` Yana urinib ko'ring (${attempts}/3).`;
+          speakTarget(q.text);
+        }
+      }
+    };
+
+    mic.addEventListener('click', () => {
+      if (!SR || scored) return;
+      if (recognition) {
+        recognition.stop();
+        return;
+      }
+      App.stopSpeaking();
+      const rec = new SR();
+      recognition = rec;
+      rec.lang = App.locale();
+      rec.interimResults = true;
+      rec.maxAlternatives = 1;
+      let finalText = '';
+      mic.classList.add('listening');
+      heard.textContent = 'Tinglayapman...';
+      rec.onresult = (e) => {
+        let interim = '';
+        finalText = '';
+        for (const r of e.results) {
+          if (r.isFinal) finalText += r[0].transcript;
+          else interim += r[0].transcript;
+        }
+        heard.textContent = (finalText + ' ' + interim).trim();
+      };
+      rec.onerror = (e) => {
+        if (e.error === 'not-allowed') heard.textContent = 'Mikrofonga ruxsat berilmadi.';
+      };
+      rec.onend = () => {
+        recognition = null;
+        mic.classList.remove('listening');
+        if (finalText.trim()) evaluate(finalText.trim());
+        else if (heard.textContent === 'Tinglayapman...') heard.textContent = "Eshitmadim — mikrofonni bosib, qaytadan ayting.";
+      };
+      try {
+        rec.start();
+      } catch {
+        recognition = null;
+        mic.classList.remove('listening');
+      }
+    });
+
+    speakTarget(q.text);
+  }
+
   // ---------- Umumiy oqim ----------
 
   function render() {
@@ -315,15 +499,18 @@ window.Games = (() => {
     if (type === 'quiz') renderQuiz();
     else if (type === 'listen') renderListen();
     else if (type === 'order') renderOrder();
+    else if (type === 'speak') renderSpeak();
     else renderMatch();
   }
 
-  async function start(nextType) {
+  async function start(nextType, opts = {}) {
     type = nextType;
+    ctx = { unit: opts.unit || null, exam: Boolean(opts.exam) };
     const token = ++loadToken;
     App.unlockAudio();
+    stopRecognition();
     hideFeedback();
-    $('gameTitle').textContent = TITLES[type];
+    $('gameTitle').textContent = ctx.exam ? '🏁 Imtihon' : TITLES[type];
     $('gameScore').textContent = '';
     $('gameProgress').style.width = '0%';
     body.textContent = '';
@@ -337,7 +524,7 @@ window.Games = (() => {
       const result = await App.postJson('/api/game', {
         lang: App.lang(),
         type,
-        settings: App.settings(),
+        settings: { ...App.settings(), unit: ctx.unit, exam: ctx.exam },
         focus: App.focus(),
       });
       if (token !== loadToken) return;
@@ -350,7 +537,7 @@ window.Games = (() => {
       body.appendChild(el('p', 'loading', err instanceof TypeError ? "Internet bilan aloqa yo'q." : err.message));
       const retry = el('button', 'primary', 'Qayta urinish');
       retry.type = 'button';
-      retry.addEventListener('click', () => start(type));
+      retry.addEventListener('click', () => start(type, ctx));
       body.appendChild(retry);
       return;
     }
@@ -365,43 +552,93 @@ window.Games = (() => {
     render();
   }
 
-  function finish() {
-    App.stopSpeaking();
-    hideFeedback();
-    const ratio = total ? score / total : 0;
+  // Natija oynasi: matn, yulduzlar va yuzcha. Hikoya (practice.js) ham shundan foydalanadi.
+  function showResult({ score: s, total: t, title, text, unit }) {
+    const ratio = t ? s / t : 0;
     const stars = ratio >= 0.9 ? 3 : ratio >= 0.6 ? 2 : 1;
     $('resultStars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
-    $('resultTitle').textContent = `${total} dan ${score} ta to'g'ri!`;
-
-    const key = App.bestKey();
-    const best = App.loadStored(key) || {};
-    const prev = best[type];
-    const record = !prev || score / prev.total > prev.score / prev.total;
-    if (record) {
-      best[type] = { score, total };
-      App.store(key, best);
-    }
-
-    const name = App.tutor().name;
-    let text;
-    if (ratio >= 0.9) text = `${name}: Ajoyib natija! Siz haqiqiy yulduzsiz.`;
-    else if (ratio >= 0.6) text = `${name}: Yaxshi! Yana bir-ikki mashq — va mukammal bo'ladi.`;
-    else text = mode() === 'strict' ? `${name}: Hmm... Yana o'ynaymiz, men kutaman!` : `${name}: Hechqisi yo'q, takrorlash — o'rganishning onasi!`;
-    if (record && prev) text += ' 🏆 Yangi rekord!';
+    $('resultTitle').textContent = title || `${t} dan ${s} ta to'g'ri!`;
     $('resultText').textContent = text;
-
+    $('resultMenuBtn').textContent = unit ? '← Bosqichga qaytish' : 'Menyu';
     Face.set($('resultFace'), ratio >= 0.9 ? 'excited' : ratio >= 0.6 ? 'happy' : mode() === 'strict' ? 'angry' : 'calm');
     App.show('result');
+  }
+
+  let resultBack = null;
+  let replay = null;
+
+  function finish() {
+    App.stopSpeaking();
+    stopRecognition();
+    hideFeedback();
+    const ratio = total ? score / total : 0;
+    const name = App.tutor().name;
+    const lang = App.lang();
+    let text;
+    let title;
+
+    window.Practice.awardXp(5 + score * 3, TITLES[type]);
+
+    if (ctx.unit) {
+      const C = window.COURSE;
+      if (ctx.exam) {
+        const passed = ratio >= C.PASS_RATIO;
+        window.Learn.completeStep(lang, ctx.unit, 'exam', { ratio, passed });
+        title = passed ? `🎉 Imtihondan o'tdingiz! ${total} dan ${score}` : `${total} dan ${score} — yana bir urinish`;
+        const idx = C.UNITS.findIndex((u) => u.id === ctx.unit);
+        const next = C.UNITS[idx + 1];
+        text = passed
+          ? next
+            ? `${name}: Barakalla! Yangi bosqich ochildi: ${next.icon} ${next.title}.`
+            : `${name}: Siz butun kursni tugatdingiz! Endi erkin suhbatda mashq qilamiz.`
+          : `${name}: O'tish uchun ${Math.ceil(C.PASS_RATIO * total)} ta to'g'ri javob kerak. So'zlarni takrorlab, yana urinib ko'ring!`;
+        if (passed) window.Practice.awardXp(20, "Bosqich imtihoni");
+      } else {
+        window.Learn.completeStep(lang, ctx.unit, type === 'speak' ? 'speak' : 'words');
+      }
+    } else {
+      const key = App.bestKey();
+      const best = App.loadStored(key) || {};
+      const prev = best[type];
+      const record = !prev || score / prev.total > prev.score / prev.total;
+      if (record) {
+        best[type] = { score, total };
+        App.store(key, best);
+      }
+      if (record && prev) title = `🏆 Yangi rekord! ${total} dan ${score}`;
+    }
+
+    if (!text) {
+      if (ratio >= 0.9) text = `${name}: Ajoyib natija! Siz haqiqiy yulduzsiz.`;
+      else if (ratio >= 0.6) text = `${name}: Yaxshi! Yana bir-ikki mashq — va mukammal bo'ladi.`;
+      else text = mode() === 'strict' ? `${name}: Hmm... Yana o'ynaymiz, men kutaman!` : `${name}: Hechqisi yo'q, takrorlash — o'rganishning onasi!`;
+      text += " Xato qilgan so'zlaringiz takrorlash daftariga qo'shildi.";
+    }
+
+    const unit = ctx.unit;
+    const again = { type, ctx: { ...ctx } };
+    replay = () => start(again.type, again.ctx);
+    resultBack = unit ? () => window.Practice.openUnit(unit) : () => App.openMenu();
+    showResult({ score, total, title, text, unit });
   }
 
   $('gameBackBtn').addEventListener('click', () => {
     loadToken++;
     App.stopSpeaking();
+    stopRecognition();
     hideFeedback();
-    App.openMenu();
+    if (ctx.unit) window.Practice.openUnit(ctx.unit);
+    else App.openMenu();
   });
-  $('replayBtn').addEventListener('click', () => start(type));
-  $('resultMenuBtn').addEventListener('click', () => App.openMenu());
+  $('replayBtn').addEventListener('click', () => replay && replay());
+  $('resultMenuBtn').addEventListener('click', () => (resultBack ? resultBack() : App.openMenu()));
 
-  return { start };
+  // Hikoya tugagach natija oynasini ko'rsatish uchun.
+  function showExternalResult(opts, onReplay, onBack) {
+    replay = onReplay;
+    resultBack = onBack;
+    showResult(opts);
+  }
+
+  return { start, showResult: showExternalResult };
 })();

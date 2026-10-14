@@ -45,6 +45,35 @@
   <main id="menuScreen" class="screen menu" hidden>
     <div class="face-slot" id="menuFace" data-face="happy" data-state="idle"></div>
     <h1 id="menuTitle">Anna bilan rus tili</h1>
+
+    <section class="daily" id="daily">
+      <div class="daily-top">
+        <span class="streak" id="streak">🔥 0 kun</span>
+        <span class="daily-xp" id="dailyXp">Bugun 0 / 50 XP</span>
+      </div>
+      <div class="xp-bar"><div class="xp-fill" id="xpFill"></div></div>
+      <div class="week" id="week"></div>
+    </section>
+
+    <button type="button" class="big-card course-card" id="courseCard">
+      <span class="act-icon">🗺️</span>
+      <span class="act-text">
+        <span class="act-title">Kurs: A1 → B1</span>
+        <span class="act-desc" id="courseNow">1-bosqich</span>
+      </span>
+      <span class="course-count" id="courseCount">0/12</span>
+    </button>
+
+    <button type="button" class="big-card review-card" id="reviewCard">
+      <span class="act-icon">🧠</span>
+      <span class="act-text">
+        <span class="act-title">Takrorlash</span>
+        <span class="act-desc" id="reviewDesc">Daftaringiz hali bo'sh</span>
+      </span>
+      <span class="due-badge" id="dueBadge" hidden>0</span>
+    </button>
+
+    <h2 class="section-title">Erkin mashq</h2>
     <button type="button" class="settings-summary" id="settingsSummary">
       <span id="settingsText"></span>
       <span class="change">O'zgartirish</span>
@@ -82,10 +111,26 @@
         <span class="act-desc">Eshitganingizni tanlang</span>
         <span class="best" data-best="listen"></span>
       </button>
+      <button type="button" class="activity" data-activity="speak">
+        <span class="act-icon">🗣️</span>
+        <span class="act-title">Talaffuz</span>
+        <span class="act-desc">Ustozdan keyin takrorlang</span>
+        <span class="best" data-best="speak"></span>
+      </button>
+      <button type="button" class="activity" data-activity="story">
+        <span class="act-icon">📖</span>
+        <span class="act-title">Hikoya</span>
+        <span class="act-desc">O'qing, tinglang, tushuning</span>
+        <span class="best" data-best="story"></span>
+      </button>
     </div>
 
-    <p class="focus-note" id="focusNote" hidden>✨ Oxirgi darsdagi xatolar va yangi so'zlar o'yinlarga qo'shiladi</p>
-    <button type="button" class="link-btn" id="menuHomeBtn">Tilni almashtirish</button>
+    <p class="focus-note" id="focusNote" hidden>✨ Ustoz oldingi xatolaringizni eslaydi — darslar va o'yinlarda ularni qayta mashq qildiradi</p>
+    <div class="menu-links">
+      <button type="button" class="link-btn" id="notebookBtn">📒 Daftar</button>
+      <button type="button" class="link-btn" id="reminderBtn">⏰ Eslatma</button>
+      <button type="button" class="link-btn" id="menuHomeBtn">🌐 Tilni almashtirish</button>
+    </div>
   </main>
 
   <!-- 3. Sozlamalar -->
@@ -127,6 +172,15 @@
         <button type="button" class="chip" data-value="a1">Boshlang'ich</button>
         <button type="button" class="chip" data-value="b1">O'rta</button>
         <button type="button" class="chip" data-value="b2">Yuqori</button>
+      </div>
+    </section>
+
+    <section class="option-group">
+      <h2>Kunlik maqsad</h2>
+      <div class="chips" id="goalChips">
+        <button type="button" class="chip" data-goal="20">🙂 Yengil — 20 XP</button>
+        <button type="button" class="chip" data-goal="50">💪 O'rtacha — 50 XP</button>
+        <button type="button" class="chip" data-goal="100">🚀 Jiddiy — 100 XP</button>
       </div>
     </section>
 
@@ -243,8 +297,126 @@
     </div>
   </main>
 
+  <!-- 7. Kurs xaritasi -->
+  <main id="courseScreen" class="screen course" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">🗺️ Kurs xaritasi</span>
+      <span></span>
+    </div>
+    <p class="lead small">Har bosqichda: ovozli dars, so'zlar va imtihon. Imtihondan o'tsangiz, keyingi bosqich ochiladi.</p>
+    <ol class="unit-path" id="unitPath"></ol>
+  </main>
+
+  <!-- 8. Bosqich -->
+  <main id="unitScreen" class="screen unit" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="course">← Xarita</button>
+      <span class="game-title" id="unitLevel"></span>
+      <span></span>
+    </div>
+    <div class="unit-icon" id="unitIcon"></div>
+    <h1 id="unitTitle"></h1>
+    <p class="lead small" id="unitGrammar"></p>
+    <div class="unit-steps">
+      <button type="button" class="step" data-step="lesson">
+        <span class="step-check" aria-hidden="true"></span>
+        <span class="act-text">
+          <span class="act-title">🎙️ 1. Ovozli dars</span>
+          <span class="act-desc">Ustoz bilan shu mavzuda gaplashing</span>
+        </span>
+      </button>
+      <button type="button" class="step" data-step="words">
+        <span class="step-check" aria-hidden="true"></span>
+        <span class="act-text">
+          <span class="act-title">🧩 2. Yangi so'zlar</span>
+          <span class="act-desc">Bosqich so'zlarini juftlab yodlang</span>
+        </span>
+      </button>
+      <button type="button" class="step" data-step="speak">
+        <span class="step-check" aria-hidden="true"></span>
+        <span class="act-text">
+          <span class="act-title">🗣️ 3. Talaffuz</span>
+          <span class="act-desc">Bosqich iboralarini ovoz chiqarib ayting</span>
+        </span>
+      </button>
+      <button type="button" class="step exam" data-step="exam">
+        <span class="step-check" aria-hidden="true"></span>
+        <span class="act-text">
+          <span class="act-title">🏁 4. Bosqich imtihoni</span>
+          <span class="act-desc" id="examDesc">8 ta savol, o'tish uchun 6 ta to'g'ri</span>
+        </span>
+      </button>
+    </div>
+  </main>
+
+  <!-- 9. Takrorlash -->
+  <main id="reviewScreen" class="screen review" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">🧠 Takrorlash</span>
+      <span class="game-score" id="reviewLeft"></span>
+    </div>
+    <div class="progress" aria-hidden="true"><div class="progress-fill" id="reviewProgress"></div></div>
+    <div class="flashcard" id="flashcard">
+      <p class="fc-hint" id="fcHint"></p>
+      <p class="fc-front" id="fcFront"></p>
+      <button type="button" class="icon-btn fc-say" id="fcSay" aria-label="Eshitish">🔊</button>
+      <p class="fc-back" id="fcBack" hidden></p>
+    </div>
+    <div class="review-actions">
+      <button type="button" class="primary big" id="revealBtn">Javobni ko'rish</button>
+      <div class="grade-row" id="gradeRow" hidden>
+        <button type="button" class="grade bad" id="gradeBad">❌ Bilmadim</button>
+        <button type="button" class="grade good" id="gradeGood">✅ Bildim</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- 10. Daftar -->
+  <main id="notebookScreen" class="screen notebook" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">📒 Daftar</span>
+      <span></span>
+    </div>
+    <div class="speak-lang tabs" role="tablist">
+      <button type="button" class="pill active" data-tab="words">So'zlar</button>
+      <button type="button" class="pill" data-tab="mistakes">Xatolar</button>
+    </div>
+    <p class="lead small" id="notebookStats"></p>
+    <ul class="note-list" id="noteList"></ul>
+  </main>
+
+  <!-- 11. Hikoya -->
+  <main id="storyScreen" class="screen story" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">📖 Hikoya</span>
+      <button type="button" class="stop-btn" id="storyPlayBtn">🔊 O'qib berish</button>
+    </div>
+    <div id="storyBody" class="story-body"></div>
+  </main>
+
+  <dialog class="sheet" id="reminderDialog">
+    <form method="dialog">
+      <h2>⏰ Har kuni eslatsin</h2>
+      <p>Telefoningiz taqvimiga har kungi eslatma qo'shiladi. Qaysi vaqtda mashq qilasiz?</p>
+      <input type="time" id="reminderTime" value="20:00">
+      <div class="end-actions">
+        <button type="button" class="primary" id="reminderSave">Taqvimga qo'shish</button>
+        <button type="submit" class="secondary">Yopish</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
   <script src="face.js"></script>
+  <script src="course.js"></script>
+  <script src="learn.js"></script>
   <script src="app.js"></script>
   <script src="games.js"></script>
+  <script src="practice.js"></script>
 </body>
 </html>

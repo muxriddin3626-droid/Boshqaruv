@@ -8,7 +8,6 @@
   const MODE_LABELS = { kind: 'Mehribon', strict: "Qattiqqo'l" };
   const THEME_KEY = 'til-ustoz-theme';
   const SETTINGS_KEY = 'til-ustoz-settings';
-  const FOCUS_KEY = 'til-ustoz-focus-';
   const BEST_KEY = 'til-ustoz-best-';
 
   const $ = (id) => document.getElementById(id);
@@ -20,6 +19,11 @@
     end: $('endScreen'),
     game: $('gameScreen'),
     result: $('resultScreen'),
+    course: $('courseScreen'),
+    unit: $('unitScreen'),
+    review: $('reviewScreen'),
+    notebook: $('notebookScreen'),
+    story: $('storyScreen'),
   };
   const face = $('face');
   const statusText = $('statusText');
@@ -130,9 +134,10 @@
     } catch {}
   }
 
+  // Ustoz eslab qolgan narsalar: o'quvchining xatolari va yaxshi yodlanmagan so'zlari.
   function loadFocus() {
-    const f = loadStored(FOCUS_KEY + lang);
-    return f && Array.isArray(f.words) && Array.isArray(f.mistakes) ? f : { words: [], mistakes: [] };
+    const m = Learn.memory(lang);
+    return { words: m.words, mistakes: m.mistakes };
   }
 
   function openMenu(nextLang) {
@@ -146,9 +151,10 @@
       const b = best[el.dataset.best];
       el.textContent = b ? `🏆 ${b.score}/${b.total}` : '';
     });
-    const focus = loadFocus();
-    $('focusNote').hidden = !(focus.words.length || focus.mistakes.length);
+    const memory = Learn.memory(lang);
+    $('focusNote').hidden = !(memory.lessons || memory.mistakes.length);
     Face.set($('menuFace'), settings.mode === 'strict' ? 'angry' : 'happy');
+    window.Practice.renderMenu();
     show('menu');
   }
 
@@ -167,10 +173,14 @@
       card.classList.toggle('selected', on);
       card.setAttribute('aria-checked', String(on));
     });
-    document.querySelectorAll('.chips').forEach((group) => {
+    document.querySelectorAll('.chips[data-group]').forEach((group) => {
       group.querySelectorAll('.chip').forEach((chip) => {
         chip.classList.toggle('selected', chip.dataset.value === settings[group.dataset.group]);
       });
+    });
+    const goal = Learn.daily().goal;
+    document.querySelectorAll('#goalChips .chip').forEach((chip) => {
+      chip.classList.toggle('selected', Number(chip.dataset.goal) === goal);
     });
     Face.set($('setupFace'), settings.mode === 'strict' ? 'angry' : 'happy');
   }
@@ -183,7 +193,14 @@
     });
   });
 
-  document.querySelectorAll('.chips').forEach((group) => {
+  $('goalChips').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    Learn.setGoal(Number(chip.dataset.goal));
+    renderSettings();
+  });
+
+  document.querySelectorAll('.chips[data-group]').forEach((group) => {
     group.addEventListener('click', (e) => {
       const chip = e.target.closest('.chip');
       if (!chip) return;
@@ -434,7 +451,12 @@
     Face.set(face, 'thinking');
     let data;
     try {
-      data = await postJson('/api/chat', { lang, settings, messages: history });
+      data = await postJson('/api/chat', {
+        lang,
+        settings: { ...settings, unit: lessonUnit },
+        memory: Learn.memory(lang),
+        messages: history,
+      });
       if (!Array.isArray(data.segments)) throw new Error("Javob kelmadi. Qayta urinib ko'ring.");
     } catch (err) {
       if (ended) return;
@@ -467,8 +489,12 @@
 
   // ---------- Dars boshlanishi va tugashi ----------
 
-  function startLesson() {
+  let lessonUnit = null; // kurs bosqichi darsi bo'lsa, bosqich id'si
+
+  function startLesson(opts = {}) {
     const t = TUTORS[lang];
+    lessonUnit = opts.unit || null;
+    const unit = lessonUnit && COURSE.byId(lessonUnit);
     history = [];
     userTurns = 0;
     timeUp = false;
@@ -477,7 +503,9 @@
     document.querySelectorAll('.pill').forEach((p) => p.classList.toggle('active', p.dataset.speak === 'target'));
     $('speakTarget').textContent = t.speakLabel;
     const topic = document.querySelector(`[data-group="topic"] [data-value="${settings.topic}"]`);
-    $('lessonInfo').textContent = `${t.name} · ${MODE_LABELS[settings.mode]} · ${topic ? topic.textContent : ''}`;
+    $('lessonInfo').textContent = unit
+      ? `${t.name} · ${unit.icon} ${unit.title}`
+      : `${t.name} · ${MODE_LABELS[settings.mode]} · ${topic ? topic.textContent : ''}`;
     typeForm.hidden = true;
     setSubtitle('');
     Face.set(face, 'calm');
@@ -504,7 +532,13 @@
         ? `${minutes} daqiqa ichida ${userTurns} marta gapirdingiz. Ofarin, shunday davom eting!`
         : "Bu safar gaplashmadik. Keyingi safar mikrofonni bosib, bemalol gapiring!";
     Face.set(document.querySelector('#endScreen .face-slot'), userTurns > 0 ? 'excited' : 'calm');
+    $('endMenuBtn').textContent = lessonUnit ? '← Bosqichga qaytish' : "O'yinlar va menyu";
     show('end');
+    if (userTurns > 0) {
+      // Har gap uchun XP; kurs darsi kamida 3 ta gap bo'lsa bajarilgan hisoblanadi.
+      window.Practice.awardXp(Math.min(60, 10 + userTurns * 4), 'Ovozli dars');
+      if (lessonUnit && userTurns >= 3) Learn.completeStep(lang, lessonUnit, 'lesson');
+    }
     if (userTurns > 0) loadReport(history.slice());
     else $('report').hidden = true;
   }
@@ -523,10 +557,7 @@
       const r = await postJson('/api/report', { lang, settings, messages });
       if (token !== reportToken) return;
       renderReport(r);
-      store(FOCUS_KEY + lang, {
-        words: (r.words || []).map((w) => w.word),
-        mistakes: (r.mistakes || []).map((m) => `${m.wrong} → ${m.correct}`),
-      });
+      Learn.recordReport(lang, r);
     } catch {
       if (token !== reportToken) return;
       $('reportLoading').textContent = "Hisobotni tayyorlab bo'lmadi. Keyingi darsda albatta!";
@@ -591,6 +622,7 @@
     btn.addEventListener('click', () => {
       const activity = btn.dataset.activity;
       if (activity === 'lesson') startLesson();
+      else if (activity === 'story') window.Practice.startStory();
       else window.Games.start(activity);
     });
   });
@@ -615,8 +647,11 @@
   face.addEventListener('click', onMic);
 
   $('stopBtn').addEventListener('click', endLesson);
-  $('againBtn').addEventListener('click', startLesson);
-  $('endMenuBtn').addEventListener('click', () => openMenu());
+  $('againBtn').addEventListener('click', () => startLesson({ unit: lessonUnit }));
+  $('endMenuBtn').addEventListener('click', () => {
+    if (lessonUnit) window.Practice.openUnit(lessonUnit);
+    else openMenu();
+  });
 
   document.querySelectorAll('.pill').forEach((pill) => {
     pill.addEventListener('click', () => {
@@ -688,6 +723,8 @@
     tutor: () => TUTORS[lang],
     settings: () => settings,
     focus: loadFocus,
+    startLesson,
+    locale: () => LOCALES[lang],
     bestKey: () => BEST_KEY + lang,
   };
 

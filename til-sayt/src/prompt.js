@@ -1,3 +1,5 @@
+const COURSE = require('../public/course.js');
+
 const TUTOR_PROMPT = `Sen professional va tajribali rus va nemis tili o'qituvchisisiz. Sening vazifang foydalanuvchiga rus yoki nemis tillarini jonli muloqot orqali o'rgatish.
 
 Quyidagi qoidalarga qat'iy amal qil:
@@ -53,14 +55,47 @@ const LEVELS = {
   b2: "Yuqori (B2+): tabiiy tezlikda, idiomalar va murakkab grammatika bilan.",
 };
 
-function sessionPrompt(lang, settings) {
+// Kurs bosqichi tanlangan bo'lsa, mavzu va daraja o'sha bosqichdan olinadi.
+function topicLines(lang, settings, levels) {
+  const unit = settings.unit && COURSE.byId(settings.unit);
+  if (unit) {
+    return [
+      `Kurs bosqichi: "${unit.title}" (${unit.level}). Mavzu: ${unit.topic}.`,
+      `Shu bosqichning grammatikasi: ${unit.grammar[lang]}. Mashqda shu grammatikani albatta ishlat.`,
+      `Daraja: ${unit.level}.`,
+    ];
+  }
+  return [`Mavzu: ${TOPICS[settings.topic]}.`, `Daraja: ${levels[settings.level]}`];
+}
+
+function memoryLines(memory) {
+  if (!memory || (!memory.lessons && !memory.mistakes.length && !memory.words.length)) {
+    return ["Bu o'quvchi bilan birinchi darsing."];
+  }
+  const lines = [`Bu o'quvchi bilan oldin ${memory.lessons} ta ovozli dars o'tgansan — sen uni eslaysan.`];
+  if (memory.summary) lines.push(`O'tgan darsdan xulosa: ${memory.summary}`);
+  if (memory.level) lines.push(`O'tgan safar taxminiy darajasi: ${memory.level}.`);
+  if (memory.mistakes.length) {
+    lines.push(
+      "Uning oldingi xatolari (darsda tabiiy tarzda qayta mashq qildir: o'sha shakl kerak bo'ladigan savollar ber, to'g'ri aytsa — maqta, yana xato qilsa — o'tgan safar ham shunday bo'lganini hazil aralash eslat):\n" +
+        memory.mistakes.map((m) => `- ${m}`).join('\n')
+    );
+  }
+  if (memory.words.length) lines.push(`U yaxshi yodlamagan so'zlar (suhbatda ishlatib, takrorlat): ${memory.words.join(', ')}.`);
+  lines.push("Darsni boshlaganda o'quvchini qaytgani bilan qisqa tabrikla va o'tgan darsni bir gap bilan eslatib o't.");
+  return lines;
+}
+
+function sessionPrompt(lang, settings, memory) {
   const p = PERSONAS[lang];
+  const [topic, ...rest] = topicLines(lang, settings, LEVELS);
   return [
     `Foydalanuvchi tanlagan til: ${LANGUAGES[lang]}. Suhbatni shu tilda olib bor.`,
     `Sening isming ${p.name}, sen ${p.about}.`,
     MODES[settings.mode],
-    `Dars mavzusi: ${TOPICS[settings.topic]}. Suhbatni shu mavzu atrofida olib bor, rolli o'yin qilsa ham bo'ladi.`,
-    `Foydalanuvchi darajasi: ${LEVELS[settings.level]}`,
+    `${topic} Suhbatni shu mavzu atrofida olib bor, rolli o'yin qilsa ham bo'ladi.`,
+    ...rest,
+    memoryLines(memory).join('\n'),
   ].join('\n\n');
 }
 
@@ -242,19 +277,93 @@ const GAMES = {
       additionalProperties: false,
     },
   },
+  speak: {
+    count: 6,
+    task: `Talaffuz mashqi uchun o'rganilayotgan tilda 6 ta qisqa ibora yoki gap ber (darajaga qarab 2-8 so'z). O'quvchi ularni ovoz chiqarib takrorlaydi. Talaffuzi qiyin tovushli so'zlarni ham qo'sh. Raqamlarni so'z bilan yoz.
+- text: ibora yoki gap
+- translation: o'zbekcha tarjimasi
+- tip: talaffuz bo'yicha qisqa o'zbekcha maslahat (qaysi tovushga e'tibor berish, urg'u qayerda)`,
+    schema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { text: { type: 'string' }, translation: { type: 'string' }, tip: { type: 'string' } },
+            required: ['text', 'translation', 'tip'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['items'],
+      additionalProperties: false,
+    },
+  },
+  story: {
+    count: 8,
+    task: `O'quvchi darajasiga mos qisqa, qiziqarli hikoya yoki dialog yoz (6-8 gap). Oxirida kutilmagan yoki kulgili burilish bo'lsa yaxshi.
+- title: hikoya nomi (o'rganilayotgan tilda), title_uz: o'zbekcha nomi
+- sentences: gaplar ro'yxati. Har birida text (gap), translation (o'zbekcha tarjima) va words — shu gapdagi o'quvchi bilmasligi mumkin bo'lgan 1-4 ta so'z: form (matnda qanday yozilgan bo'lsa, aynan shunday), base (lug'at shakli), translation (o'zbekcha)
+- questions: hikoya bo'yicha 3 ta tushunish savoli (o'zbekcha savol, javoblar o'rganilayotgan tilda yoki o'zbekcha): question, correct, wrong (3 ta noto'g'ri)`,
+    schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        title_uz: { type: 'string' },
+        sentences: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              text: { type: 'string' },
+              translation: { type: 'string' },
+              words: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: { form: { type: 'string' }, base: { type: 'string' }, translation: { type: 'string' } },
+                  required: ['form', 'base', 'translation'],
+                  additionalProperties: false,
+                },
+              },
+            },
+            required: ['text', 'translation', 'words'],
+            additionalProperties: false,
+          },
+        },
+        questions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              question: { type: 'string' },
+              correct: { type: 'string' },
+              wrong: { type: 'array', items: { type: 'string' } },
+            },
+            required: ['question', 'correct', 'wrong'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['title', 'title_uz', 'sentences', 'questions'],
+      additionalProperties: false,
+    },
+  },
 };
 
 function gamePrompt(lang, type, settings, focus) {
   const parts = [
     `Sen tajribali ${LANGUAGES[lang]} o'qituvchisisan va o'zbek tilida so'zlashuvchi o'quvchi uchun qiziqarli mashq tuzasan.`,
-    `Daraja: ${GAME_LEVELS[settings.level]}.`,
-    `Mavzu: ${TOPICS[settings.topic]}.`,
+    ...topicLines(lang, settings, GAME_LEVELS),
     "Barcha izoh va tarjimalar o'zbek tilida, lotin yozuvida bo'lsin. Har bir savolning faqat bitta to'g'ri javobi bo'lsin. Har safar yangi, takrorlanmaydigan misollar o'yla.",
     GAMES[type].task,
   ];
-  if (focus.words.length || focus.mistakes.length) {
+  if (settings.exam) {
+    parts.push("Bu bosqich IMTIHONI: savollar faqat shu bosqich mavzusi va grammatikasi bo'yicha bo'lsin, osondan qiyinga qarab.");
+  } else if (focus.words.length || focus.mistakes.length) {
     parts.push(
-      "O'quvchi oxirgi ovozli darsda quyidagilarni o'rgandi yoki xato qildi. Mashqning kamida yarmini shularni takrorlashga bag'ishla:\n" +
+      "O'quvchi quyidagi so'zlarni hali yaxshi yodlamagan yoki shu xatolarni qilgan. Agar mavzuga mos kelsa, mashqning bir qismini shularni takrorlashga bag'ishla:\n" +
         [...focus.words.map((w) => `- so'z: ${w}`), ...focus.mistakes.map((m) => `- xato: ${m}`)].join('\n')
     );
   }
@@ -262,6 +371,7 @@ function gamePrompt(lang, type, settings, focus) {
 }
 
 module.exports = {
+  COURSE,
   GAMES,
   gamePrompt,
   TUTOR_PROMPT,

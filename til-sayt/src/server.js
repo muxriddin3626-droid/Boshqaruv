@@ -13,6 +13,7 @@ const {
   REPLY_SCHEMA,
   REPORT_PROMPT,
   REPORT_SCHEMA,
+  COURSE,
   GAMES,
   gamePrompt,
   sessionPrompt,
@@ -153,6 +154,8 @@ function cleanSettings(raw) {
     mode: Object.hasOwn(MODES, s.mode) ? s.mode : 'kind',
     topic: Object.hasOwn(TOPICS, s.topic) ? s.topic : 'free',
     level: Object.hasOwn(LEVELS, s.level) ? s.level : 'auto',
+    unit: typeof s.unit === 'string' && COURSE.byId(s.unit) ? s.unit : null,
+    exam: s.exam === true,
   };
 }
 
@@ -232,7 +235,7 @@ async function handleChat(req, res) {
     const reply = await askJson({
       system: [
         { type: 'text', text: TUTOR_PROMPT, cache_control: { type: 'ephemeral' } },
-        { type: 'text', text: sessionPrompt(lang, cleanSettings(body.settings)) },
+        { type: 'text', text: sessionPrompt(lang, cleanSettings(body.settings), cleanMemory(body.memory)) },
       ],
       messages,
       schema: REPLY_SCHEMA,
@@ -318,6 +321,27 @@ function cleanWrong(list, correct) {
 
 function cleanGame(type, raw) {
   const count = GAMES[type].count;
+  if (type === 'story') {
+    const sentences = (raw.sentences || [])
+      .map((x) => ({
+        text: str(x && x.text, 300),
+        translation: str(x && x.translation, 300),
+        words: (Array.isArray(x && x.words) ? x.words : [])
+          .map((w) => ({ form: str(w && w.form, 60), base: str(w && w.base, 60), translation: str(w && w.translation, 80) }))
+          .filter((w) => w.form && w.translation)
+          .slice(0, 6),
+      }))
+      .filter((x) => x.text && x.translation)
+      .slice(0, 12);
+    const questions = (raw.questions || [])
+      .map((q) => {
+        const correct = str(q && q.correct, 120);
+        return { question: str(q && q.question), correct, wrong: cleanWrong(q && q.wrong, correct) };
+      })
+      .filter((q) => q.question && q.correct && q.wrong.length === 3)
+      .slice(0, 4);
+    return { title: str(raw.title, 120), title_uz: str(raw.title_uz, 120), sentences, questions };
+  }
   if (type === 'match') {
     const seen = new Set();
     const pairs = (raw.pairs || [])
@@ -340,14 +364,22 @@ function cleanGame(type, raw) {
       const text = str(it.text, 120);
       return { text, translation: str(it.translation, 120), wrong: cleanWrong(it.wrong, text) };
     }
+    if (type === 'speak') return { text: str(it.text, 160), translation: str(it.translation, 160), tip: str(it.tip, 300) };
     return { sentence: str(it.sentence, 200), translation: str(it.translation, 200) };
   });
   const ok = items.filter((it) => {
     if (type === 'quiz') return it.question && it.correct && it.wrong.length === 3;
     if (type === 'listen') return it.text && it.translation && it.wrong.length === 3;
+    if (type === 'speak') return it.text && it.translation;
     return it.sentence.split(/\s+/).length >= 2 && it.translation;
   });
   return { items: ok.slice(0, count) };
+}
+
+function cleanMemory(raw) {
+  const m = raw || {};
+  const lessons = Number.isInteger(m.lessons) && m.lessons > 0 ? Math.min(m.lessons, 10000) : 0;
+  return { lessons, summary: str(m.summary, 400), level: str(m.level, 10), ...cleanFocus(m) };
 }
 
 function cleanFocus(raw) {
@@ -376,7 +408,7 @@ async function handleGame(req, res) {
       schema: GAMES[type].schema,
     });
     const game = raw && cleanGame(type, raw);
-    const size = game && (game.pairs || game.items).length;
+    const size = game && (game.pairs || game.items || game.sentences).length;
     if (!size || size < 3) {
       sendJson(res, 502, { error: "Mashqni tayyorlab bo'lmadi, qayta urinib ko'ring." });
       return;

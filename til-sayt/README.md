@@ -19,17 +19,41 @@ uslubida). Telefonda ham, kompyuterda ham ishlaydi:
 - dars oxirida **hisobot** chiqadi: taxminiy daraja, xatolar va ularning to'g'risi,
   yangi so'zlar tarjimasi bilan, keyingi dars uchun maslahat.
 
+### Tez o'rganish uchun
+
+- 🗺️ **Kurs xaritasi (A1 → B1)** — 12 bosqich (salomlashish, raqamlar, oila, kun
+  tartibi, ovqat, do'kon, shahar, o'tgan zamon, ob-havo, sog'liq, ish, sayohat).
+  Har bosqichning o'z grammatikasi bor (rus va nemis tili uchun alohida) va 4 qadami:
+  ovozli dars, yangi so'zlar, talaffuz va imtihon. Imtihondan 75% bilan o'tilsa,
+  keyingi bosqich ochiladi. Bosqichlar `public/course.js` faylida.
+- 🧠 **Aqlli takrorlash** — darslar, o'yinlar va hikoyalardagi yangi so'zlar va
+  xatolar so'z daftariga yig'iladi. Har so'z 1, 3, 7, 16, 35, 80 kundan keyin
+  qaytadan so'raladi; bilmagan so'z boshidan boshlanadi.
+- 📒 **Ustoz xotirasi** — dars oxiridagi hisobotdan xatolar va xulosa saqlanadi.
+  Keyingi darsda ustoz o'quvchini eslaydi, o'tgan darsni eslatadi va oldingi
+  xatolarni ataylab qayta mashq qildiradi. Daftarda so'zlar va xatolar ro'yxati bor.
+- 🗣️ **Talaffuz** — ustoz iborani aytadi, o'quvchi takrorlaydi; sayt nima
+  deganini tanib, to'g'ri aytilgan so'zlarni yashil, xatolarini qizil ko'rsatadi
+  (80% dan yuqori — o'tdi, 3 urinish).
+- 🔥 **Kunlik odat** — har mashq uchun XP, kunlik maqsad (20 / 50 / 100 XP),
+  ketma-ket kunlar (streak) va haftalik ko'rinish. "⏰ Eslatma" tugmasi telefon
+  taqvimiga har kungi eslatma (`.ics` fayl) qo'shadi — server kerak emas.
+- 📖 **Hikoyalar** — darajaga mos qisqa hikoya: ustoz o'qib beradi, so'z
+  bosilsa tarjimasi chiqadi va daftarga qo'shish mumkin, oxirida 3 ta savol.
+
+Bu ma'lumotlarning hammasi foydalanuvchi brauzerida (localStorage) saqlanadi.
+
 ### O'yinlar va testlar
 
-Til tanlangach menyu ochiladi: ovozli darsdan tashqari 4 ta o'yin bor.
+Menyuda ovozli darsdan tashqari o'yinlar bor:
 
 - 📝 **Test** — grammatika, so'z ma'nosi va bo'sh joyni to'ldirish, har javobdan keyin o'zbekcha izoh;
 - 🧩 **So'z juftlash** — so'zni o'zbekcha tarjimasiga ulash (so'z bosilganda ovozda o'qiladi);
 - 🔤 **Gap tuzish** — aralash so'zlardan to'g'ri gap terish;
 - 🎧 **Eshitib top** — ovozni eshitib, 4 ta o'xshash so'zdan to'g'risini tanlash.
 
-Savollarni har safar Claude yangidan tuzadi — tanlangan mavzu va darajaga mos.
-Oxirgi ovozli darsdagi xatolar va yangi so'zlar keyingi o'yinlarga qo'shiladi.
+Savollarni har safar Claude yangidan tuzadi — tanlangan mavzu (yoki kurs bosqichi)
+va darajaga mos. Xato qilingan so'zlar takrorlash daftariga tushadi.
 Ustoz yuzchasi javobga qarab xursand bo'ladi, hayron qoladi yoki (qattiqqo'l
 rejimda) jahl qiladi; ball, yulduzlar va har o'yindagi eng yaxshi natija saqlanadi.
 
@@ -38,7 +62,9 @@ O'qituvchining qoidalari va o'yin topshiriqlari `src/prompt.js` faylida turadi.
 ## Tuzilishi
 
 - `public/` — sayt sahifasi (`index.html`, `style.css`, `face.js` — yuzcha,
-  `app.js` — menyu, ovoz, taymer va suhbat, `games.js` — o'yinlar)
+  `app.js` — menyu, ovoz, taymer va suhbat, `games.js` — o'yinlar va talaffuz,
+  `practice.js` — kurs, takrorlash, daftar, hikoya, kunlik maqsad, `learn.js` —
+  brauzerda saqlanadigan o'rganish ma'lumotlari, `course.js` — kurs bosqichlari)
 - `src/server.js` — sahifani ko'rsatadi va `/api/chat` orqali Claude bilan
   bog'lanadi. API kalit faqat serverda turadi, brauzerga chiqmaydi.
 
