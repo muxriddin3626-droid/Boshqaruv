@@ -1,0 +1,123 @@
+"""AI Ustoz — FastAPI ilova kirish nuqtasi."""
+import os
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
+from app.api.routes import (
+    audio,
+    auth,
+    chat,
+    conspect,
+    duels,
+    exam_feedback,
+    flashcards,
+    games,
+    homework,
+    illustrations,
+    leaderboard,
+    lectures,
+    media,
+    onboarding,
+    photos,
+    plan,
+    progress,
+    research,
+    sync,
+    tests,
+    textbooks,
+    voice,
+    weakness,
+)
+from app.core.config import get_settings
+from app.services.scheduler import shutdown_scheduler, start_scheduler
+from app.services.textbook_service import recover_interrupted
+
+settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+    start_scheduler()  # Modul 7: RESEARCH_SCAN_ENABLED=true bo'lsagina fon vazifalarini boshlaydi
+    await recover_interrupted()  # yarim qolgan darslik yuklashlari navbatga qaytib, o'zi davom etadi
+    yield
+    shutdown_scheduler()
+
+
+app = FastAPI(
+    title="AI Ustoz API",
+    description="DTM (BMBA) va Milliy Sertifikat imtihonlariga tayyorlovchi AI repetitor backend xizmati.",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth.router)
+app.include_router(onboarding.router)
+app.include_router(plan.router)
+app.include_router(leaderboard.router)
+app.include_router(tests.router)
+app.include_router(games.router)
+app.include_router(homework.router)
+app.include_router(duels.router)
+app.include_router(chat.router)
+app.include_router(voice.router)
+app.include_router(progress.router)
+app.include_router(flashcards.router)
+app.include_router(weakness.router)
+app.include_router(conspect.router)
+app.include_router(sync.router)
+app.include_router(exam_feedback.router)
+app.include_router(research.router)
+app.include_router(audio.router)
+app.include_router(lectures.router)
+app.include_router(media.router)
+app.include_router(illustrations.router)
+app.include_router(photos.router)
+app.include_router(textbooks.router)
+
+
+@app.get("/health", tags=["system"])
+async def health_check():
+    return {"status": "ok", "service": "ai-ustoz-backend"}
+
+
+# --- Sayt (frontend) --------------------------------------------------------------------
+# Render'da sayt va API bitta xizmatda: `next build` (NEXT_OUTPUT=export) chiqargan tayyor
+# fayllar WEB_DIR dan beriladi. Papka bo'lmasa (lokal ishlab chiqish) — hech narsa ulanmaydi.
+_web_dir = Path(os.environ.get("WEB_DIR", "/app/web"))
+
+
+class _SiteFiles(StaticFiles):
+    """Sahifalar (HTML) har safar yangisi tekshiriladi — yangilanishdan keyin brauzer eski saytni
+    ko'rsatib qolmasin. `_next/static` fayllari nomida xesh bor, ular uzoq keshlanadi."""
+
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if path.startswith("_next/static/"):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif response.media_type == "text/html" or response.headers.get("content-type", "").startswith("text/html"):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
+if _web_dir.is_dir():
+
+    @app.get("/icon", include_in_schema=False)
+    async def site_icon():
+        # Next.js eksporti favicon'ni kengaytmasiz "icon" fayli qilib chiqaradi — turini aniq aytamiz.
+        return FileResponse(_web_dir / "icon", media_type="image/png")
+
+    app.mount("/", _SiteFiles(directory=_web_dir, html=True), name="web")

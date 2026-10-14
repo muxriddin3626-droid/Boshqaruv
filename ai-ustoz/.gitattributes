@@ -1,0 +1,4 @@
+# PDF va rasmlar — ikkilik fayl (git ularni matn deb diff qilmasin).
+*.pdf binary
+*.png binary
+*.jpg binary
