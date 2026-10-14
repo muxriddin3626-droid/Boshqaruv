@@ -1,25 +1,31 @@
-# Til Ustoz — rus va nemis tili o'qituvchi sayti
+# Til Ustoz — rus va nemis tili ovozli o'qituvchisi
 
-Rus yoki nemis tilini jonli suhbat orqali o'rgatadigan veb-sayt. Telefonda ham,
-kompyuterda ham ishlaydi. Javoblarni Claude (Anthropic) yozadi:
+Rus yoki nemis tilini **ovozli suhbat** orqali o'rgatadigan veb-sayt (goprep.gg
+uslubida). Telefonda ham, kompyuterda ham ishlaydi:
 
-- suhbat tanlangan tilda (rus yoki nemis) olib boriladi;
-- grammatik xatolar, so'zlarning ma'nosi va qoidalar **o'zbek tilida** tushuntiriladi;
-- xatolar darhol, muloyimlik bilan tuzatiladi;
-- har bir javob oxirida suhbatni davom ettirish uchun savol beriladi;
-- boshlanishida oddiy so'zlar va qisqa gaplar ishlatiladi.
+- til tanlanadi va 10 daqiqalik dars boshlanadi (yuqorida taymer va "Stop" tugmasi);
+- ekran o'rtasidagi ustoz yuzchasi gapiradi va kayfiyatini ko'rsatadi:
+  xotirjam, xursand, yulduz ko'zli, o'ylayotgan, hayron va olovli "jahldor"
+  (bir xil xato takrorlansa — hazil tariqasida);
+- ustoz gapini tugatgach, mikrofon o'zi yoqiladi — siz javob berasiz;
+- xatolar darhol tuzatiladi va **o'zbek tilida** tushuntiriladi;
+- pastdagi "O'zbekcha" tugmasi bilan o'zbek tilida ham savol berish mumkin;
+- ustozning gapi ekranda matn bo'lib ham chiqadi (o'chirib qo'yish mumkin);
+- mikrofon ishlamasa, klaviatura tugmasi orqali yozib yuborish mumkin.
 
 O'qituvchining qoidalari `src/prompt.js` faylida turadi.
 
 ## Tuzilishi
 
-- `public/` — sayt sahifasi (`index.html`, `style.css`, `app.js`)
+- `public/` — sayt sahifasi (`index.html`, `style.css`, `face.js` — yuzcha,
+  `app.js` — ovoz, taymer va suhbat)
 - `src/server.js` — sahifani ko'rsatadi va `/api/chat` orqali Claude bilan
   bog'lanadi. API kalit faqat serverda turadi, brauzerga chiqmaydi.
 
-Suhbat tarixi foydalanuvchining brauzerida saqlanadi: sahifani yopib ochsa ham
-suhbat davom etadi. "Yangi" tugmasi suhbatni boshidan boshlaydi, "Til" tugmasi
-tilni almashtiradi.
+Ovozni tanish va ovoz chiqarib o'qish brauzerning o'zida ishlaydi (Web Speech
+API), qo'shimcha xizmat kerak emas. Eng yaxshi natija — Chrome (Android va
+kompyuter). Ko'p qurilmalarda o'zbekcha ovoz yo'q, shunda o'zbekcha gaplarni
+turkcha ovoz o'qiydi.
 
 ## Lokal ishga tushirish
 
@@ -36,7 +42,7 @@ kalitga almashtiring, so'ng:
 npm start
 ```
 
-Brauzerda http://localhost:3000 ni oching.
+Brauzerda http://localhost:3000 ni oching (mikrofon `localhost` yoki `https` manzilda ishlaydi).
 
 ## Internetga joylashtirish (Render)
 

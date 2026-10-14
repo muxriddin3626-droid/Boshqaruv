@@ -4,7 +4,7 @@
   "description": "Rus va nemis tilini jonli suhbat orqali o'rganing",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f6f4ef",
-  "theme_color": "#1f6f5c",
+  "background_color": "#f7f7f5",
+  "theme_color": "#f7f7f5",
   "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
 }

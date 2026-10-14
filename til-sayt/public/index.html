@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#1f6f5c">
-  <meta name="description" content="Rus va nemis tilini jonli suhbat orqali o'rganing. Xatolaringiz o'zbek tilida tushuntiriladi.">
+  <meta name="theme-color" content="#f7f7f5">
+  <meta name="description" content="Rus va nemis tilini ovozli suhbat orqali o'rganing. Xatolaringiz o'zbek tilida tushuntiriladi.">
   <title>Til Ustoz</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
@@ -12,26 +12,23 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <img src="icon.svg" alt="" width="28" height="28">
-      <span>Til Ustoz</span>
-    </div>
-    <div class="actions" id="chatActions" hidden>
-      <span class="lang-badge" id="langBadge"></span>
-      <button type="button" class="ghost" id="newChatBtn" aria-label="Yangi suhbat">Yangi<span class="long"> suhbat</span></button>
-      <button type="button" class="ghost" id="changeLangBtn" aria-label="Tilni almashtirish"><span class="long">Tilni almashtirish</span><span class="short">Til</span></button>
-    </div>
+    <span class="brand">tilustoz</span>
+    <button type="button" class="icon-btn" id="themeBtn" aria-label="Rangni almashtirish">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.8"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></g></svg>
+    </button>
+    <span></span>
   </header>
 
-  <main id="welcome" class="welcome">
-    <h1>Rus va nemis tilini suhbat orqali o'rganing</h1>
-    <p class="lead">Ustoz bilan tanlagan tilingizda yozishasiz. Xatolaringiz darhol tuzatiladi va <strong>o'zbek tilida</strong> tushuntiriladi.</p>
-
+  <!-- 1. Til tanlash -->
+  <main id="startScreen" class="screen start">
+    <div class="face-slot" data-face="calm" data-state="idle"></div>
+    <h1>Ustoz bilan gaplashib o'rganing</h1>
+    <p class="lead">10 daqiqalik ovozli dars. Ustoz siz bilan tanlagan tilingizda gaplashadi, xatolaringizni esa <strong>o'zbek tilida</strong> tushuntiradi.</p>
     <div class="lang-cards">
       <button type="button" class="lang-card" data-lang="ru">
         <span class="flag">🇷🇺</span>
         <span class="lang-name">Rus tili</span>
-        <span class="lang-native">Русский язык</span>
+        <span class="lang-native">Русский</span>
       </button>
       <button type="button" class="lang-card" data-lang="de">
         <span class="flag">🇩🇪</span>
@@ -39,24 +36,60 @@
         <span class="lang-native">Deutsch</span>
       </button>
     </div>
-
-    <ul class="how">
-      <li><b>1.</b> Tilni tanlang. Ustoz siz bilan salomlashadi.</li>
-      <li><b>2.</b> O'sha tilda javob yozing, xato qilishdan qo'rqmang.</li>
-      <li><b>3.</b> Ustoz xatoni to'g'rilaydi, qoidani o'zbekcha tushuntiradi va yangi savol beradi.</li>
-    </ul>
+    <p class="hint">Mikrofonga ruxsat so'raladi. Eng yaxshi ishlashi uchun Chrome brauzeridan foydalaning.</p>
   </main>
 
-  <main id="chat" class="chat" hidden>
-    <div class="messages" id="messages" aria-live="polite"></div>
-    <form class="composer" id="composer">
-      <textarea id="input" rows="1" maxlength="2000" placeholder="Xabar yozing..." aria-label="Xabar" autocomplete="off"></textarea>
-      <button type="submit" id="sendBtn" aria-label="Yuborish">
-        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6l.1 6.5L15 12 3.5 13.9z" fill="currentColor"/></svg>
-      </button>
-    </form>
+  <!-- 2. Dars -->
+  <main id="lessonScreen" class="screen lesson" hidden>
+    <div class="lesson-bar">
+      <span class="timer" id="timer">00:00 / 10:00</span>
+      <button type="button" class="stop-btn" id="stopBtn"><span class="square"></span>Stop</button>
+    </div>
+
+    <div class="stage">
+      <button type="button" class="face-slot big" id="face" data-face="calm" data-state="idle" aria-label="Gapirish uchun bosing"></button>
+      <div class="status" id="status">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-2.1A7 7 0 0 0 19 12z" fill="currentColor"/></svg>
+        <span id="statusText">Tayyorlanmoqda...</span>
+      </div>
+      <p class="subtitle" id="subtitle" aria-live="polite"></p>
+    </div>
+
+    <div class="controls">
+      <div class="speak-lang" role="group" aria-label="Qaysi tilda gapirasiz">
+        <button type="button" class="pill active" data-speak="target" id="speakTarget">Ruscha</button>
+        <button type="button" class="pill" data-speak="uz">O'zbekcha</button>
+      </div>
+      <div class="control-row">
+        <button type="button" class="round-btn" id="keyboardBtn" aria-label="Yozib yuborish">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6 10h1M9 10h1M12 10h1M15 10h1M18 10h0M7 14h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button type="button" class="mic-btn" id="micBtn" aria-label="Gapirish">
+          <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-2.1A7 7 0 0 0 19 12z" fill="currentColor"/></svg>
+        </button>
+        <button type="button" class="round-btn" id="subsBtn" aria-label="Matnni ko'rsatish" aria-pressed="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6 14h5M13 14h5M6 10.5h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <form class="type-form" id="typeForm" hidden>
+        <input id="typeInput" type="text" maxlength="500" autocomplete="off" placeholder="Yozing va Enter bosing...">
+        <button type="submit">Yuborish</button>
+      </form>
+    </div>
   </main>
 
+  <!-- 3. Dars tugadi -->
+  <main id="endScreen" class="screen end" hidden>
+    <div class="face-slot" data-face="excited" data-state="idle"></div>
+    <h1>Dars tugadi!</h1>
+    <p class="lead" id="endText"></p>
+    <div class="end-actions">
+      <button type="button" class="primary" id="againBtn">Yana gaplashish</button>
+      <button type="button" class="secondary" id="homeBtn">Tilni almashtirish</button>
+    </div>
+  </main>
+
+  <script src="face.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

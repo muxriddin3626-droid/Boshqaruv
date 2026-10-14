@@ -3,7 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
-const { SYSTEM_PROMPT, LANGUAGES } = require('./prompt');
+const { SYSTEM_PROMPT, LANGUAGES, MOODS, REPLY_SCHEMA } = require('./prompt');
 
 if (!process.env.ANTHROPIC_API_KEY) {
   console.error('ANTHROPIC_API_KEY topilmadi. .env faylida ANTHROPIC_API_KEY ni belgilang.');
@@ -21,7 +21,7 @@ const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 // Suhbat tarixi brauzerda saqlanadi va har so'rovda yuboriladi. Server faqat
 // oxirgi MAX_HISTORY ta xabarni Claude'ga uzatadi.
 const MAX_HISTORY = 40;
-const MAX_MESSAGE_CHARS = 2000;
+const MAX_MESSAGE_CHARS = 4000;
 const MAX_BODY_BYTES = 200 * 1024;
 
 // Bitta IP manzildan daqiqasiga RATE_LIMIT tadan ortiq so'rov qabul qilinmaydi.
@@ -119,11 +119,21 @@ function cleanMessages(raw) {
   return messages;
 }
 
+const REFUSAL_REPLY = {
+  mood: 'calm',
+  segments: [{ lang: 'uz', text: "Kechirasiz, bu haqda gaplasha olmayman. Keling, boshqa mavzuda gaplashamiz." }],
+};
+
+// Claude javobi JSON ko'rinishida keladi: { mood, segments: [{ lang, text }] }.
+// Tarixga ham aynan shu JSON matni yoziladi, shunda model o'z formatini ko'radi.
 async function askTutor(lang, messages) {
   const response = await client.beta.messages.create({
     model: MODEL,
     max_tokens: 4000,
-    output_config: { effort: EFFORT },
+    output_config: {
+      effort: EFFORT,
+      format: { type: 'json_schema', schema: REPLY_SCHEMA },
+    },
     // Xavfsizlik filtri so'rovni rad etsa, server boshqa modelda qayta urinadi.
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default',
@@ -134,15 +144,16 @@ async function askTutor(lang, messages) {
     messages,
   });
 
-  if (response.stop_reason === 'refusal') {
-    return "Kechirasiz, bu savolga javob bera olmayman. Keling, boshqa mavzuda gaplashamiz! 🙂";
-  }
+  if (response.stop_reason === 'refusal') return REFUSAL_REPLY;
 
-  return response.content
+  const text = response.content
     .filter((b) => b.type === 'text')
     .map((b) => b.text)
-    .join('\n')
-    .trim();
+    .join('');
+  const reply = JSON.parse(text);
+  const segments = (reply.segments || []).filter((s) => s && typeof s.text === 'string' && s.text.trim());
+  if (!segments.length) throw new Error("Bo'sh javob");
+  return { mood: MOODS.includes(reply.mood) ? reply.mood : 'calm', segments };
 }
 
 async function handleChat(req, res) {
@@ -169,7 +180,7 @@ async function handleChat(req, res) {
 
   try {
     const reply = await askTutor(lang, messages);
-    sendJson(res, 200, { reply });
+    sendJson(res, 200, reply);
   } catch (err) {
     if (err instanceof Anthropic.RateLimitError) {
       sendJson(res, 503, { error: "Hozir so'rovlar ko'p, bir daqiqadan keyin yana yozing." });
