@@ -584,6 +584,7 @@ window.Games = (() => {
       if (ctx.exam) {
         const passed = ratio >= C.PASS_RATIO;
         window.Learn.completeStep(lang, ctx.unit, 'exam', { ratio, passed });
+        if (passed) window.Cert.checkNew();
         title = passed ? `🎉 Imtihondan o'tdingiz! ${total} dan ${score}` : `${total} dan ${score} — yana bir urinish`;
         const idx = C.UNITS.findIndex((u) => u.id === ctx.unit);
         const next = C.UNITS[idx + 1];

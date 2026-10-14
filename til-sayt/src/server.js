@@ -14,6 +14,11 @@ const {
   REPORT_PROMPT,
   REPORT_SCHEMA,
   COURSE,
+  EXAMS,
+  EXAM_SCHEMAS,
+  GRADE_SCHEMA,
+  examSectionPrompt,
+  examGradePrompt,
   GAMES,
   gamePrompt,
   sessionPrompt,
@@ -419,6 +424,124 @@ async function handleGame(req, res) {
   }
 }
 
+// ---------- Sinov imtihonlari ----------
+
+function findSection(lang, examId, sectionId) {
+  const exam = Object.hasOwn(LANGUAGES, lang) && EXAMS.find(lang, examId);
+  const section = exam && exam.sections.find((x) => x.id === sectionId);
+  return section ? { exam, section, kind: EXAMS.SECTION_INFO[section.id].kind } : null;
+}
+
+function cleanExamSection(kind, raw) {
+  if (kind === 'choice') {
+    const passages = (raw.passages || [])
+      .map((p) => ({
+        title: str(p && p.title, 120),
+        text: str(p && p.text, 3000),
+        questions: (Array.isArray(p && p.questions) ? p.questions : [])
+          .map((q) => {
+            const correct = str(q && q.correct, 160);
+            return { question: str(q && q.question, 400), correct, wrong: cleanWrong(q && q.wrong, correct) };
+          })
+          .filter((q) => q.question && q.correct && q.wrong.length >= 2)
+          .slice(0, 12),
+      }))
+      .filter((p) => p.questions.length)
+      .slice(0, 5);
+    const count = passages.reduce((n, p) => n + p.questions.length, 0);
+    return count >= 4 ? { instructions_uz: str(raw.instructions_uz, 400), passages } : null;
+  }
+  if (kind === 'writing') {
+    const task = str(raw.task, 1200);
+    const points = (Array.isArray(raw.points) ? raw.points : []).map((x) => str(x, 200)).filter(Boolean).slice(0, 5);
+    const minWords = Number.isInteger(raw.min_words) ? Math.min(Math.max(raw.min_words, 20), 250) : 40;
+    return task ? { instructions_uz: str(raw.instructions_uz, 400), task, task_uz: str(raw.task_uz, 1200), points, min_words: minWords } : null;
+  }
+  const tasks = (Array.isArray(raw.tasks) ? raw.tasks : [])
+    .map((t) => ({ prompt: str(t && t.prompt, 400), prompt_uz: str(t && t.prompt_uz, 400) }))
+    .filter((t) => t.prompt)
+    .slice(0, 4);
+  return tasks.length ? { instructions_uz: str(raw.instructions_uz, 400), tasks } : null;
+}
+
+async function handleExamSection(req, res) {
+  if (rateLimited('chat', clientIp(req))) {
+    sendJson(res, 429, { error: "So'rovlar juda ko'p. Bir daqiqadan keyin yana urinib ko'ring." });
+    return;
+  }
+  const body = await readJson(req, res);
+  if (!body) return;
+  const found = findSection(body.lang, body.exam, body.section);
+  if (!found) {
+    sendJson(res, 400, { error: "Noto'g'ri so'rov." });
+    return;
+  }
+  try {
+    const raw = await askJson({
+      system: examSectionPrompt(body.lang, found.exam, found.section),
+      messages: [{ role: 'user', content: "Topshiriqni tayyorla." }],
+      schema: EXAM_SCHEMAS[found.kind],
+    });
+    const content = raw && cleanExamSection(found.kind, raw);
+    if (!content) {
+      sendJson(res, 502, { error: "Topshiriqni tayyorlab bo'lmadi, qayta urinib ko'ring." });
+      return;
+    }
+    sendJson(res, 200, content);
+  } catch (err) {
+    sendClaudeError(res, err);
+  }
+}
+
+async function handleExamGrade(req, res) {
+  if (rateLimited('chat', clientIp(req))) {
+    sendJson(res, 429, { error: "So'rovlar juda ko'p." });
+    return;
+  }
+  const body = await readJson(req, res);
+  if (!body) return;
+  const found = findSection(body.lang, body.exam, body.section);
+  if (!found || found.kind === 'choice') {
+    sendJson(res, 400, { error: "Noto'g'ri so'rov." });
+    return;
+  }
+
+  // Topshiriq va javoblarni bitta matnga yig'amiz.
+  let content;
+  if (found.kind === 'writing') {
+    const answer = str(body.answer, 4000);
+    content = `Topshiriq: ${str(body.task && body.task.task, 1200)}\nKerakli nuqtalar: ${(Array.isArray(body.task && body.task.points) ? body.task.points : []).map((x) => str(x, 200)).join('; ')}\nKamida ${Number(body.task && body.task.min_words) || 40} so'z.\n\n<answer>\n${answer || '(javob yozilmagan)'}\n</answer>`;
+  } else {
+    const tasks = Array.isArray(body.task && body.task.tasks) ? body.task.tasks.slice(0, 4) : [];
+    const answers = Array.isArray(body.answer) ? body.answer : [];
+    content = tasks
+      .map((t, i) => `${i + 1}-topshiriq: ${str(t && t.prompt, 400)}\n<answer>\n${str(answers[i], 2000) || '(javob berilmagan)'}\n</answer>`)
+      .join('\n\n');
+  }
+
+  try {
+    const g = await askJson({
+      system: examGradePrompt(body.lang, found.exam, found.section),
+      messages: [{ role: 'user', content }],
+      schema: GRADE_SCHEMA,
+    });
+    if (!g) {
+      sendJson(res, 502, { error: "Baholab bo'lmadi." });
+      return;
+    }
+    const list = (v) => (Array.isArray(v) ? v.map((x) => str(x, 300)).filter(Boolean).slice(0, 5) : []);
+    sendJson(res, 200, {
+      score: Math.max(0, Math.min(100, Math.round(Number(g.score) || 0))),
+      feedback: str(g.feedback, 800),
+      strengths: list(g.strengths),
+      improvements: list(g.improvements),
+      corrected: str(g.corrected, 4000),
+    });
+  } catch (err) {
+    sendClaudeError(res, err);
+  }
+}
+
 function escapeXml(s) {
   return s.replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[c]);
 }
@@ -478,6 +601,8 @@ const ROUTES = {
   '/api/chat': handleChat,
   '/api/report': handleReport,
   '/api/game': handleGame,
+  '/api/exam/section': handleExamSection,
+  '/api/exam/grade': handleExamGrade,
   '/api/tts': handleTts,
 };
 

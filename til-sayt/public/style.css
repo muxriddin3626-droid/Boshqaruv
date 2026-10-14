@@ -951,3 +951,113 @@ h1 {
 }
 
 .toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+/* Imtihon sinovi */
+
+.exam-card { border-color: #a35cf0; background: color-mix(in srgb, #a35cf0 10%, var(--surface)); }
+
+.disclaimer { max-width: 520px; margin: 0 0 14px; font-size: 13px; color: var(--muted); }
+
+.exam-list { width: 100%; max-width: 560px; display: grid; gap: 14px; text-align: left; }
+
+.exam-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.exam-item h2 { margin: 0; font-size: 18px; }
+.exam-item .primary { align-self: stretch; }
+.hint-left { margin: 4px 0 0; color: var(--muted); font-size: 13px; text-align: left; }
+.hint-left.enough { color: #2fb36d; font-weight: 600; }
+.tries { margin: 0; padding-left: 18px; font-size: 14px; }
+.tries .pass { color: #2fb36d; }
+.tries .fail { color: var(--danger); }
+
+.exam-timer { font: 600 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.exam-timer.low { color: var(--danger); animation: fade 0.6s ease-in-out infinite alternate; }
+
+.exam-steps { width: 100%; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 6px 0 10px; }
+.exam-step { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.exam-step.done { border-color: #2fb36d; color: #2fb36d; }
+.exam-step.now { border-color: var(--text); color: var(--text); font-weight: 600; }
+
+.exam-body { width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 14px; text-align: left; }
+.exam-instr { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); font-size: 14px; }
+
+.passage { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+.passage h3 { margin: 0; font-size: 16px; }
+.passage-text { white-space: pre-line; padding: 12px; border-radius: 12px; background: var(--bg); line-height: 1.6; font-size: 16px; }
+.exam-q { margin: 8px 0 0; font-weight: 600; }
+.options.compact { gap: 6px; }
+.options.compact .option { padding: 9px 12px; font-size: 15px; }
+.option.chosen { border-color: #4f8ef7; background: color-mix(in srgb, #4f8ef7 14%, var(--surface)); }
+.play-btn.small { align-self: flex-start; padding: 9px 18px; font-size: 15px; }
+.play-btn:disabled { opacity: 0.5; }
+.points { margin: 0; padding-left: 20px; }
+
+.exam-text {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  resize: vertical;
+}
+
+.mic-btn.small { width: 52px; height: 52px; }
+.exam-submit { position: sticky; bottom: 0; width: 100%; display: flex; justify-content: center; padding: 14px 0 calc(8px + env(safe-area-inset-bottom)); background: var(--bg); }
+
+/* Imtihon natijasi */
+
+.exam-result { gap: 6px; }
+.exam-name { margin: 0; color: var(--muted); }
+.exam-result h1 { font-size: 56px; margin: 0; }
+.verdict { max-width: 520px; margin: 4px 0 14px; padding: 10px 14px; border-radius: 14px; font-weight: 600; }
+.verdict.pass { background: color-mix(in srgb, #2fb36d 14%, var(--surface)); }
+.verdict.fail { background: color-mix(in srgb, var(--danger) 12%, var(--surface)); }
+
+.section-scores { width: 100%; max-width: 520px; display: grid; gap: 10px; margin-bottom: 14px; }
+.score-row { display: grid; grid-template-columns: 9.5em 1fr 3.4em; align-items: center; gap: 10px; text-align: left; font-size: 14px; }
+.score-bar { position: relative; height: 12px; border-radius: 999px; background: var(--border); }
+.score-fill { height: 100%; border-radius: inherit; }
+.score-fill.pass { background: #2fb36d; }
+.score-fill.fail { background: var(--danger); }
+.pass-line { position: absolute; top: -4px; width: 2px; height: 20px; background: var(--text); opacity: 0.5; }
+
+#examFeedback { width: 100%; max-width: 560px; display: grid; gap: 10px; margin-bottom: 16px; text-align: left; }
+.feedback-block { padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.feedback-block summary { font-weight: 700; cursor: pointer; }
+.feedback-block h4 { margin: 12px 0 4px; }
+.feedback-block ul { margin: 0; padding-left: 20px; }
+.exam-mistakes { list-style: none; padding: 0 !important; display: grid; gap: 8px; margin-top: 10px !important; }
+.exam-mistakes li { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: var(--bg); }
+.exam-mistakes .wrong { color: var(--danger); }
+.exam-mistakes .correct { color: #2fb36d; }
+.weak-tip { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px; border-radius: 14px; background: var(--surface); border: 1px dashed var(--border); text-align: center; }
+.weak-tip p { margin: 0; }
+
+/* Sertifikatlar */
+
+.name-field { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; text-align: left; font-size: 14px; color: var(--muted); }
+.name-field input { padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; font-size: 17px; }
+
+.cert-list { width: 100%; max-width: 520px; display: grid; gap: 10px; margin-bottom: 16px; }
+.cert-item { display: flex; align-items: center; gap: 14px; padding: 14px; border: 1.5px solid var(--border); border-radius: 16px; background: var(--surface); text-align: left; }
+.cert-item:disabled { opacity: 0.55; cursor: default; }
+.cert-item.earned { border-color: #b8892d; background: color-mix(in srgb, #b8892d 10%, var(--surface)); }
+.cert-badge { font-size: 28px; }
+
+.cert-preview { width: 100%; max-width: 720px; display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 14px; }
+.cert-preview canvas { width: 100%; height: auto; border-radius: 8px; box-shadow: 0 6px 30px rgba(0, 0, 0, 0.15); }
+
+.stop-btn { white-space: nowrap; }
+.game-title { min-width: 0; text-align: center; font-size: 15px; line-height: 1.25; }
+.exam-run .game-bar { display: grid; grid-template-columns: auto 1fr auto; }

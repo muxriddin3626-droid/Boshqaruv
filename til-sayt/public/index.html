@@ -73,6 +73,14 @@
       <span class="due-badge" id="dueBadge" hidden>0</span>
     </button>
 
+    <button type="button" class="big-card exam-card" id="examCard">
+      <span class="act-icon">🎓</span>
+      <span class="act-text">
+        <span class="act-title">Imtihonga tayyorgarlik</span>
+        <span class="act-desc" id="examCardDesc">Goethe / ТРКИ formatida sinov imtihoni</span>
+      </span>
+    </button>
+
     <h2 class="section-title">Erkin mashq</h2>
     <button type="button" class="settings-summary" id="settingsSummary">
       <span id="settingsText"></span>
@@ -128,6 +136,7 @@
     <p class="focus-note" id="focusNote" hidden>✨ Ustoz oldingi xatolaringizni eslaydi — darslar va o'yinlarda ularni qayta mashq qildiradi</p>
     <div class="menu-links">
       <button type="button" class="link-btn" id="notebookBtn">📒 Daftar</button>
+      <button type="button" class="link-btn" id="certBtn">📜 Sertifikatlar</button>
       <button type="button" class="link-btn" id="reminderBtn">⏰ Eslatma</button>
       <button type="button" class="link-btn" id="menuHomeBtn">🌐 Tilni almashtirish</button>
     </div>
@@ -398,6 +407,71 @@
     <div id="storyBody" class="story-body"></div>
   </main>
 
+  <!-- 12. Imtihonlar ro'yxati -->
+  <main id="examListScreen" class="screen exams" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">🎓 Imtihon sinovi</span>
+      <span></span>
+    </div>
+    <p class="lead small">Haqiqiy imtihon formatidagi mashq: vaqt cheklovi, barcha bo'limlar va ballar. Yozish va gapirishni ustoz imtihon oluvchidek baholaydi.</p>
+    <p class="disclaimer">⚠️ Bu — tayyorgarlik uchun sinov. Rasmiy sertifikatni faqat imtihon markazi (Goethe-Institut, ТРКИ markazlari) beradi.</p>
+    <div class="exam-list" id="examList"></div>
+  </main>
+
+  <!-- 13. Imtihon bo'limi -->
+  <main id="examScreen" class="screen exam-run" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="examQuitBtn">✕ To'xtatish</button>
+      <span class="game-title" id="examSectionTitle"></span>
+      <span class="exam-timer" id="examTimer">00:00</span>
+    </div>
+    <div class="exam-steps" id="examSteps"></div>
+    <div class="exam-body" id="examBody"></div>
+    <div class="exam-submit">
+      <button type="button" class="primary big" id="examSubmitBtn">Bo'limni yakunlash</button>
+    </div>
+  </main>
+
+  <!-- 14. Imtihon natijasi -->
+  <main id="examResultScreen" class="screen exam-result" hidden>
+    <div class="face-slot" id="examResultFace" data-face="excited" data-state="idle"></div>
+    <p class="exam-name" id="examResultName"></p>
+    <h1 id="examResultTitle"></h1>
+    <p class="verdict" id="examVerdict"></p>
+    <div class="section-scores" id="sectionScores"></div>
+    <div id="examFeedback"></div>
+    <div class="end-actions">
+      <button type="button" class="primary" id="examAgainBtn">Yana sinov</button>
+      <button type="button" class="secondary" id="examListBtn">Imtihonlar</button>
+      <button type="button" class="secondary" data-back="menu">Menyu</button>
+    </div>
+    <p class="disclaimer">Bu sinov natijasi — haqiqiy imtihondagi natijangizni taxminiy ko'rsatadi, rasmiy hujjat emas.</p>
+  </main>
+
+  <!-- 15. Sertifikatlar -->
+  <main id="certScreen" class="screen certs" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">📜 Sertifikatlar</span>
+      <span></span>
+    </div>
+    <p class="lead small">Kursning har bir darajasini (barcha bosqich imtihonlarini) tugatsangiz, ismingiz yozilgan sertifikat olasiz.</p>
+    <label class="name-field">
+      <span>Sertifikatda yoziladigan ism-familiyangiz</span>
+      <input type="text" id="certName" maxlength="40" autocomplete="name" placeholder="Masalan: Muxriddin Karimov">
+    </label>
+    <div class="cert-list" id="certList"></div>
+    <div class="cert-preview" id="certPreview" hidden>
+      <canvas id="certCanvas" width="1600" height="1131" aria-label="Sertifikat"></canvas>
+      <div class="end-actions">
+        <button type="button" class="primary" id="certDownload">⬇️ Yuklab olish</button>
+        <button type="button" class="secondary" id="certShare">📤 Ulashish</button>
+      </div>
+    </div>
+    <p class="disclaimer">Til Ustoz sertifikati o'quv yutug'ingizni tasdiqlaydi, lekin rasmiy til sertifikati (ТРКИ, Goethe-Zertifikat) emas va ularning o'rnini bosmaydi.</p>
+  </main>
+
   <dialog class="sheet" id="reminderDialog">
     <form method="dialog">
       <h2>⏰ Har kuni eslatsin</h2>
@@ -414,9 +488,12 @@
 
   <script src="face.js"></script>
   <script src="course.js"></script>
+  <script src="exams.js"></script>
   <script src="learn.js"></script>
   <script src="app.js"></script>
   <script src="games.js"></script>
   <script src="practice.js"></script>
+  <script src="exam.js"></script>
+  <script src="cert.js"></script>
 </body>
 </html>

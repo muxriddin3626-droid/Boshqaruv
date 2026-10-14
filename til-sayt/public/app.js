@@ -24,6 +24,10 @@
     review: $('reviewScreen'),
     notebook: $('notebookScreen'),
     story: $('storyScreen'),
+    examList: $('examListScreen'),
+    exam: $('examScreen'),
+    examResult: $('examResultScreen'),
+    cert: $('certScreen'),
   };
   const face = $('face');
   const statusText = $('statusText');

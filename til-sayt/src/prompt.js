@@ -370,7 +370,127 @@ function gamePrompt(lang, type, settings, focus) {
   return parts.join('\n\n');
 }
 
+// ---------- Sinov imtihonlari ----------
+
+const EXAMS = require('../public/exams.js');
+
+const CHOICE_SCHEMA = {
+  type: 'object',
+  properties: {
+    instructions_uz: { type: 'string' },
+    passages: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          text: { type: 'string' },
+          questions: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                question: { type: 'string' },
+                correct: { type: 'string' },
+                wrong: { type: 'array', items: { type: 'string' } },
+              },
+              required: ['question', 'correct', 'wrong'],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ['title', 'text', 'questions'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['instructions_uz', 'passages'],
+  additionalProperties: false,
+};
+
+const WRITING_SCHEMA = {
+  type: 'object',
+  properties: {
+    instructions_uz: { type: 'string' },
+    task: { type: 'string' },
+    task_uz: { type: 'string' },
+    points: { type: 'array', items: { type: 'string' } },
+    min_words: { type: 'integer' },
+  },
+  required: ['instructions_uz', 'task', 'task_uz', 'points', 'min_words'],
+  additionalProperties: false,
+};
+
+const SPEAKING_SCHEMA = {
+  type: 'object',
+  properties: {
+    instructions_uz: { type: 'string' },
+    tasks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { prompt: { type: 'string' }, prompt_uz: { type: 'string' } },
+        required: ['prompt', 'prompt_uz'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['instructions_uz', 'tasks'],
+  additionalProperties: false,
+};
+
+const SECTION_TASKS = {
+  grammar: `1 ta passage ber: title bo'sh qolishi mumkin, text — bo'sh satr (""). questions — 10 ta gap; har birida bo'sh joy ___ bilan belgilangan, correct — to'g'ri shakl, wrong — 3 ta noto'g'ri shakl.`,
+  reading: `2-3 ta passage ber: har birida title va o'rganilayotgan tildagi matn (darajaga mos uzunlikda), va 3-4 ta savol. Savollar o'rganilayotgan tilda; correct — to'g'ri javob, wrong — 2 ta noto'g'ri javob. Jami 9-10 ta savol.`,
+  listening: `3-4 ta passage ber: text — ovoz chiqarib o'qiladigan dialog yoki e'lon (dialogda gapiruvchilarni "— " bilan boshla, ism yozma). title — vaziyat (masalan "Vokzalda"). Har biriga 2-3 ta savol, o'rganilayotgan tilda; wrong — 2 ta noto'g'ri javob. Jami 8-10 ta savol. Javobni faqat eshitib bilsa bo'ladigan qil.`,
+  writing: `Bitta yozma topshiriq ber: task — o'rganilayotgan tilda topshiriq matni (vaziyat), task_uz — uning o'zbekcha tarjimasi, points — javobda albatta bo'lishi kerak bo'lgan 3 ta nuqta (o'zbekcha), min_words — kerakli so'zlar soni.`,
+  speaking: `3 ta og'zaki topshiriq ber, osondan qiyinga: prompt — imtihon oluvchining savoli yoki vaziyat (o'rganilayotgan tilda), prompt_uz — o'zbekcha tarjimasi.`,
+};
+
+function examSectionPrompt(lang, exam, section) {
+  return [
+    `Sen ${exam.name} imtihonining tajribali tuzuvchisisan. O'zbek tilida so'zlashuvchi o'quvchi uchun haqiqiy imtihonga iloji boricha o'xshash SINOV topshiriq tuz.`,
+    `Daraja: ${exam.level}. O'rganilayotgan til: ${LANGUAGES[lang]}.`,
+    `Bo'lim: ${section.format}`,
+    "instructions_uz — o'quvchiga o'zbekcha qisqa yo'riqnoma (nima qilish kerak). Har bir savolning faqat bitta aniq to'g'ri javobi bo'lsin. Har safar yangi mavzu va vaziyat o'yla.",
+    SECTION_TASKS[section.id],
+  ].join('\n\n');
+}
+
+const EXAM_SCHEMAS = {
+  choice: CHOICE_SCHEMA,
+  writing: WRITING_SCHEMA,
+  speaking: SPEAKING_SCHEMA,
+};
+
+const GRADE_SCHEMA = {
+  type: 'object',
+  properties: {
+    score: { type: 'integer' },
+    feedback: { type: 'string' },
+    strengths: { type: 'array', items: { type: 'string' } },
+    improvements: { type: 'array', items: { type: 'string' } },
+    corrected: { type: 'string' },
+  },
+  required: ['score', 'feedback', 'strengths', 'improvements', 'corrected'],
+  additionalProperties: false,
+};
+
+function examGradePrompt(lang, exam, section) {
+  const what = section.id === 'writing' ? 'yozma ishini' : "og'zaki javoblarini (nutqni tanish dasturi yozib olgan — tinish belgilari va katta-kichik harfni hisobga olma)";
+  return [
+    `Sen ${exam.name} imtihonining tajribali, adolatli imtihon oluvchisisan. O'quvchining ${what} ${exam.level} darajasi mezonlari bo'yicha bahola: topshiriqni bajarish, so'z boyligi, grammatika, ${section.id === 'writing' ? 'matn tuzilishi' : 'ravonlik va tushunarlilik'}.`,
+    "score — 0 dan 100 gacha butun son (haqiqiy imtihondagidek: 60 — o'tish chegarasi atrofida). Bo'sh yoki mavzuga aloqasiz javobga past ball qo'y.",
+    "feedback — o'zbekcha 2-3 gaplik umumiy baho. strengths — 1-3 ta kuchli tomon (o'zbekcha). improvements — 2-4 ta aniq tavsiya, xato va to'g'ri variant bilan (o'zbekcha). corrected — o'quvchi javobining to'g'rilangan varianti (o'rganilayotgan tilda).",
+  ].join('\n\n');
+}
+
 module.exports = {
+  EXAMS,
+  EXAM_SCHEMAS,
+  GRADE_SCHEMA,
+  examSectionPrompt,
+  examGradePrompt,
   COURSE,
   GAMES,
   gamePrompt,

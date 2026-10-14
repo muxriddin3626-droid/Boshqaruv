@@ -43,6 +43,26 @@ uslubida). Telefonda ham, kompyuterda ham ishlaydi:
 
 Bu ma'lumotlarning hammasi foydalanuvchi brauzerida (localStorage) saqlanadi.
 
+### Imtihonga tayyorgarlik va sertifikat
+
+- 🎓 **Sinov imtihoni** — rasmiy imtihonlar formatida: rus tili uchun **ТРКИ A1**
+  va **ТРКИ-1 (B1)**, nemis tili uchun **Goethe A1** va **Goethe B1**
+  (`public/exams.js`). Bo'limlar: lug'at va grammatika (ТРКИ), o'qish, tinglash
+  (matnni 2 marta eshitish mumkin), yozish va gapirish — har biri vaqt cheklovi
+  bilan. Yozish va gapirishni Claude imtihon oluvchidek 0-100 ballga baholaydi,
+  kuchli tomonlar, tavsiyalar va to'g'rilangan variantni beradi. Natijada har
+  bo'lim balli, o'tish chegarasi (Goethe — jami 60%, ТРКИ — har bo'limdan 66%),
+  "o'tish ehtimoli" va eng zaif bo'lim uchun mashq tavsiyasi chiqadi.
+  To'liq sinov yoki faqat bitta bo'limni mashq qilish mumkin.
+- 📜 **Til Ustoz sertifikati** — kursning A1, A2 yoki B1 darajasidagi barcha bosqich
+  imtihonlari topshirilsa, ism-familiya yozilgan sertifikat (PNG) chiqadi: yuklab
+  olish yoki telefondan ulashish mumkin. Sertifikatda "rasmiy til sertifikati emas"
+  deb aniq yozilgan — u ТРКИ yoki Goethe-Zertifikat o'rnini bosmaydi.
+
+Rasmiy sertifikat faqat imtihon markazida topshirib olinadi: nemis tili —
+Goethe-Institut (Toshkentda bor), shuningdek telc, ÖSD, TestDaF; rus tili — ТРКИ
+(TORFL) test markazlari. Sana va narxlarni markazning rasmiy saytidan tekshiring.
+
 ### O'yinlar va testlar
 
 Menyuda ovozli darsdan tashqari o'yinlar bor:
@@ -64,7 +84,8 @@ O'qituvchining qoidalari va o'yin topshiriqlari `src/prompt.js` faylida turadi.
 - `public/` — sayt sahifasi (`index.html`, `style.css`, `face.js` — yuzcha,
   `app.js` — menyu, ovoz, taymer va suhbat, `games.js` — o'yinlar va talaffuz,
   `practice.js` — kurs, takrorlash, daftar, hikoya, kunlik maqsad, `learn.js` —
-  brauzerda saqlanadigan o'rganish ma'lumotlari, `course.js` — kurs bosqichlari)
+  brauzerda saqlanadigan o'rganish ma'lumotlari, `course.js` — kurs bosqichlari,
+  `exams.js` va `exam.js` — sinov imtihonlari, `cert.js` — sertifikat)
 - `src/server.js` — sahifani ko'rsatadi va `/api/chat` orqali Claude bilan
   bog'lanadi. API kalit faqat serverda turadi, brauzerga chiqmaydi.
 
