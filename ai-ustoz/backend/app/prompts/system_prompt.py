@@ -405,6 +405,14 @@ def format_weak_spots(weak_spots: list[WeakSpot]) -> str:
 # prompt ~2 barobar qisqaradi, har bir ovozli javob arzonroq.
 VOICE_PERSONA = BASE_PERSONA.split("FORMATLASH QOIDALARI:")[0].rstrip() + "\n"
 
+# Matnli suhbatda ekran burchagidagi kichik yuzcha shu teg bo'yicha kayfiyatini almashtiradi (o'quvchi tegni ko'rmaydi).
+EMOTION_TAG_RULE = (
+    "\nKAYFIYAT TEGI: har bir javobingni bitta kayfiyat tegi bilan boshla — [neutral], [thinking], [happy], "
+    "[laughing], [shocked] yoki [angry] (masalan: \"[happy] Barakalla! ...\"). To'g'ri javob — [happy], "
+    "kulgili xato — [laughing], g'alati javob — [shocked], dangasalik — [angry], tushuntirish — [neutral]. "
+    "Teg faqat eng boshida, bir marta.\n"
+)
+
 
 def build_system_prompt(ctx: StudentContext, today: date | None = None, for_voice: bool = False) -> str:
     """StudentContext asosida to'liq system promptni yig'ib qaytaradi (`for_voice` — chizmalarsiz qisqa)."""
@@ -427,7 +435,7 @@ def build_system_prompt(ctx: StudentContext, today: date | None = None, for_voic
         else "Hali test natijalari yo'q."
     )
 
-    return f"""{VOICE_PERSONA if for_voice else BASE_PERSONA}
+    return f"""{VOICE_PERSONA if for_voice else BASE_PERSONA + EMOTION_TAG_RULE}
 
 JORIY O'QUVCHI HAQIDA MA'LUMOT:
 - Ism: {ctx.full_name}

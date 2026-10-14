@@ -3,6 +3,8 @@ export type Subject = "kimyo" | "biologiya";
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  /** O'quvchi savolni ovozli xabar bilan yuborgan. */
+  voice?: boolean;
 }
 
 export interface WeakSpot {
@@ -22,16 +24,10 @@ export interface ProgressResponse {
 
 export type VoiceMode = "tutor" | "debate";
 
-export interface VoiceTurnResponse {
-  text: string;
-  emotion: string;
-  audio_base64: string | null;
+export interface VoiceSpeakResponse {
+  audio_base64: string;
   audio_mime: string;
-}
-
-export interface VoiceOptions {
-  premium_allowed: boolean;
-  turns_per_day: number;
+  spoken_text: string;
 }
 
 export interface VoiceSessionResponse {

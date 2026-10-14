@@ -67,29 +67,21 @@ class VoiceSessionIn(BaseModel):
     subject: SubjectSchema = SubjectSchema.KIMYO
 
 
-class VoiceTurnIn(BaseModel):
-    """Arzon ovozli rejim: o'quvchi gapi (brauzer matnga aylantirgan). Bo'sh matn — suhbat boshi."""
+class VoiceSpeakIn(BaseModel):
+    """Ustozning yozma javobini ovozga aylantirish: qisqa xulosa (avtomatik) yoki to'liq (tugma bilan)."""
 
-    mode: VoiceMode = VoiceMode.TUTOR
-    subject: SubjectSchema = SubjectSchema.KIMYO
-    text: str = Field(default="", max_length=1500)
-    reset: bool = False
+    text: str = Field(min_length=1, max_length=12000)
+    full: bool = False
 
 
-class VoiceTurnOut(BaseModel):
-    text: str
-    emotion: str
-    audio_base64: str | None = None  # MP3; TTS ishlamasa None — faqat subtitr
+class VoiceSpeakOut(BaseModel):
+    audio_base64: str
     audio_mime: str = "audio/mpeg"
+    spoken_text: str
 
 
 class VoiceTranscriptOut(BaseModel):
     text: str
-
-
-class VoiceOptionsOut(BaseModel):
-    premium_allowed: bool  # OpenAI jonli (Realtime) ovozi — qimmat
-    turns_per_day: int
 
 
 class VoiceSessionOut(BaseModel):

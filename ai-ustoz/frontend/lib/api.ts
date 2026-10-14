@@ -45,9 +45,8 @@ import type {
   TestResult,
   TestSession,
   VoiceMode,
-  VoiceOptions,
   VoiceSessionResponse,
-  VoiceTurnResponse,
+  VoiceSpeakResponse,
 } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -167,24 +166,14 @@ async function detailOrThrow(response: Response, fallback: string): Promise<Resp
   return response;
 }
 
-export async function fetchVoiceOptions(token: string): Promise<VoiceOptions> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/voice/options`, { headers: authHeaders(token) });
-  return (await detailOrThrow(response, "Ovozli rejim sozlamalarini olib bo'lmadi")).json();
-}
-
-/** Tejamkor ovozli rejim: o'quvchi gapi -> ustoz javobi (matn, kayfiyat, MP3). Bo'sh matn — suhbat boshi. */
-export async function voiceTurn(
-  token: string,
-  payload: { subject: Subject; mode: VoiceMode; text: string; reset?: boolean },
-  signal?: AbortSignal
-): Promise<VoiceTurnResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/voice/turn`, {
+/** Ustoz javobini ovozga aylantiradi: `full=false` — qisqa boshi (avtomatik), `full=true` — to'liq. */
+export async function voiceSpeak(token: string, text: string, full = false): Promise<VoiceSpeakResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/voice/speak`, {
     method: "POST",
     headers: authHeaders(token),
-    body: JSON.stringify(payload),
-    signal,
+    body: JSON.stringify({ text, full }),
   });
-  return (await detailOrThrow(response, "Ustoz javob bera olmadi")).json();
+  return (await detailOrThrow(response, "Javobni ovozga aylantirib bo'lmadi")).json();
 }
 
 /** Brauzer nutqni o'zi taniy olmasa: yozib olingan ovoz -> matn (serverda). */

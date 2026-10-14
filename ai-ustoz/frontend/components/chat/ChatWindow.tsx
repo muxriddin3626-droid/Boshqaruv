@@ -2,10 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { splitEmotion } from "@/lib/emotion";
 import { ChatLimitError, fetchPlan, fetchProgress, generateAudioLecture, streamChatMessage } from "@/lib/api";
 import type { ChatMessage, ProgressResponse, Subject } from "@/lib/types";
 
+import type { Emotion } from "../voice/realtimeEvents";
+import TutorMascot from "../voice/TutorMascot";
+
 import MessageBubble from "./MessageBubble";
+import { useSpeaker } from "./useSpeaker";
+import { useVoiceInput } from "./useVoiceInput";
 
 const SUBJECT_LABELS: Record<Subject, string> = {
   kimyo: "Kimyo",
@@ -48,6 +54,9 @@ export default function ChatWindow({
   const scrollRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const handledLessonRef = useRef<number | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const speaker = useSpeaker(token, setNotice);
+  const voice = useVoiceInput(token, (text) => void handleSend(text, true), setNotice);
 
   useEffect(() => {
     fetchProgress(token, subject)
@@ -75,22 +84,24 @@ export default function ChatWindow({
     await generateAudioLecture(token, subject, title, content);
   }
 
-  async function handleSend(preset?: string) {
+  async function handleSend(preset?: string, viaVoice = false) {
     const text = (preset ?? input).trim();
     if (!text || isSending) return;
 
     if (preset === undefined) setInput("");
+    setNotice(null);
+    speaker.stop();
     setIsSending(true);
-    // Telefonda suhbat oynasi yuzcha ostida — javob ko'rinishi uchun unga suriladi.
-    if (window.matchMedia("(max-width: 767px)").matches) rootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    setMessages((prev) => [...prev, { role: "user", content: text }, { role: "assistant", content: "" }]);
+    setMessages((prev) => [...prev, { role: "user", content: text, voice: viaVoice }, { role: "assistant", content: "" }]);
 
+    let answer = "";
     try {
       await streamChatMessage(
         token,
         subject,
         text,
         (chunk) => {
+          answer += chunk;
           setMessages((prev) => {
             const updated = [...prev];
             const lastIndex = updated.length - 1;
@@ -100,6 +111,8 @@ export default function ChatWindow({
         },
         () => setIsSending(false)
       );
+      // Ovozli savolga — javobning qisqa boshi ovoz bilan (to'liq javob "Eshitish" tugmasida).
+      if (viaVoice && answer.trim()) void speaker.play(`m${messages.length + 1}`, splitEmotion(answer).body, false);
     } catch (err) {
       setIsSending(false);
       setMessages((prev) => {
@@ -116,8 +129,33 @@ export default function ChatWindow({
     }
   }
 
+  const lastAnswer = [...messages].reverse().find((message) => message.role === "assistant" && message.content);
+  const mascotEmotion: Emotion = isSending ? "thinking" : (lastAnswer && splitEmotion(lastAnswer.content).emotion) || "neutral";
+  const status = speaker.speakingKey
+    ? "Gapiryapman..."
+    : speaker.loadingKey
+      ? "Ovozga aylantiryapman..."
+      : isSending
+        ? "O'ylayapman..."
+        : voice.state === "recording"
+          ? "Tinglayapman..."
+          : "Yozing yoki 🎙 bosib ayting";
+
   return (
     <div ref={rootRef} className="flex h-full flex-col">
+      {/* Kichik yuzcha suhbat tepasida: kayfiyatni ko'rsatadi, gapirganda og'zi qimirlaydi, chizmalarni yopmaydi. */}
+      <div className="mb-2 flex items-center gap-3 rounded-xl border border-white/5 bg-black/20 px-2 py-1" data-testid="chat-mascot">
+        <div className="w-14 shrink-0">
+          <TutorMascot emotion={mascotEmotion} amplitude={speaker.amplitude} isActive={Boolean(speaker.speakingKey) || isSending} />
+        </div>
+        <p className="flex-1 text-xs text-gray-400">{status}</p>
+        {speaker.speakingKey && (
+          <button onClick={speaker.stop} className="rounded-lg border border-gray-700 px-2.5 py-1 text-xs text-gray-300">
+            ⏹ To&apos;xtatish
+          </button>
+        )}
+      </div>
+
       {progress?.current_lesson_title && (
         <div className="mb-3 rounded-xl border border-neon-cyan/30 bg-surface/80 px-4 py-3 text-sm text-neon-cyan">
           Kecha <strong>{progress.current_lesson_title}</strong> mavzusida
@@ -141,7 +179,7 @@ export default function ChatWindow({
         )}
         {messages.length === 0 && (
           <p className={`${todayTopic ? "mt-4" : "mt-10"} text-center text-gray-500`}>
-            {SUBJECT_LABELS[subject]} bo&apos;yicha savolingizni yozing. AI Ustoz sizni tinglayapti.
+            {SUBJECT_LABELS[subject]} bo&apos;yicha savolingizni yozing yoki 🎙 tugmasini bosib ovozli yuboring.
           </p>
         )}
         {messages.map((message, index) => {
@@ -154,6 +192,16 @@ export default function ChatWindow({
               onGenerateAudio={
                 message.role === "assistant" && !isStreamingThisMessage ? handleGenerateAudio : undefined
               }
+              onSpeak={
+                message.role === "assistant" && !isStreamingThisMessage
+                  ? (body) => {
+                      speaker.unlock();
+                      void speaker.play(`m${index}`, body, true);
+                    }
+                  : undefined
+              }
+              speakState={speaker.speakingKey === `m${index}` ? "speaking" : speaker.loadingKey === `m${index}` ? "loading" : "idle"}
+              onStopSpeaking={speaker.stop}
             />
           );
         })}
@@ -166,6 +214,13 @@ export default function ChatWindow({
         >
           Darsni tugatdim — uyga vazifa olish
         </button>
+      )}
+
+      {notice && <p className="mt-2 text-center text-xs text-amber-300">{notice}</p>}
+      {voice.state !== "idle" && (
+        <p className="mt-2 rounded-lg bg-neon-cyan/10 px-3 py-2 text-xs text-neon-cyan" data-testid="voice-interim">
+          {voice.state === "recording" ? `🎙 Gapiring, tugatgach ⏹ ni bosing... ${voice.interim}` : "Ovozingiz matnga aylantirilmoqda..."}
+        </p>
       )}
 
       <div className="mt-3 flex gap-2">
@@ -182,6 +237,20 @@ export default function ChatWindow({
           rows={2}
           className="flex-1 resize-none rounded-xl border border-neon-violet/30 bg-surface px-4 py-3 text-sm text-gray-100 outline-none focus:border-neon-cyan"
         />
+        <button
+          onClick={() => {
+            speaker.unlock();
+            voice.toggle();
+          }}
+          disabled={isSending || voice.state === "transcribing"}
+          aria-label={voice.state === "recording" ? "Ovozli xabarni yuborish" : "Ovozli xabar yozish"}
+          className={`rounded-xl px-4 py-3 text-lg text-white disabled:opacity-50 ${
+            voice.state === "recording" ? "animate-pulse bg-red-500" : "border border-neon-violet/40 bg-surface"
+          }`}
+          data-testid="voice-button"
+        >
+          {voice.state === "recording" ? "⏹" : voice.state === "transcribing" ? "…" : "🎙"}
+        </button>
         <button
           onClick={() => handleSend()}
           disabled={isSending}

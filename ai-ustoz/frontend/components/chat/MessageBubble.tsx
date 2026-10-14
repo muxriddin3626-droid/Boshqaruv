@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import { useState } from "react";
 
+import { splitEmotion } from "@/lib/emotion";
 import type { ChatMessage } from "@/lib/types";
 import { toSpeechText } from "@/lib/visuals/blocks";
 
@@ -14,10 +15,23 @@ interface MessageBubbleProps {
   onGenerateAudio?: (content: string) => Promise<void>;
   /** Javob hali kelayotgan bo'lsa chizmalar chizilmaydi (blok chala bo'lishi mumkin). */
   isStreaming?: boolean;
+  /** Ustoz javobini to'liq ovozda eshitish. */
+  onSpeak?: (text: string) => void;
+  onStopSpeaking?: () => void;
+  speakState?: "idle" | "loading" | "speaking";
 }
 
-export default function MessageBubble({ message, onGenerateAudio, isStreaming = false }: MessageBubbleProps) {
+export default function MessageBubble({
+  message,
+  onGenerateAudio,
+  isStreaming = false,
+  onSpeak,
+  onStopSpeaking,
+  speakState = "idle",
+}: MessageBubbleProps) {
   const isUser = message.role === "user";
+  // Javob boshidagi kayfiyat tegi ([happy] ...) yuzcha uchun — o'quvchiga ko'rsatilmaydi.
+  const body = isUser ? message.content : splitEmotion(message.content).body;
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
 
   async function handleGenerateAudio() {
@@ -25,7 +39,7 @@ export default function MessageBubble({ message, onGenerateAudio, isStreaming = 
     setIsGeneratingAudio(true);
     try {
       // Chizma bloklari va formulalar ovozda o'qilmasin.
-      await onGenerateAudio(toSpeechText(message.content));
+      await onGenerateAudio(toSpeechText(body));
     } finally {
       setIsGeneratingAudio(false);
     }
@@ -42,18 +56,30 @@ export default function MessageBubble({ message, onGenerateAudio, isStreaming = 
         )}
       >
         {isUser ? (
-          <p className="whitespace-pre-wrap">{message.content}</p>
+          <p className="whitespace-pre-wrap">
+            {message.voice && <span aria-label="Ovozli xabar">🎤 </span>}
+            {message.content}
+          </p>
         ) : (
           <>
-            <MarkdownRenderer content={message.content} isStreaming={isStreaming} />
-            {onGenerateAudio && message.content && (
-              <button
-                onClick={handleGenerateAudio}
-                disabled={isGeneratingAudio}
-                className="mt-2 text-xs text-neon-cyan underline disabled:opacity-50"
-              >
-                {isGeneratingAudio ? "Audio tayyorlanmoqda..." : "Audio qilish"}
-              </button>
+            <MarkdownRenderer content={body} isStreaming={isStreaming} />
+            {body && (onSpeak || onGenerateAudio) && (
+              <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                {onSpeak && (
+                  <button
+                    onClick={() => (speakState === "speaking" ? onStopSpeaking?.() : onSpeak(body))}
+                    disabled={speakState === "loading"}
+                    className="text-neon-cyan underline disabled:opacity-50"
+                  >
+                    {speakState === "speaking" ? "⏹ To'xtatish" : speakState === "loading" ? "Tayyorlanmoqda..." : "🔊 Eshitish"}
+                  </button>
+                )}
+                {onGenerateAudio && (
+                  <button onClick={handleGenerateAudio} disabled={isGeneratingAudio} className="text-gray-400 underline disabled:opacity-50">
+                    {isGeneratingAudio ? "Audio tayyorlanmoqda..." : "Ma'ruzalarga saqlash"}
+                  </button>
+                )}
+              </div>
             )}
           </>
         )}

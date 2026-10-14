@@ -1,14 +1,13 @@
 """
-Ovozli suhbat (tutor va debate rejimlari), ikki xil:
+Ovoz:
 
-1. Tejamkor (standart): brauzer o'quvchi nutqini matnga aylantiradi -> `/turn` matnli AI (Gemini yoki
-   OpenAI) javob yozadi -> TTS bilan MP3 qaytadi. Kuniga ~30 daqiqa ham oyiga bir necha dollar.
-2. Jonli (Premium): OpenAI Realtime — `/session` ephemeral client_secret beradi, audio brauzer va
-   OpenAI orasida to'g'ridan-to'g'ri oqadi. Tabiiyroq, lekin bir necha barobar qimmat — o'quvchilarga
-   faqat REALTIME_VOICE_FOR_STUDENTS=true bo'lsa ochiq (administrator har doim ishlata oladi).
+1. Ovozli xabarlar (standart): o'quvchi chatga ovozli savol yuboradi (brauzer matnga aylantiradi yoki
+   `/transcribe`), ustoz odatdagidek yozma javob beradi (chizmalar bilan), `/speak` javobni ovozga
+   aylantiradi — qisqa xulosa avtomatik, to'liq javob tugma bilan.
+2. Jonli (Premium) ovoz: OpenAI Realtime — `/session`. Qimmat, shuning uchun ilovada ko'rsatilmaydi;
+   faqat administrator yoki REALTIME_VOICE_FOR_STUDENTS=true bo'lsa ruxsat.
 """
 import base64
-import json
 import logging
 import re
 import uuid
@@ -23,32 +22,24 @@ from app.core.config import get_settings
 from app.core.security import get_current_user_id
 from app.db.redis_client import get_redis
 from app.db.session import get_db
-from app.models.schemas import (
-    VoiceMode,
-    VoiceOptionsOut,
-    VoiceSessionIn,
-    VoiceSessionOut,
-    VoiceTranscriptOut,
-    VoiceTurnIn,
-    VoiceTurnOut,
-)
+from app.models.schemas import VoiceMode, VoiceSessionIn, VoiceSessionOut, VoiceSpeakIn, VoiceSpeakOut, VoiceTranscriptOut
 from app.prompts.debate_prompt import build_debate_system_prompt
 from app.prompts.exam_feedback_prompt import build_exam_feedback_addendum
 from app.prompts.system_prompt import build_system_prompt
-from app.prompts.voice_persona import ECONOMY_VOICE_ADDENDUM, SET_EMOTION_TOOL, VOICE_ADDENDUM, VOICE_EMOTIONS
+from app.prompts.voice_persona import SET_EMOTION_TOOL, VOICE_ADDENDUM
 from app.services import ai_budget, exam_pipeline_service, openai_service, progress_service
 from app.services.openai_service import DEFAULT_VOICE_INSTRUCTIONS, RealtimeSessionError, create_realtime_voice_session
-from app.services.usage_limits import use_daily, voice_limit, voice_turn_limit
+from app.services.usage_limits import use_daily, voice_limit, voice_reply_limit
 
 router = APIRouter(prefix="/api/v1/voice", tags=["voice"])
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-HISTORY_MAX_MESSAGES = 16
-HISTORY_TTL_SECONDS = 2 * 60 * 60
-SPOKEN_MAX_CHARS = 600
+# Avtomatik o'qiladigan qisqa xulosa va "To'liq eshitish" chegarasi (TTS narxi belgilar soniga bog'liq).
+SUMMARY_MAX_CHARS = 350
+FULL_MAX_CHARS = 1500
 MAX_UPLOAD_BYTES = 3 * 1024 * 1024
-START_MESSAGE = "(Ovozli dars boshlandi. Salomlash va darhol bitta savol ber.)"
+EMOTION_TAG = re.compile(r"^\s*\[[a-z]{3,10}\]\s*")
 
 
 async def _instructions(db: AsyncSession, user_id: uuid.UUID, subject: str, mode: VoiceMode) -> str:
@@ -61,79 +52,40 @@ async def _instructions(db: AsyncSession, user_id: uuid.UUID, subject: str, mode
     return (build_system_prompt(student_ctx, for_voice=True) or DEFAULT_VOICE_INSTRUCTIONS) + exam_addendum
 
 
-def split_emotion(reply: str) -> tuple[str, str]:
-    """"[happy] Barakalla!" -> ("happy", "Barakalla!"). Teg bo'lmasa — neutral."""
-    match = re.match(r"\s*\[([a-z]+)\]\s*", reply)
-    if match and match.group(1) in VOICE_EMOTIONS:
-        return match.group(1), reply[match.end():]
-    return "neutral", re.sub(r"^\s*\[[^\]]{1,20}\]\s*", "", reply)
-
-
-def to_spoken(text: str) -> str:
-    """Ovozga aytiladigan toza matn: chizma bloklari, LaTeX, markdown belgilari olib tashlanadi; uzun bo'lsa qisqaradi."""
+def to_spoken(text: str, max_chars: int = SUMMARY_MAX_CHARS) -> str:
+    """Ovozga aytiladigan toza matn: kayfiyat tegi, chizma bloklari, LaTeX, markdown olib tashlanadi; gap oxirida qisqaradi."""
+    text = EMOTION_TAG.sub("", text)
     text = re.sub(r"```.*?(```|$)", " ", text, flags=re.S)
     text = re.sub(r"\$+([^$]*)\$+", r"\1", text)
     text = re.sub(r"\\ce\{([^}]*)\}", r"\1", text)
     text = text.replace("<=>", " qaytar reaksiyada ").replace("->", " dan hosil bo'ladi ")
     text = re.sub(r"[*_#`>|\\]+", "", text)
     text = re.sub(r"\s+", " ", text).strip()
-    if len(text) > SPOKEN_MAX_CHARS:
-        cut = text[:SPOKEN_MAX_CHARS]
-        end = max(cut.rfind(". "), cut.rfind("? "), cut.rfind("! "))
-        text = cut[: end + 1] if end > SPOKEN_MAX_CHARS // 2 else cut.rstrip() + "..."
+    if len(text) > max_chars:
+        cut = text[: max_chars + 1]
+        end = max(cut.rfind(". "), cut.rfind("? "), cut.rfind("! "), cut.rfind(".\n"))
+        text = cut[: end + 1] if end > max_chars // 3 else cut[:max_chars].rstrip() + "..."
     return text
 
 
-def _history_key(user_id: uuid.UUID, subject: str, mode: VoiceMode) -> str:
-    return f"voice_hist:{user_id}:{subject}:{mode.value}"
-
-
-@router.get("/options", response_model=VoiceOptionsOut)
-async def voice_options(user_id: uuid.UUID = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
-    premium = settings.realtime_voice_for_students or await ai_budget.is_admin(db, user_id)
-    return VoiceOptionsOut(premium_allowed=premium, turns_per_day=settings.voice_turns_per_user_per_day)
-
-
-@router.post("/turn", response_model=VoiceTurnOut)
-async def voice_turn(
-    payload: VoiceTurnIn,
+@router.post("/speak", response_model=VoiceSpeakOut)
+async def speak(
+    payload: VoiceSpeakIn,
     user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    """Tejamkor ovozli rejimning bitta navbati: o'quvchi gapi -> ustoz javobi (matn + kayfiyat + MP3)."""
-    await use_daily(redis, db, user_id, voice_turn_limit())
-    subject = payload.subject.value
-    key = _history_key(user_id, subject, payload.mode)
-    if payload.reset:
-        await redis.delete(key)
-    history = [json.loads(item) for item in await redis.lrange(key, 0, -1)]
-
-    instructions = await _instructions(db, user_id, subject, payload.mode) + ECONOMY_VOICE_ADDENDUM
-    user_text = payload.text.strip() or START_MESSAGE
-    messages = [{"role": "system", "content": instructions}, *history, {"role": "user", "content": user_text}]
+    """Ustoz javobini ovozga aylantiradi: `full=false` — 2-3 gaplik boshi (avtomatik), `full=true` — to'liq."""
+    spoken = to_spoken(payload.text, FULL_MAX_CHARS if payload.full else SUMMARY_MAX_CHARS)
+    if not spoken:
+        raise HTTPException(status_code=422, detail="Bu javobda o'qiladigan matn yo'q (faqat chizma).")
+    await use_daily(redis, db, user_id, voice_reply_limit())
     try:
-        response = await openai_service._text_completion(messages, temperature=0.7)
-    except Exception as exc:  # noqa: BLE001 — sababini o'quvchiga tushunarli qilib aytamiz
-        logger.warning("Ovozli javob yozilmadi", exc_info=True)
+        audio = await openai_service.text_to_speech(spoken, voice=settings.tts_voice_name)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Javob ovozga aylanmadi", exc_info=True)
         raise HTTPException(status_code=502, detail=openai_service.describe_error_for_student(exc)) from exc
-
-    emotion, reply = split_emotion(response.choices[0].message.content or "")
-    spoken = to_spoken(reply) or "Kechirasiz, qaytadan aytib bera olasizmi?"
-
-    async with redis.pipeline(transaction=True) as pipe:
-        pipe.rpush(key, json.dumps({"role": "user", "content": user_text}), json.dumps({"role": "assistant", "content": spoken}))
-        pipe.ltrim(key, -HISTORY_MAX_MESSAGES, -1)
-        pipe.expire(key, HISTORY_TTL_SECONDS)
-        await pipe.execute()
-
-    audio_base64 = None
-    try:
-        audio = await openai_service.text_to_speech(spoken, voice=settings.economy_voice_name)
-        audio_base64 = base64.b64encode(audio).decode("ascii")
-    except Exception:  # noqa: BLE001 — ovoz bo'lmasa ham subtitr ko'rinadi
-        logger.warning("Ovozli javob TTS bo'lmadi", exc_info=True)
-    return VoiceTurnOut(text=spoken, emotion=emotion, audio_base64=audio_base64)
+    return VoiceSpeakOut(audio_base64=base64.b64encode(audio).decode("ascii"), spoken_text=spoken)
 
 
 @router.post("/transcribe", response_model=VoiceTranscriptOut)

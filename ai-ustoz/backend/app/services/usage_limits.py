@@ -54,13 +54,14 @@ def voice_limit() -> DailyLimit:
     )
 
 
-def voice_turn_limit() -> DailyLimit:
+def voice_reply_limit() -> DailyLimit:
     return DailyLimit(
-        "voice_turn",
-        settings.voice_turns_per_user_per_day,
-        settings.voice_turns_global_per_day,
-        "Bugungi ovozli dars vaqti tugadi (~30 daqiqa). Ertaga davom etamiz! Matnli suhbatda yozishingiz mumkin.",
-        "Bugun ovozli darslar chegarasi tugadi — matnli suhbatda davom eting.",
+        "voice_reply",
+        settings.voice_replies_per_user_per_day,
+        settings.voice_replies_global_per_day,
+        f"Bugungi ovozli javoblar chegarasi tugadi (kuniga {settings.voice_replies_per_user_per_day} ta). "
+        "Javoblarni o'qib davom eting — ertaga yana eshitasiz!",
+        "Bugun ovozli javoblar chegarasi tugadi — javoblarni o'qib davom eting.",
     )
 
 

@@ -8,7 +8,6 @@ import LecturesView, { type LectureRequest } from "@/components/lectures/Lecture
 import LoginForm from "@/components/auth/LoginForm";
 import ChatWindow, { type LessonRequest } from "@/components/chat/ChatWindow";
 import FlashcardDeck from "@/components/flashcards/FlashcardDeck";
-import VoicePanel from "@/components/voice/VoicePanel";
 import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
 import StudyPlanView from "@/components/plan/StudyPlanView";
 import LeaderboardView from "@/components/progress/LeaderboardView";
@@ -211,12 +210,7 @@ export default function HomePage() {
       </nav>
 
       {activeTab === "suhbat" && (
-        <section className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto md:grid-cols-3 md:overflow-hidden">
-          {/* Telefonda yuzcha va suhbat ustma-ust: bo'lim o'zi suriladi, suhbat oynasi qirqilmaydi. */}
-          <div className="flex items-center justify-center rounded-2xl border border-neon-violet/20 bg-surface/40 p-4 md:col-span-1">
-            <VoicePanel token={token} subject={subject} />
-          </div>
-          <div className="h-[85dvh] min-h-[420px] rounded-2xl border border-neon-cyan/20 bg-surface/40 p-4 md:col-span-2 md:h-auto md:min-h-0">
+        <section className="min-h-0 flex-1 rounded-2xl border border-neon-cyan/20 bg-surface/40 p-3 md:p-4">
             <ChatWindow
               token={token}
               subject={subject}
@@ -227,7 +221,6 @@ export default function HomePage() {
                 setActiveTab("homework");
               }}
             />
-          </div>
         </section>
       )}
 
