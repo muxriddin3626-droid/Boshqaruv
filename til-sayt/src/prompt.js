@@ -132,7 +132,138 @@ const REPORT_SCHEMA = {
   additionalProperties: false,
 };
 
+// ---------- O'yinlar va testlar ----------
+
+const GAME_LEVELS = {
+  auto: 'A1-A2 (boshlovchi va biroz bilgan o\'quvchi uchun aralash)',
+  a1: "A1 (boshlang'ich)",
+  b1: "A2-B1 (o'rta)",
+  b2: 'B2+ (yuqori)',
+};
+
+const GAMES = {
+  quiz: {
+    count: 8,
+    task: `8 ta test savoli tuz. Aralash bo'lsin: so'z ma'nosi, grammatika (kelishik, artikl, fe'l shakli, zamon) va bo'sh joyni to'ldirish (bo'sh joyni ___ bilan belgila). Savol matni o'zbekcha yoki o'rganilayotgan tilda bo'lishi mumkin.
+- question: savol matni
+- correct: yagona to'g'ri javob
+- wrong: 3 ta ishonarli, lekin aniq noto'g'ri javob
+- explanation: nega shu javob to'g'ri — o'zbekcha bir-ikki gap`,
+    schema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              question: { type: 'string' },
+              correct: { type: 'string' },
+              wrong: { type: 'array', items: { type: 'string' } },
+              explanation: { type: 'string' },
+            },
+            required: ['question', 'correct', 'wrong', 'explanation'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['items'],
+      additionalProperties: false,
+    },
+  },
+  match: {
+    count: 8,
+    task: `8 ta so'z yoki qisqa ibora va ularning o'zbekcha tarjimasini ber. Tarjimalar bir-biriga o'xshamasin, har biri faqat bitta so'zga mos kelsin.
+- word: o'rganilayotgan tildagi so'z (nemis otlari artikli bilan, masalan "der Tisch")
+- translation: o'zbekcha tarjima`,
+    schema: {
+      type: 'object',
+      properties: {
+        pairs: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { word: { type: 'string' }, translation: { type: 'string' } },
+            required: ['word', 'translation'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['pairs'],
+      additionalProperties: false,
+    },
+  },
+  order: {
+    count: 6,
+    task: `O'rganilayotgan tilda 6 ta gap ber (darajaga qarab 3-9 so'zli). So'zlar tartibi bir ma'noli bo'lsin — boshqa tartibda ham to'g'ri bo'ladigan gaplarni berma.
+- sentence: gap
+- translation: gapning o'zbekcha tarjimasi`,
+    schema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { sentence: { type: 'string' }, translation: { type: 'string' } },
+            required: ['sentence', 'translation'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['items'],
+      additionalProperties: false,
+    },
+  },
+  listen: {
+    count: 8,
+    task: `Eshitib topish mashqi uchun 8 ta so'z yoki qisqa ibora ber. O'quvchi ovozni eshitadi va 4 ta variantdan eshitganini tanlaydi.
+- text: o'rganilayotgan tildagi so'z yoki ibora (ovoz chiqarib o'qiladi)
+- translation: o'zbekcha tarjimasi
+- wrong: o'rganilayotgan tildagi 3 ta talaffuzi yoki yozilishi o'xshash, lekin boshqa so'z`,
+    schema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              text: { type: 'string' },
+              translation: { type: 'string' },
+              wrong: { type: 'array', items: { type: 'string' } },
+            },
+            required: ['text', 'translation', 'wrong'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['items'],
+      additionalProperties: false,
+    },
+  },
+};
+
+function gamePrompt(lang, type, settings, focus) {
+  const parts = [
+    `Sen tajribali ${LANGUAGES[lang]} o'qituvchisisan va o'zbek tilida so'zlashuvchi o'quvchi uchun qiziqarli mashq tuzasan.`,
+    `Daraja: ${GAME_LEVELS[settings.level]}.`,
+    `Mavzu: ${TOPICS[settings.topic]}.`,
+    "Barcha izoh va tarjimalar o'zbek tilida, lotin yozuvida bo'lsin. Har bir savolning faqat bitta to'g'ri javobi bo'lsin. Har safar yangi, takrorlanmaydigan misollar o'yla.",
+    GAMES[type].task,
+  ];
+  if (focus.words.length || focus.mistakes.length) {
+    parts.push(
+      "O'quvchi oxirgi ovozli darsda quyidagilarni o'rgandi yoki xato qildi. Mashqning kamida yarmini shularni takrorlashga bag'ishla:\n" +
+        [...focus.words.map((w) => `- so'z: ${w}`), ...focus.mistakes.map((m) => `- xato: ${m}`)].join('\n')
+    );
+  }
+  return parts.join('\n\n');
+}
+
 module.exports = {
+  GAMES,
+  gamePrompt,
   TUTOR_PROMPT,
   LANGUAGES,
   PERSONAS,

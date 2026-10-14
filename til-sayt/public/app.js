@@ -8,13 +8,18 @@
   const MODE_LABELS = { kind: 'Mehribon', strict: "Qattiqqo'l" };
   const THEME_KEY = 'til-ustoz-theme';
   const SETTINGS_KEY = 'til-ustoz-settings';
+  const FOCUS_KEY = 'til-ustoz-focus-';
+  const BEST_KEY = 'til-ustoz-best-';
 
   const $ = (id) => document.getElementById(id);
   const screens = {
     start: $('startScreen'),
+    menu: $('menuScreen'),
     setup: $('setupScreen'),
     lesson: $('lessonScreen'),
     end: $('endScreen'),
+    game: $('gameScreen'),
+    result: $('resultScreen'),
   };
   const face = $('face');
   const statusText = $('statusText');
@@ -104,13 +109,54 @@
     return json;
   }
 
+  // ---------- Menyu ----------
+
+  function chipLabel(group, value) {
+    const chip = document.querySelector(`[data-group="${group}"] [data-value="${value}"]`);
+    return chip ? chip.textContent : '';
+  }
+
+  function loadStored(key) {
+    try {
+      return JSON.parse(localStorage.getItem(key));
+    } catch {
+      return null;
+    }
+  }
+
+  function store(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {}
+  }
+
+  function loadFocus() {
+    const f = loadStored(FOCUS_KEY + lang);
+    return f && Array.isArray(f.words) && Array.isArray(f.mistakes) ? f : { words: [], mistakes: [] };
+  }
+
+  function openMenu(nextLang) {
+    if (nextLang) lang = nextLang;
+    const t = TUTORS[lang];
+    $('menuTitle').textContent = `${t.name} bilan ${t.lang}`;
+    $('settingsText').textContent =
+      `${settings.mode === 'strict' ? '🔥' : '😊'} ${MODE_LABELS[settings.mode]} · ${chipLabel('topic', settings.topic)} · ${chipLabel('level', settings.level)}`;
+    const best = loadStored(BEST_KEY + lang) || {};
+    document.querySelectorAll('[data-best]').forEach((el) => {
+      const b = best[el.dataset.best];
+      el.textContent = b ? `🏆 ${b.score}/${b.total}` : '';
+    });
+    const focus = loadFocus();
+    $('focusNote').hidden = !(focus.words.length || focus.mistakes.length);
+    Face.set($('menuFace'), settings.mode === 'strict' ? 'angry' : 'happy');
+    show('menu');
+  }
+
   // ---------- Sozlamalar ekrani ----------
 
-  function openSetup(nextLang) {
-    lang = nextLang;
-    const t = TUTORS[lang];
-    $('setupTitle').textContent = `${t.name} bilan ${t.lang} darsi`;
-    $('setupLead').textContent = `${t.name} — sizning ustozingiz. Qanday dars bo'lishini tanlang.`;
+  function openSetup() {
+    $('setupTitle').textContent = 'Sozlamalar';
+    $('setupLead').textContent = `${TUTORS[lang].name} qanday ustoz bo'lsin, nimani mashq qilamiz?`;
     renderSettings();
     show('setup');
   }
@@ -279,8 +325,14 @@
   }
 
   async function speakReply(segments) {
-    const token = ++speakToken;
     setPhase('speaking', `${TUTORS[lang].name} gapiryapti...`);
+    return speakSegments(segments, (seg) => setSubtitle(seg.text, seg.lang));
+  }
+
+  // Bo'laklarni navbat bilan o'qiydi. To'xtatilsa false qaytaradi.
+  async function speakSegments(segments, onSegment) {
+    stopSpeaking();
+    const token = ++speakToken;
     // Barcha bo'laklarning ovozini birdaniga so'raymiz — biri o'qilayotganda keyingisi tayyor bo'ladi.
     const pending = segments.map(fetchVoice);
     try {
@@ -288,7 +340,7 @@
         if (token !== speakToken) return false;
         const url = await pending[i];
         if (token !== speakToken) return false;
-        setSubtitle(segments[i].text, segments[i].lang);
+        if (onSegment) onSegment(segments[i]);
         if (url) await playUrl(url);
         else await speakBrowser(segments[i]);
       }
@@ -471,6 +523,10 @@
       const r = await postJson('/api/report', { lang, settings, messages });
       if (token !== reportToken) return;
       renderReport(r);
+      store(FOCUS_KEY + lang, {
+        words: (r.words || []).map((w) => w.word),
+        mistakes: (r.mistakes || []).map((m) => `${m.wrong} → ${m.correct}`),
+      });
     } catch {
       if (token !== reportToken) return;
       $('reportLoading').textContent = "Hisobotni tayyorlab bo'lmadi. Keyingi darsda albatta!";
@@ -524,11 +580,20 @@
   // ---------- Tugmalar ----------
 
   document.querySelectorAll('.lang-card').forEach((btn) => {
-    btn.addEventListener('click', () => openSetup(btn.dataset.lang));
+    btn.addEventListener('click', () => openMenu(btn.dataset.lang));
   });
 
-  $('beginBtn').addEventListener('click', startLesson);
-  $('backBtn').addEventListener('click', () => show('start'));
+  $('settingsSummary').addEventListener('click', openSetup);
+  $('setupDoneBtn').addEventListener('click', () => openMenu());
+  $('menuHomeBtn').addEventListener('click', () => show('start'));
+
+  document.querySelectorAll('.activity').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const activity = btn.dataset.activity;
+      if (activity === 'lesson') startLesson();
+      else window.Games.start(activity);
+    });
+  });
 
   function onMic() {
     if (ended) return;
@@ -551,8 +616,7 @@
 
   $('stopBtn').addEventListener('click', endLesson);
   $('againBtn').addEventListener('click', startLesson);
-  $('setupBtn').addEventListener('click', () => openSetup(lang));
-  $('homeBtn').addEventListener('click', () => show('start'));
+  $('endMenuBtn').addEventListener('click', () => openMenu());
 
   document.querySelectorAll('.pill').forEach((pill) => {
     pill.addEventListener('click', () => {
@@ -609,6 +673,23 @@
       localStorage.setItem(THEME_KEY, next);
     } catch {}
   });
+
+  // O'yinlar (games.js) uchun umumiy funksiyalar.
+  window.App = {
+    show,
+    openMenu,
+    postJson,
+    store,
+    loadStored,
+    unlockAudio,
+    speak: (segments) => speakSegments(segments),
+    stopSpeaking,
+    lang: () => lang,
+    tutor: () => TUTORS[lang],
+    settings: () => settings,
+    focus: loadFocus,
+    bestKey: () => BEST_KEY + lang,
+  };
 
   // Sahifa yopilsa yoki boshqa ilovaga o'tilsa, ovozni to'xtatamiz.
   window.addEventListener('pagehide', () => {

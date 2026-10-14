@@ -19,12 +19,26 @@ uslubida). Telefonda ham, kompyuterda ham ishlaydi:
 - dars oxirida **hisobot** chiqadi: taxminiy daraja, xatolar va ularning to'g'risi,
   yangi so'zlar tarjimasi bilan, keyingi dars uchun maslahat.
 
-O'qituvchining qoidalari `src/prompt.js` faylida turadi.
+### O'yinlar va testlar
+
+Til tanlangach menyu ochiladi: ovozli darsdan tashqari 4 ta o'yin bor.
+
+- 📝 **Test** — grammatika, so'z ma'nosi va bo'sh joyni to'ldirish, har javobdan keyin o'zbekcha izoh;
+- 🧩 **So'z juftlash** — so'zni o'zbekcha tarjimasiga ulash (so'z bosilganda ovozda o'qiladi);
+- 🔤 **Gap tuzish** — aralash so'zlardan to'g'ri gap terish;
+- 🎧 **Eshitib top** — ovozni eshitib, 4 ta o'xshash so'zdan to'g'risini tanlash.
+
+Savollarni har safar Claude yangidan tuzadi — tanlangan mavzu va darajaga mos.
+Oxirgi ovozli darsdagi xatolar va yangi so'zlar keyingi o'yinlarga qo'shiladi.
+Ustoz yuzchasi javobga qarab xursand bo'ladi, hayron qoladi yoki (qattiqqo'l
+rejimda) jahl qiladi; ball, yulduzlar va har o'yindagi eng yaxshi natija saqlanadi.
+
+O'qituvchining qoidalari va o'yin topshiriqlari `src/prompt.js` faylida turadi.
 
 ## Tuzilishi
 
 - `public/` — sayt sahifasi (`index.html`, `style.css`, `face.js` — yuzcha,
-  `app.js` — ovoz, taymer va suhbat)
+  `app.js` — menyu, ovoz, taymer va suhbat, `games.js` — o'yinlar)
 - `src/server.js` — sahifani ko'rsatadi va `/api/chat` orqali Claude bilan
   bog'lanadi. API kalit faqat serverda turadi, brauzerga chiqmaydi.
 

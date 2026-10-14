@@ -41,7 +41,54 @@
     <p class="hint">Mikrofonga ruxsat so'raladi. Eng yaxshi ishlashi uchun Chrome brauzeridan foydalaning.</p>
   </main>
 
-  <!-- 2. Dars sozlamalari -->
+  <!-- 2. Menyu -->
+  <main id="menuScreen" class="screen menu" hidden>
+    <div class="face-slot" id="menuFace" data-face="happy" data-state="idle"></div>
+    <h1 id="menuTitle">Anna bilan rus tili</h1>
+    <button type="button" class="settings-summary" id="settingsSummary">
+      <span id="settingsText"></span>
+      <span class="change">O'zgartirish</span>
+    </button>
+
+    <div class="activities">
+      <button type="button" class="activity main" data-activity="lesson">
+        <span class="act-icon">🎙️</span>
+        <span class="act-text">
+          <span class="act-title">Ovozli dars</span>
+          <span class="act-desc">10 daqiqa jonli suhbat</span>
+        </span>
+      </button>
+      <button type="button" class="activity" data-activity="quiz">
+        <span class="act-icon">📝</span>
+        <span class="act-title">Test</span>
+        <span class="act-desc">Grammatika va so'zlar</span>
+        <span class="best" data-best="quiz"></span>
+      </button>
+      <button type="button" class="activity" data-activity="match">
+        <span class="act-icon">🧩</span>
+        <span class="act-title">So'z juftlash</span>
+        <span class="act-desc">So'zni tarjimasiga ulang</span>
+        <span class="best" data-best="match"></span>
+      </button>
+      <button type="button" class="activity" data-activity="order">
+        <span class="act-icon">🔤</span>
+        <span class="act-title">Gap tuzish</span>
+        <span class="act-desc">So'zlarni to'g'ri tering</span>
+        <span class="best" data-best="order"></span>
+      </button>
+      <button type="button" class="activity" data-activity="listen">
+        <span class="act-icon">🎧</span>
+        <span class="act-title">Eshitib top</span>
+        <span class="act-desc">Eshitganingizni tanlang</span>
+        <span class="best" data-best="listen"></span>
+      </button>
+    </div>
+
+    <p class="focus-note" id="focusNote" hidden>✨ Oxirgi darsdagi xatolar va yangi so'zlar o'yinlarga qo'shiladi</p>
+    <button type="button" class="link-btn" id="menuHomeBtn">Tilni almashtirish</button>
+  </main>
+
+  <!-- 3. Sozlamalar -->
   <main id="setupScreen" class="screen setup" hidden>
     <div class="face-slot" id="setupFace" data-face="happy" data-state="idle"></div>
     <h1 id="setupTitle">Anna bilan dars</h1>
@@ -84,12 +131,11 @@
     </section>
 
     <div class="end-actions">
-      <button type="button" class="primary big" id="beginBtn">Darsni boshlash</button>
-      <button type="button" class="secondary" id="backBtn">Orqaga</button>
+      <button type="button" class="primary big" id="setupDoneBtn">Tayyor</button>
     </div>
   </main>
 
-  <!-- 3. Dars -->
+  <!-- 4. Dars -->
   <main id="lessonScreen" class="screen lesson" hidden>
     <div class="lesson-bar">
       <span class="timer" id="timer">00:00 / 10:00</span>
@@ -129,7 +175,7 @@
     </div>
   </main>
 
-  <!-- 4. Dars tugadi -->
+  <!-- 4b. Dars tugadi -->
   <main id="endScreen" class="screen end" hidden>
     <div class="face-slot" data-face="excited" data-state="idle"></div>
     <h1>Dars tugadi!</h1>
@@ -159,12 +205,46 @@
 
     <div class="end-actions">
       <button type="button" class="primary" id="againBtn">Yana gaplashish</button>
-      <button type="button" class="secondary" id="setupBtn">Boshqa mavzu</button>
-      <button type="button" class="secondary" id="homeBtn">Tilni almashtirish</button>
+      <button type="button" class="secondary" id="endMenuBtn">O'yinlar va menyu</button>
+    </div>
+  </main>
+
+  <!-- 5. O'yin -->
+  <main id="gameScreen" class="screen game" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="gameBackBtn">← Menyu</button>
+      <span class="game-title" id="gameTitle"></span>
+      <span class="game-score" id="gameScore"></span>
+    </div>
+    <div class="progress" aria-hidden="true"><div class="progress-fill" id="gameProgress"></div></div>
+
+    <div class="game-face">
+      <div class="face-slot small" id="gameFace" data-face="calm" data-state="idle"></div>
+      <p class="reaction" id="gameReaction"></p>
+    </div>
+
+    <div class="game-body" id="gameBody"></div>
+
+    <div class="feedback" id="feedback" hidden>
+      <p class="feedback-text" id="feedbackText"></p>
+      <button type="button" class="primary big" id="nextBtn">Keyingi</button>
+    </div>
+  </main>
+
+  <!-- 6. O'yin natijasi -->
+  <main id="resultScreen" class="screen end" hidden>
+    <div class="face-slot" id="resultFace" data-face="excited" data-state="idle"></div>
+    <div class="stars" id="resultStars"></div>
+    <h1 id="resultTitle"></h1>
+    <p class="lead" id="resultText"></p>
+    <div class="end-actions">
+      <button type="button" class="primary" id="replayBtn">Yana o'ynash</button>
+      <button type="button" class="secondary" id="resultMenuBtn">Menyu</button>
     </div>
   </main>
 
   <script src="face.js"></script>
   <script src="app.js"></script>
+  <script src="games.js"></script>
 </body>
 </html>

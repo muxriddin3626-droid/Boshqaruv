@@ -13,6 +13,8 @@ const {
   REPLY_SCHEMA,
   REPORT_PROMPT,
   REPORT_SCHEMA,
+  GAMES,
+  gamePrompt,
   sessionPrompt,
 } = require('./prompt');
 
@@ -297,6 +299,94 @@ async function handleReport(req, res) {
   }
 }
 
+const str = (v, max = 300) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+
+// Modeldan kelgan o'yin ma'lumotini tekshiradi: bo'sh yoki chala bandlarni tashlaydi,
+// noto'g'ri variantlar orasidan to'g'ri javobni va takrorlarni olib tashlaydi.
+function cleanWrong(list, correct) {
+  const seen = new Set([correct.toLowerCase()]);
+  const out = [];
+  for (const w of Array.isArray(list) ? list : []) {
+    const v = str(w);
+    if (v && !seen.has(v.toLowerCase())) {
+      seen.add(v.toLowerCase());
+      out.push(v);
+    }
+  }
+  return out.slice(0, 3);
+}
+
+function cleanGame(type, raw) {
+  const count = GAMES[type].count;
+  if (type === 'match') {
+    const seen = new Set();
+    const pairs = (raw.pairs || [])
+      .map((p) => ({ word: str(p && p.word, 80), translation: str(p && p.translation, 80) }))
+      .filter((p) => {
+        const key = p.translation.toLowerCase();
+        if (!p.word || !p.translation || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    return { pairs: pairs.slice(0, count) };
+  }
+  const items = (raw.items || []).map((it) => {
+    it = it || {};
+    if (type === 'quiz') {
+      const correct = str(it.correct, 120);
+      return { question: str(it.question), correct, wrong: cleanWrong(it.wrong, correct), explanation: str(it.explanation, 400) };
+    }
+    if (type === 'listen') {
+      const text = str(it.text, 120);
+      return { text, translation: str(it.translation, 120), wrong: cleanWrong(it.wrong, text) };
+    }
+    return { sentence: str(it.sentence, 200), translation: str(it.translation, 200) };
+  });
+  const ok = items.filter((it) => {
+    if (type === 'quiz') return it.question && it.correct && it.wrong.length === 3;
+    if (type === 'listen') return it.text && it.translation && it.wrong.length === 3;
+    return it.sentence.split(/\s+/).length >= 2 && it.translation;
+  });
+  return { items: ok.slice(0, count) };
+}
+
+function cleanFocus(raw) {
+  const list = (v, n) => (Array.isArray(v) ? v.map((x) => str(x, 120)).filter(Boolean).slice(0, n) : []);
+  return { words: list(raw && raw.words, 8), mistakes: list(raw && raw.mistakes, 6) };
+}
+
+async function handleGame(req, res) {
+  if (rateLimited('chat', clientIp(req))) {
+    sendJson(res, 429, { error: "So'rovlar juda ko'p. Bir daqiqadan keyin yana urinib ko'ring." });
+    return;
+  }
+  const body = await readJson(req, res);
+  if (!body) return;
+
+  const { lang, type } = body;
+  if (!Object.hasOwn(LANGUAGES, lang) || !Object.hasOwn(GAMES, type)) {
+    sendJson(res, 400, { error: "Noto'g'ri so'rov." });
+    return;
+  }
+
+  try {
+    const raw = await askJson({
+      system: gamePrompt(lang, type, cleanSettings(body.settings), cleanFocus(body.focus)),
+      messages: [{ role: 'user', content: "Mashqni tayyorla." }],
+      schema: GAMES[type].schema,
+    });
+    const game = raw && cleanGame(type, raw);
+    const size = game && (game.pairs || game.items).length;
+    if (!size || size < 3) {
+      sendJson(res, 502, { error: "Mashqni tayyorlab bo'lmadi, qayta urinib ko'ring." });
+      return;
+    }
+    sendJson(res, 200, game);
+  } catch (err) {
+    sendClaudeError(res, err);
+  }
+}
+
 function escapeXml(s) {
   return s.replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[c]);
 }
@@ -355,6 +445,7 @@ async function handleTts(req, res) {
 const ROUTES = {
   '/api/chat': handleChat,
   '/api/report': handleReport,
+  '/api/game': handleGame,
   '/api/tts': handleTts,
 };
 
