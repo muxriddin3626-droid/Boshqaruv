@@ -50,10 +50,11 @@ const AZURE_KEY = process.env.AZURE_SPEECH_KEY;
 const AZURE_REGION = process.env.AZURE_SPEECH_REGION;
 // Har bir ustozning ovozi: o'z tili, o'zbekcha tushuntirish va boshqa til uchun.
 const VOICES = {
-  ru: { ru: 'ru-RU-SvetlanaNeural', uz: 'uz-UZ-MadinaNeural', de: 'de-DE-KatjaNeural' },
-  de: { de: 'de-DE-ConradNeural', uz: 'uz-UZ-SardorNeural', ru: 'ru-RU-DmitryNeural' },
+  ru: { ru: 'ru-RU-SvetlanaNeural', uz: 'uz-UZ-MadinaNeural', de: 'de-DE-KatjaNeural', ko: 'ko-KR-SunHiNeural' },
+  de: { de: 'de-DE-ConradNeural', uz: 'uz-UZ-SardorNeural', ru: 'ru-RU-DmitryNeural', ko: 'ko-KR-InJoonNeural' },
+  ko: { ko: 'ko-KR-SunHiNeural', uz: 'uz-UZ-MadinaNeural', ru: 'ru-RU-SvetlanaNeural', de: 'de-DE-KatjaNeural' },
 };
-const VOICE_LOCALES = { ru: 'ru-RU', de: 'de-DE', uz: 'uz-UZ' };
+const VOICE_LOCALES = { ru: 'ru-RU', de: 'de-DE', ko: 'ko-KR', uz: 'uz-UZ' };
 const MAX_TTS_CHARS = 600;
 
 // Suhbat tarixi brauzerda saqlanadi va har so'rovda yuboriladi. Server suhbat

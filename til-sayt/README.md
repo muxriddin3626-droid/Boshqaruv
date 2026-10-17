@@ -1,9 +1,11 @@
-# Til Ustoz — rus va nemis tili ovozli o'qituvchisi
+# Til Ustoz — rus, nemis va koreys tili ovozli o'qituvchisi
 
-Rus yoki nemis tilini **ovozli suhbat** orqali o'rgatadigan veb-sayt (goprep.gg
+Rus, nemis yoki koreys tilini **ovozli suhbat** orqali o'rgatadigan veb-sayt (goprep.gg
 uslubida). Telefonda ham, kompyuterda ham ishlaydi:
 
-- til tanlanadi: rus tilida ustoz **Anna**, nemis tilida ustoz **Hans**;
+- til tanlanadi: rus tilida ustoz **Anna**, nemis tilida ustoz **Hans**, koreys
+  tilida ustoz **Minji** (Hangul bilan, hurmatli 해요체 uslubida; qo'shimchalarni
+  o'zbek tili qo'shimchalariga qiyoslab tushuntiradi);
 - dars oldidan tanlanadi: ustoz rejimi (**Mehribon** yoki **Qattiqqo'l** — hazil aralash
   koyiydi, lekin so'kinmaydi), mavzu (tanishuv, do'kon, restoran, sayohat, ish
   suhbati yoki erkin suhbat) va daraja ("Bilmayman" desangiz, ustoz o'zi aniqlaydi);
@@ -59,12 +61,14 @@ Bu ma'lumotlarning hammasi foydalanuvchi brauzerida (localStorage) saqlanadi.
 ### Imtihonga tayyorgarlik va sertifikat
 
 - 🎓 **Sinov imtihoni** — rasmiy imtihonlar formatida: rus tili uchun **ТРКИ A1**
-  va **ТРКИ-1 (B1)**, nemis tili uchun **Goethe A1** va **Goethe B1**
+  va **ТРКИ-1 (B1)**, nemis tili uchun **Goethe A1** va **Goethe B1**, koreys tili
+  uchun **EPS-TOPIK** (Koreyaga ishlashga borish uchun) va **TOPIK I**
+  (o'qish va tinglash, har savolda 4 variant)
   (`public/exams.js`). Bo'limlar: lug'at va grammatika (ТРКИ), o'qish, tinglash
   (matnni 2 marta eshitish mumkin), yozish va gapirish — har biri vaqt cheklovi
   bilan. Yozish va gapirishni Claude imtihon oluvchidek 0-100 ballga baholaydi,
   kuchli tomonlar, tavsiyalar va to'g'rilangan variantni beradi. Natijada har
-  bo'lim balli, o'tish chegarasi (Goethe — jami 60%, ТРКИ — har bo'limdan 66%),
+  bo'lim balli, o'tish chegarasi (Goethe — jami 60%, ТРКИ — har bo'limdan 66%, EPS-TOPIK — taxminan 40%, TOPIK I 2-daraja — 70%),
   "o'tish ehtimoli" va eng zaif bo'lim uchun mashq tavsiyasi chiqadi.
   To'liq sinov yoki faqat bitta bo'limni mashq qilish mumkin.
 - 📜 **Til Ustoz sertifikati** — kursning A1, A2 yoki B1 darajasidagi barcha bosqich

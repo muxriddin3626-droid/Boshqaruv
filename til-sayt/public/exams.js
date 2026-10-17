@@ -1,4 +1,4 @@
-// Sinov imtihonlari: rasmiy imtihonlar (Goethe, ТРКИ) formatiga o'xshatilgan mashq.
+// Sinov imtihonlari: rasmiy imtihonlar (Goethe, ТРКИ, TOPIK, EPS-TOPIK) formatiga o'xshatilgan mashq.
 // Bu fayl ham brauzerda, ham serverda ishlatiladi.
 (function (root) {
   const SECTION_INFO = {
@@ -100,6 +100,42 @@
       },
     ],
   };
+
+  EXAMS.ko = [
+    {
+      id: 'eps-topik',
+      name: 'EPS-TOPIK (Koreyada ishlash uchun koreys tili testi)',
+      short: 'EPS-TOPIK',
+      level: 'A1-A2',
+      pass: 0.4,
+      rule: 'total',
+      options: 4,
+      about:
+        "Janubiy Koreyaga ishlash tizimi (EPS) orqali borish uchun topshiriladigan koreys tili testi: o'qish va tinglash, har savolda 4 variant. Kundalik hayot va ish joyidagi vaziyatlar.",
+      note:
+        "Haqiqiy imtihonda 200 balldan kamida 80 ball kerak (taxminan 40%), lekin ishga tanlov ball bo'yicha raqobatli — qancha yuqori bo'lsa, shuncha yaxshi. Qoidalar o'zgarib turadi: O'zbekistonda Tashqi mehnat migratsiyasi agentligi va HRD Korea rasmiy manbalaridan tekshiring.",
+      sections: [
+        { id: 'reading', minutes: 12, format: "읽기 (o'qish): so'z va grammatika (bo'sh joyni to'ldirish), ish joyidagi belgilar va ogohlantirishlar (안전모 착용, 금연, 위험), e'lon, ish tartibi, ish haqi varaqasi, qisqa matnlar. Har savolda 4 variant." },
+        { id: 'listening', minutes: 12, format: "듣기 (tinglash): qisqa savol-javoblar, ish joyidagi ko'rsatmalar (rahbar ishchiga topshiriq beradi), kundalik vaziyatlar (do'kon, kasalxona, bank, transport), e'lonlar. Har savolda 4 variant." },
+      ],
+    },
+    {
+      id: 'topik-1',
+      name: 'TOPIK I (1–2-daraja)',
+      short: 'TOPIK I',
+      level: 'A1-A2',
+      pass: 0.7,
+      rule: 'total',
+      options: 4,
+      about:
+        "Koreys tilini bilish darajasi bo'yicha rasmiy test (boshlang'ich). 200 balldan 80+ — 1-daraja, 140+ — 2-daraja. Koreyada o'qish va vizalar uchun so'raladi.",
+      note: "Bu sinovda 70% — taxminan 2-daraja (140/200) chegarasiga mos.",
+      sections: [
+        { id: 'listening', minutes: 12, format: "듣기 (tinglash): qisqa dialoglar va savollar — to'g'ri javobni yoki keyingi gapni tanlash, suhbat qayerda bo'layotganini, mavzuni va tafsilotni aniqlash. Har savolda 4 variant." },
+        { id: 'reading', minutes: 15, format: "읽기 (o'qish): mavzuni topish, bo'sh joyga mos so'z yoki grammatikani (조사, 어미) tanlash, e'lon va xabarlar, qisqa matn mazmuni bo'yicha savollar, gaplar tartibi. Har savolda 4 variant." },
+      ],
+    },
+  ];
 
   function find(lang, id) {
     return (EXAMS[lang] || []).find((e) => e.id === id) || null;

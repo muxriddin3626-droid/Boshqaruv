@@ -4,7 +4,7 @@ window.Social = (() => {
   const Learn = window.Learn;
   const $ = (id) => document.getElementById(id);
   const BADGES_KEY = 'tu-badges';
-  const LANGS = ['ru', 'de'];
+  const LANGS = ['ru', 'de', 'ko'];
 
   const sumLangs = (fn) => LANGS.reduce((n, l) => n + fn(l), 0);
   const deck = () => LANGS.map((l) => Learn.deckStats(l));

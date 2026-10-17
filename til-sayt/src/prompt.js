@@ -1,10 +1,10 @@
 const COURSE = require('../public/course.js');
 const SC = require('../public/scenarios.js');
 
-const TUTOR_PROMPT = `Sen professional va tajribali rus va nemis tili o'qituvchisisiz. Sening vazifang foydalanuvchiga rus yoki nemis tillarini jonli muloqot orqali o'rgatish.
+const TUTOR_PROMPT = `Sen professional va tajribali rus, nemis va koreys tili o'qituvchisisiz. Sening vazifang foydalanuvchiga rus, nemis yoki koreys tillarini jonli muloqot orqali o'rgatish.
 
 Quyidagi qoidalarga qat'iy amal qil:
-1. Til tanlash: Foydalanuvchi qaysi tilda muloqot qilishni xohlasa (rus yoki nemis tili), suhbatni o'sha tilda olib borasan.
+1. Til tanlash: Foydalanuvchi qaysi tilda muloqot qilishni xohlasa (rus, nemis yoki koreys tili), suhbatni o'sha tilda olib borasan.
 2. Tushuntirish tili: Foydalanuvchining grammatik xatolarini, so'zlar ma'nosini va qoidalarni doimo O'ZBEK TILIDA tushuntirasan.
 3. Xatolarni tuzatish: Foydalanuvchi xato gapirsa, uni darhol qo'pol bo'lmagan tarzda to'g'rilab, to'g'ri variantini o'zbek tilida qisqacha tushuntirib o'tasan.
 4. Muloqot uslubi: Do'stona, sabrli va rag'batlantiruvchi tarzda muloqot qilasan. Har bir javobing oxirida suhbat davom etishi uchun foydalanuvchiga o'sha tilda qiziqarli savol berasan.
@@ -13,7 +13,7 @@ Quyidagi qoidalarga qat'iy amal qil:
 Bu OVOZLI dars: foydalanuvchi mikrofon orqali gapiradi, sening javobing esa ovoz chiqarib o'qiladi.
 - Jonli suhbatdagidek qisqa gapir: bir javobda 1-4 ta qisqa gap. Uzun ro'yxat va ma'ruzalardan qoch.
 - Emoji, Markdown, qavs ichidagi transliteratsiya va maxsus belgilar ishlatma — ular ovozda o'qilmaydi.
-- Javobni "segments" ro'yxatiga bo'l: har bir bo'lak bitta tilda bo'lsin ("ru", "de" yoki "uz"), shunda har birini to'g'ri talaffuz bilan o'qiymiz. O'zbekcha bo'laklarni lotin yozuvida yoz.
+- Javobni "segments" ro'yxatiga bo'l: har bir bo'lak bitta tilda bo'lsin ("ru", "de", "ko" yoki "uz"), shunda har birini to'g'ri talaffuz bilan o'qiymiz. O'zbekcha bo'laklarni lotin yozuvida yoz.
 - Foydalanuvchining gapi nutqni tanish dasturi orqali yoziladi, shuning uchun unda tinish belgilari yoki kichik xatolar bo'lishi mumkin — bunday narsalarni xato deb hisoblama, faqat aniq grammatik va so'z xatolarini tuzat.
 - "mood" — yuzchaning kayfiyati, javobingga mos tanla:
   calm — oddiy suhbat; happy — foydalanuvchi to'g'ri aytdi; excited — juda yaxshi javob yoki yutuq;
@@ -25,11 +25,18 @@ Bu OVOZLI dars: foydalanuvchi mikrofon orqali gapiradi, sening javobing esa ovoz
 const LANGUAGES = {
   ru: 'rus tili',
   de: 'nemis tili',
+  ko: 'koreys tili',
+};
+
+// Tilga xos qo'shimcha ko'rsatmalar.
+const LANG_NOTES = {
+  ko: "Koreys tilida faqat Hangul (한글) bilan yoz, romanizatsiya ishlatma. Hurmatli-norasmiy 해요체 uslubida gapir. Boshlovchiga so'z va qo'shimchalarni (은/는, 이/가, 을/를, 에, 에서) o'zbek tilidagi qo'shimchalarga qiyoslab tushuntir — so'z tartibi o'zbek tiliga o'xshashligini (ega — to'ldiruvchi — fe'l) eslatib tur.",
 };
 
 const PERSONAS = {
   ru: { name: 'Anna', about: "Moskvalik rus tili o'qituvchisi, ayol" },
   de: { name: 'Hans', about: "Berlinlik nemis tili o'qituvchisi, erkak" },
+  ko: { name: 'Minji', about: "Seullik koreys tili o'qituvchisi, ayol" },
 };
 
 const MODES = {
@@ -49,7 +56,7 @@ const TOPICS = {
   travel: "Sayohat — aeroport, mehmonxona, yo'l so'rash",
   job: "Ish suhbati — o'zini tanishtirish, tajriba, kuchli tomonlar",
   migrant:
-    "Chet elda ishlovchi migrant hayoti (Rossiya yoki Germaniyada — tanlangan tilga qarab) — politsiya hujjat tekshiruvi, ish beruvchi bilan suhbat va ish haqi, migratsiya xizmati (Rossiyada MFC/МВД, Germaniyada Ausländerbehörde), shifokor, kvartira ijarasi, bank va pul o'tkazmasi. Amaliy, kundalik iboralar.",
+    "Chet elda ishlovchi migrant hayoti (Rossiya, Germaniya yoki Janubiy Koreyada — tanlangan tilga qarab) — politsiya hujjat tekshiruvi, ish beruvchi bilan suhbat va ish haqi, migratsiya xizmati (Rossiyada MFC/МВД, Germaniyada Ausländerbehörde, Koreyada 출입국관리사무소 va 고용센터), shifokor, kvartira ijarasi, bank va pul o'tkazmasi. Amaliy, kundalik iboralar.",
 };
 
 const LEVELS = {
@@ -119,6 +126,7 @@ const PROFILE_TEXT = {
   age: { u18: '18 yoshgacha', '18_25': '18-25 yosh', '26_35': '26-35 yosh', '36_50': '36-50 yosh', '50p': "50 yoshdan katta" },
   goal: {
     patent: 'Rossiyada ishlash uchun patent olish',
+    eps: "Janubiy Koreyada ishlash (EPS-TOPIK imtihoni orqali)",
     work: 'chet elda ishlash',
     study: "o'qish",
     family: "oila, ko'chib o'tish",
@@ -160,22 +168,24 @@ function sessionPrompt(lang, settings, memory, profile) {
   if (scenario) {
     return [
       `Foydalanuvchi tanlagan til: ${LANGUAGES[lang]}. Suhbatni shu tilda olib bor.`,
+      LANG_NOTES[lang] || '',
       `Sening asl isming ${p.name} (ustoz), lekin hozir rol o'ynaysan.`,
       ...roleplayLines(scenario),
       `Foydalanuvchi darajasi: ${LEVELS[settings.level]} Darajaga mos so'zlar ishlat.`,
       ...profileLines(profile),
-    ].join('\n\n');
+    ].filter(Boolean).join('\n\n');
   }
   const [topic, ...rest] = topicLines(lang, settings, LEVELS);
   return [
     `Foydalanuvchi tanlagan til: ${LANGUAGES[lang]}. Suhbatni shu tilda olib bor.`,
+    LANG_NOTES[lang] || '',
     `Sening isming ${p.name}, sen ${p.about}.`,
     MODES[settings.mode],
     `${topic} Suhbatni shu mavzu atrofida olib bor, rolli o'yin qilsa ham bo'ladi.`,
     ...rest,
     ...profileLines(profile),
     memoryLines(memory).join('\n'),
-  ].join('\n\n');
+  ].filter(Boolean).join('\n\n');
 }
 
 const MOODS = ['calm', 'happy', 'excited', 'thinking', 'surprised', 'angry'];
@@ -190,7 +200,7 @@ const REPLY_SCHEMA = {
       items: {
         type: 'object',
         properties: {
-          lang: { type: 'string', enum: ['ru', 'de', 'uz'] },
+          lang: { type: 'string', enum: ['ru', 'de', 'ko', 'uz'] },
           text: { type: 'string' },
         },
         required: ['lang', 'text'],
@@ -291,7 +301,7 @@ const GAMES = {
   match: {
     count: 8,
     task: `8 ta so'z yoki qisqa ibora va ularning o'zbekcha tarjimasini ber. Tarjimalar bir-biriga o'xshamasin, har biri faqat bitta so'zga mos kelsin.
-- word: o'rganilayotgan tildagi so'z (nemis otlari artikli bilan, masalan "der Tisch")
+- word: o'rganilayotgan tildagi so'z (nemis otlari artikli bilan, masalan "der Tisch"; koreyscha — Hangul bilan)
 - translation: o'zbekcha tarjima`,
     schema: {
       type: 'object',
@@ -437,6 +447,7 @@ const GAMES = {
 function gamePrompt(lang, type, settings, focus, profile) {
   const parts = [
     `Sen tajribali ${LANGUAGES[lang]} o'qituvchisisan va o'zbek tilida so'zlashuvchi o'quvchi uchun qiziqarli mashq tuzasan.`,
+    LANG_NOTES[lang] || '',
     ...topicLines(lang, settings, GAME_LEVELS),
     "Barcha izoh va tarjimalar o'zbek tilida, lotin yozuvida bo'lsin. Har bir savolning faqat bitta to'g'ri javobi bo'lsin. Har safar yangi, takrorlanmaydigan misollar o'yla.",
     GAMES[type].task,
@@ -453,7 +464,7 @@ function gamePrompt(lang, type, settings, focus, profile) {
         [...focus.words.map((w) => `- so'z: ${w}`), ...focus.mistakes.map((m) => `- xato: ${m}`)].join('\n')
     );
   }
-  return parts.join('\n\n');
+  return parts.filter(Boolean).join('\n\n');
 }
 
 // ---------- Sinov imtihonlari ----------
@@ -540,11 +551,19 @@ function examSectionPrompt(lang, exam, section) {
   return [
     `Sen ${exam.name} imtihonining tajribali tuzuvchisisan. O'zbek tilida so'zlashuvchi o'quvchi uchun haqiqiy imtihonga iloji boricha o'xshash SINOV topshiriq tuz.`,
     `Daraja: ${exam.level}. O'rganilayotgan til: ${LANGUAGES[lang]}.`,
+    LANG_NOTES[lang] || '',
     `Bo'lim: ${section.format}`,
     "instructions_uz — o'quvchiga o'zbekcha qisqa yo'riqnoma (nima qilish kerak). Har bir savolning faqat bitta aniq to'g'ri javobi bo'lsin; explanation — nega shu javob to'g'ri, o'zbekcha bir-ikki gap. Har safar yangi mavzu va vaziyat o'yla.",
     SECTION_TASKS[section.id],
-  ].join('\n\n');
+    exam.options === 4 && SECTION_INFO_KIND_CHOICE.has(section.id)
+      ? "Bu imtihonda har savolda 4 ta variant bo'ladi: wrong — aynan 3 ta noto'g'ri javob (yuqoridagi variantlar sonidan qat'i nazar)."
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 }
+
+const SECTION_INFO_KIND_CHOICE = new Set(Object.keys(EXAMS.SECTION_INFO).filter((id) => EXAMS.SECTION_INFO[id].kind === 'choice'));
 
 const EXAM_SCHEMAS = {
   choice: CHOICE_SCHEMA,

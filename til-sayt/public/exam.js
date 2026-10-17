@@ -1,4 +1,4 @@
-// Sinov imtihoni: Goethe / ТРКИ formatidagi bo'limlar, vaqt cheklovi va baholash.
+// Sinov imtihoni: Goethe / ТРКИ / TOPIK formatidagi bo'limlar, vaqt cheklovi va baholash.
 window.Exam = (() => {
   const App = window.App;
   const E = window.EXAMS;

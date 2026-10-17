@@ -96,7 +96,7 @@ window.Practice = (() => {
     $('courseCount').textContent = `${doneCount}/${C.UNITS.length}`;
 
     $('examCardDesc').textContent =
-      lang === 'ru' ? '🛂 Patent imtihoni va ТРКИ formatida sinov' : 'Goethe-Zertifikat formatida sinov';
+      { ru: '🛂 Patent imtihoni va ТРКИ formatida sinov', de: 'Goethe-Zertifikat formatida sinov', ko: '🏭 EPS-TOPIK va TOPIK I formatida sinov' }[lang];
 
     const stats = Learn.deckStats(lang);
     $('reviewDesc').textContent = stats.total

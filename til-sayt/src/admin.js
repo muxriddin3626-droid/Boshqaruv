@@ -103,9 +103,9 @@ async function handleStats(req, res) {
   // Anketa va tillar bo'yicha taqsimot (kirgan foydalanuvchilar ma'lumotidan).
   const states = await db.allStates();
   const profiles = [];
-  const langs = { ru: 0, de: 0 };
+  const langs = { ru: 0, de: 0, ko: 0 };
   for (const { data } of states) {
-    for (const lang of ['ru', 'de']) {
+    for (const lang of ['ru', 'de', 'ko']) {
       const p = data[`tu-profile-${lang}`] && data[`tu-profile-${lang}`].v;
       if (p && p.done) {
         profiles.push(p);
@@ -154,7 +154,7 @@ async function handleUser(req, res) {
   const data = await db.getState(id);
   const v = (k) => data[k] && data[k].v;
   const langs = {};
-  for (const lang of ['ru', 'de']) {
+  for (const lang of ['ru', 'de', 'ko']) {
     const deck = v(`tu-deck-${lang}`) || {};
     const course = v(`tu-course-${lang}`) || {};
     langs[lang] = {

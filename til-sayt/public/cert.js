@@ -6,7 +6,7 @@ window.Cert = (() => {
   const Learn = window.Learn;
   const $ = (id) => document.getElementById(id);
   const LEVELS = ['A1', 'A2', 'B1'];
-  const LANG_NAMES = { ru: 'Rus tili', de: 'Nemis tili' };
+  const LANG_NAMES = { ru: 'Rus tili', de: 'Nemis tili', ko: 'Koreys tili' };
   const NAME_KEY = 'tu-name';
   const certsKey = () => `tu-certs-${App.lang()}`;
 
@@ -285,7 +285,7 @@ window.Cert = (() => {
     ctx.font = `18px ${sans}`;
     ctx.fillStyle = '#8a8f96';
     ctx.fillText(
-      "Bu rasmiy til sertifikati emas — Til Ustoz ilovasidagi o'quv yutug'ini tasdiqlaydi. Rasmiy sertifikat: ТРКИ / Goethe-Zertifikat.",
+      "Bu rasmiy til sertifikati emas — Til Ustoz ilovasidagi o'quv yutug'ini tasdiqlaydi. Rasmiy sertifikat: ТРКИ / Goethe-Zertifikat / TOPIK.",
       W / 2,
       1040
     );

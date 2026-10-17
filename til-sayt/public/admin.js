@@ -4,7 +4,7 @@
   const VIEWS = ['login', 'stats', 'users', 'codes', 'settings'];
 
   const LABELS = {
-    goal: { patent: '🛂 Patent (Rossiyada ish)', work: '💼 Ish', study: "🎓 O'qish", family: '👨‍👩‍👧 Oila, ko\'chish', exam: '📜 Imtihon', travel: '✈️ Sayohat', self: "💡 O'zi uchun" },
+    goal: { patent: '🛂 Patent (Rossiyada ish)', eps: '🏭 EPS (Koreyada ish)', work: '💼 Ish', study: "🎓 O'qish", family: '👨‍👩‍👧 Oila, ko\'chish', exam: '📜 Imtihon', travel: '✈️ Sayohat', self: "💡 O'zi uchun" },
     prof: { builder: '👷 Quruvchi', driver: '🚕 Haydovchi', cook: '👨‍🍳 Oshpaz', seller: '🛒 Sotuvchi', courier: '📦 Kuryer', nurse: '🧑‍⚕️ Hamshira', factory: '🏭 Zavod', cleaner: '🧹 Tozalash', student: '🎓 Talaba', other: '✨ Boshqa' },
     level: { zero: '🌱 Noldan', little: '🌿 Biroz biladi', middle: "🌳 O'rta", good: '🏔️ Yaxshi' },
     age: { u18: '18 gacha', '18_25': '18–25', '26_35': '26–35', '36_50': '36–50', '50p': '50+' },
@@ -160,7 +160,7 @@
 
     const sv = s.survey;
     $('surveyNote').textContent = sv.total
-      ? `${sv.total} ta anketa (rus tili: ${sv.langs.ru}, nemis tili: ${sv.langs.de}). Faqat akkauntga kirganlar hisoblanadi.`
+      ? `${sv.total} ta anketa (rus tili: ${sv.langs.ru}, nemis tili: ${sv.langs.de}, koreys tili: ${sv.langs.ko || 0}). Faqat akkauntga kirganlar hisoblanadi.`
       : "Hali anketa yo'q. Faqat akkauntga kirgan foydalanuvchilarning anketasi serverga saqlanadi.";
     const dist = $('surveyDist');
     dist.textContent = '';
@@ -353,11 +353,11 @@
     );
     box.appendChild(facts);
 
-    for (const lang of ['ru', 'de']) {
+    for (const lang of ['ru', 'de', 'ko']) {
       const l = d.langs[lang];
       if (!l.profile && !l.words && !l.lessons) continue;
       const sec = el('div', 'user-lang');
-      sec.appendChild(el('h3', '', lang === 'ru' ? '🇷🇺 Rus tili' : '🇩🇪 Nemis tili'));
+      sec.appendChild(el('h3', '', { ru: '🇷🇺 Rus tili', de: '🇩🇪 Nemis tili', ko: '🇰🇷 Koreys tili' }[lang]));
       const p = l.profile || {};
       const lines = [
         p.name ? `Anketa: ${p.name}${p.city ? `, ${p.city}` : ''}${p.age ? `, ${LABELS.age[p.age] || p.age}` : ''}` : 'Anketa to\'ldirilmagan',

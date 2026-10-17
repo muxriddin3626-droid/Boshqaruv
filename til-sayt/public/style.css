@@ -164,8 +164,8 @@ h1 {
   width: 100%;
   max-width: 460px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .lang-card {
@@ -173,7 +173,7 @@ h1 {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 18px 12px;
+  padding: 16px 6px;
   border: 1px solid var(--border);
   border-radius: 18px;
   background: var(--surface);
@@ -183,7 +183,7 @@ h1 {
 .lang-card:hover { border-color: var(--text); transform: translateY(-2px); }
 
 .flag { font-size: 34px; line-height: 1; margin-bottom: 6px; }
-.lang-name { font-weight: 700; font-size: 17px; }
+.lang-name { font-weight: 700; font-size: 16px; }
 .lang-native { color: var(--muted); font-size: 14px; }
 
 /* Dars */

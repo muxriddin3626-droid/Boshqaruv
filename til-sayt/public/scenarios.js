@@ -1,7 +1,7 @@
 // Kasbiy kurslar va rolli vaziyatlar. Bu fayl ham brauzerda, ham serverda ishlatiladi.
 // Har kasbda 4 ta mavzu; har mavzuda o'z rolli vaziyati bor.
 (function (root) {
-  const COUNTRY = "o'rganilayotgan til mamlakatida (rus tili bo'lsa — Rossiyada, nemis tili bo'lsa — Germaniyada)";
+  const COUNTRY = "o'rganilayotgan til mamlakatida (rus tili bo'lsa — Rossiyada, nemis tili bo'lsa — Germaniyada, koreys tili bo'lsa — Janubiy Koreyada)";
 
   const PROFESSIONS = [
     {
@@ -96,11 +96,11 @@
 
   // Umumiy hayotiy vaziyatlar.
   const SCENARIOS = [
-    { id: 'police', icon: '👮', title: 'Politsiya hujjat tekshiruvi', role: `ko'chada hujjat tekshirayotgan politsiyachisan ${COUNTRY}`, goal: "salomlashish, hujjatlarni (pasport, patent yoki vizasi, ro'yxatdan o'tganlik) ko'rsatish, qayerda ishlashini va yashashini muloyim aytish" },
+    { id: 'police', icon: '👮', title: 'Politsiya hujjat tekshiruvi', role: `ko'chada hujjat tekshirayotgan politsiyachisan ${COUNTRY}`, goal: "salomlashish, hujjatlarni (pasport, patent yoki vizasi, ro'yxatdan o'tganlik yoki Koreyada chet ellik kartasi — 외국인등록증) ko'rsatish, qayerda ishlashini va yashashini muloyim aytish" },
     { id: 'salary', icon: '💸', title: 'Ish haqi to\'lanmayapti', role: "ish beruvchisan, ishchiga ikki haftadan beri oylik to'lamagansan va bahona qilasan", goal: "qancha va qachondan beri to'lanmaganini aytish, aniq to'lov sanasini so'rash va o'z huquqini muloyim, lekin qat'iy himoya qilish" },
-    { id: 'flat', icon: '🏠', title: 'Kvartira ijarasi', role: "kvartira egasisan, ijaraga beryapsan", goal: "narx, kommunal to'lovlar, depozit, nechta odam yashashi va ro'yxatdan o'tkazish (registratsiya/Anmeldung) haqida so'rab, kelishib olish" },
+    { id: 'flat', icon: '🏠', title: 'Kvartira ijarasi', role: "kvartira egasisan, ijaraga beryapsan", goal: "narx, kommunal to'lovlar, depozit, nechta odam yashashi va ro'yxatdan o'tkazish (registratsiya/Anmeldung/전입신고) haqida so'rab, kelishib olish" },
     { id: 'doctor', icon: '🩺', title: 'Shifokor qabulida', role: "poliklinika shifokorisan", goal: "qayeri og'riyotganini va qachondan beri ekanini aytish, shifokor savollariga javob berish va dori qanday ichilishini tushunib olish" },
-    { id: 'office', icon: '🏢', title: 'Migratsiya xizmatida', role: `migratsiya xizmati (MFC/МВД yoki Ausländerbehörde) xodimisan ${COUNTRY}`, goal: "nima uchun kelganini aytish (masalan patent yoki ro'yxatdan o'tish), kerakli hujjatlarni so'rash va keyingi qadamni tushunib olish" },
+    { id: 'office', icon: '🏢', title: 'Migratsiya xizmatida', role: `migratsiya xizmati (MFC/МВД, Ausländerbehörde yoki 출입국관리사무소) xodimisan ${COUNTRY}`, goal: "nima uchun kelganini aytish (masalan patent yoki ro'yxatdan o'tish), kerakli hujjatlarni so'rash va keyingi qadamni tushunib olish" },
     { id: 'bank', icon: '🏦', title: "Bank va pul o'tkazmasi", role: "bank xodimisan", goal: "karta ochish yoki uyga pul o'tkazish uchun nima kerakligini, komissiya va qancha vaqtda yetib borishini so'rab bilish" },
     { id: 'interview', icon: '💼', title: 'Ishga kirish suhbati', role: "kompaniya kadrlar menejerisan, ishga nomzod bilan suhbatlashasan", goal: "o'zini tanishtirish, tajriba va ko'nikmalarini aytish, ish vaqti va maosh haqida savol berish" },
     { id: 'shop', icon: '🧾', title: "Do'konda tovar qaytarish", role: "do'kon sotuvchisisan, qaytarishni unchalik xohlamaysan", goal: "tovardagi nuqsonni tushuntirish, chekni ko'rsatish va pulni qaytarish yoki almashtirishga erishish" },
