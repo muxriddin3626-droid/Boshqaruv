@@ -239,8 +239,7 @@ async function handlePhoneStart(req, res) {
   }
   await db.incrementUsage(`sms:${phone}`, day, 'sms');
   await db.incrementUsage(`smsip:${clientIp(req)}`, day, 'sms');
-  const isNew = !(await db.getUser(`p:${phone}`));
-  sendJson(res, 200, { sent: true, phone, isNew, resendIn: RESEND_SECONDS, minutes: CODE_MINUTES });
+  sendJson(res, 200, { sent: true, phone, resendIn: RESEND_SECONDS, minutes: CODE_MINUTES });
 }
 
 async function handlePhoneVerify(req, res) {

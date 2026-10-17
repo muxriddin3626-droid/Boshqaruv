@@ -171,12 +171,20 @@ window.AccountUI = (() => {
   // 998901234567 → +998 90 123 45 67
   const fmtPhone = (p) => (/^998\d{9}$/.test(p) ? p.replace(/^(998)(\d\d)(\d{3})(\d\d)(\d\d)$/, '+$1 $2 $3 $4 $5') : `+${p}`);
 
+  // Ism alohida so'ralmaydi: anketada yozilgan bo'lsa, o'shani olamiz (yangi akkaunt uchun).
+  function surveyName() {
+    for (const lang of ['ru', 'de']) {
+      const p = window.Survey && window.Survey.profile(lang);
+      if (p && p.name) return p.name;
+    }
+    return '';
+  }
+
   async function sendPhoneCode() {
     const r = await App.postJson('/api/auth/phone/start', { phone: $('phoneInput').value });
     phone.number = r.phone;
     setPhoneStep(2);
-    $('phoneName').hidden = !r.isNew;
-    $('phoneHint').textContent = `Kod ${fmtPhone(r.phone)} raqamiga yuborildi. U ${r.minutes} daqiqa amal qiladi.${r.isNew ? ' Siz yangi foydalanuvchisiz — ismingizni ham yozing.' : ''}`;
+    $('phoneHint').textContent = `Kod ${fmtPhone(r.phone)} raqamiga yuborildi. U ${r.minutes} daqiqa amal qiladi.`;
     startResendTimer(r.resendIn);
     $('phoneCode').focus();
   }
@@ -192,7 +200,7 @@ window.AccountUI = (() => {
       } else {
         const code = $('phoneCode').value.replace(/\D/g, '');
         if (code.length !== 6) throw new Error('Kod 6 ta raqamdan iborat.');
-        await completeLogin('/api/auth/phone/verify', { phone: phone.number, code, name: $('phoneName').value });
+        await completeLogin('/api/auth/phone/verify', { phone: phone.number, code, name: surveyName() });
         clearInterval(phone.timer);
         $('phoneDialog').close();
       }
@@ -219,7 +227,7 @@ window.AccountUI = (() => {
 
   // Kod to'liq yozilganda avtomatik yuboramiz.
   $('phoneCode').addEventListener('input', (e) => {
-    if (e.target.value.replace(/\D/g, '').length === 6 && $('phoneName').hidden) $('phoneForm').requestSubmit();
+    if (e.target.value.replace(/\D/g, '').length === 6) $('phoneForm').requestSubmit();
   });
 
   async function refresh() {

@@ -221,7 +221,7 @@ Server Google bergan ID tokenni Google'ning ochiq kalitlari bilan tekshiradi
 ### Telefon raqam (SMS kod)
 
 Foydalanuvchi raqamini yozadi → 6 xonali kod SMS bilan keladi → kodni yozib
-kiradi (yangi bo'lsa, ismini ham so'raydi). Kod 5 daqiqa amal qiladi, 5 marta
+kiradi. Ism so'ralmaydi (anketada yozilgan bo'lsa, o'sha olinadi, bo'lmasa "O'quvchi"). Kod 5 daqiqa amal qiladi, 5 marta
 noto'g'ri yozilsa bekor bo'ladi, qayta yuborish — 60 soniyadan keyin; bitta
 raqamga kuniga 5 ta, bitta IP'dan 10 ta SMS. Kod bazada ochiq saqlanmaydi.
 ID: `p:998901234567`.
