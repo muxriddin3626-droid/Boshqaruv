@@ -52,7 +52,7 @@ window.Survey = (() => {
     {
       id: 'goal',
       type: 'one',
-      q: { ru: 'Зачем вы учите русский язык?', de: 'Warum lernen Sie Deutsch?', uz: 'Bu tilni nima uchun o\'rganyapsiz?' },
+      q: { ru: 'Зачем вы учите русский язык?', de: 'Warum lernen Sie Deutsch?', uz: { ru: "Rus tilini nima uchun o'rganyapsiz?", de: "Nemis tilini nima uchun o'rganyapsiz?" } },
       options: [
         { id: 'patent', only: 'ru', icon: '🛂', ru: 'Работать в России (патент)', uz: "Rossiyada ishlash (patent)" },
         { id: 'work', icon: '💼', ru: 'Для работы', de: 'Für die Arbeit in Deutschland', uz: 'Ish uchun' },
@@ -67,7 +67,7 @@ window.Survey = (() => {
     {
       id: 'level',
       type: 'one',
-      q: { ru: 'Как хорошо вы знаете русский?', de: 'Wie gut sprechen Sie Deutsch?', uz: 'Tilni qanchalik bilasiz?' },
+      q: { ru: 'Как хорошо вы знаете русский?', de: 'Wie gut sprechen Sie Deutsch?', uz: { ru: 'Rus tilini qanchalik bilasiz?', de: 'Nemis tilini qanchalik bilasiz?' } },
       options: [
         { id: 'zero', icon: '🌱', ru: 'Начинаю с нуля', de: 'Ich fange bei null an', uz: 'Noldan boshlayapman' },
         { id: 'little', icon: '🌿', ru: 'Немного знаю', de: 'Ein bisschen', uz: 'Biroz bilaman' },
@@ -210,7 +210,9 @@ window.Survey = (() => {
     say.addEventListener('click', () => App.speak([{ lang, text: tr(q.q) }]));
     head.appendChild(say);
     body.appendChild(head);
-    body.appendChild(el('p', 'survey-uz', `🇺🇿 ${q.q.uz}`));
+    // O'zbekcha tarjima: ba'zi savollarda tilga qarab farq qiladi (rus / nemis).
+    const uz = typeof q.q.uz === 'object' ? q.q.uz[lang] : q.q.uz;
+    body.appendChild(el('p', 'survey-uz', `🇺🇿 ${uz}`));
 
     if (q.type === 'text') {
       if (q.hint) body.appendChild(el('p', 'survey-hint', `💬 ${tr(q.hint)}  ·  ${q.hint.uz}`));
