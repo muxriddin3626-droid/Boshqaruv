@@ -127,83 +127,51 @@ window.AccountUI = (() => {
       .catch(() => {});
   }
 
-  // ---------- Telefon raqam (SMS kod) ----------
+  // ---------- Telefon raqam va parol ----------
 
-  const phone = { number: '', step: 1, timer: null };
+  let phoneMode = 'login';
 
   function phoneError(text) {
     $('phoneError').textContent = text || '';
     $('phoneError').hidden = !text;
   }
 
-  function setPhoneStep(step) {
-    phone.step = step;
-    $('phoneStep1').hidden = step !== 1;
-    $('phoneStep2').hidden = step !== 2;
-    $('phoneSubmit').textContent = step === 1 ? 'Kod yuborish' : 'Kirish';
+  function setPhoneMode(mode) {
+    phoneMode = mode;
+    const reg = mode === 'register';
+    document.querySelectorAll('[data-phone-mode]').forEach((b) => b.classList.toggle('active', b.dataset.phoneMode === mode));
+    $('phoneName').hidden = !reg;
+    $('phonePassword').placeholder = reg ? "Parol o'ylab toping (kamida 6 ta belgi)" : 'Parol';
+    $('phonePassword').autocomplete = reg ? 'new-password' : 'current-password';
+    $('phoneSubmit').textContent = reg ? "Ro'yxatdan o'tish" : 'Kirish';
+    $('phoneForgot').textContent = reg
+      ? ''
+      : `Parolni unutdingizmi? ${config.premiumContact ? `${config.premiumContact} ga yozing` : 'Sayt egasiga yozing'} — yangi parol beriladi.`;
+    phoneError('');
   }
+
+  document.querySelectorAll('[data-phone-mode]').forEach((b) => b.addEventListener('click', () => setPhoneMode(b.dataset.phoneMode)));
 
   function openPhone() {
     const d = $('phoneDialog');
-    setPhoneStep(1);
-    phoneError('');
-    $('phoneHint').textContent = config.phoneUzOnly
-      ? "O'zbekiston raqamingizga SMS orqali 6 xonali kod yuboramiz."
-      : 'Raqamingizga SMS orqali 6 xonali kod yuboramiz.';
-    $('phoneCode').value = '';
+    setPhoneMode('login');
+    $('phonePassword').value = '';
     if (d.showModal && !d.open) d.showModal();
     $('phoneInput').focus();
-  }
-
-  function startResendTimer(seconds) {
-    clearInterval(phone.timer);
-    let left = seconds;
-    const btn = $('phoneResend');
-    const tick = () => {
-      btn.disabled = left > 0;
-      btn.textContent = left > 0 ? `Kodni qayta yuborish (${left})` : 'Kodni qayta yuborish';
-      if (left-- <= 0) clearInterval(phone.timer);
-    };
-    tick();
-    phone.timer = setInterval(tick, 1000);
-  }
-
-  // 998901234567 → +998 90 123 45 67
-  const fmtPhone = (p) => (/^998\d{9}$/.test(p) ? p.replace(/^(998)(\d\d)(\d{3})(\d\d)(\d\d)$/, '+$1 $2 $3 $4 $5') : `+${p}`);
-
-  // Ism alohida so'ralmaydi: anketada yozilgan bo'lsa, o'shani olamiz (yangi akkaunt uchun).
-  function surveyName() {
-    for (const lang of ['ru', 'de']) {
-      const p = window.Survey && window.Survey.profile(lang);
-      if (p && p.name) return p.name;
-    }
-    return '';
-  }
-
-  async function sendPhoneCode() {
-    const r = await App.postJson('/api/auth/phone/start', { phone: $('phoneInput').value });
-    phone.number = r.phone;
-    setPhoneStep(2);
-    $('phoneHint').textContent = `Kod ${fmtPhone(r.phone)} raqamiga yuborildi. U ${r.minutes} daqiqa amal qiladi.`;
-    startResendTimer(r.resendIn);
-    $('phoneCode').focus();
   }
 
   $('phoneForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     phoneError('');
+    const reg = phoneMode === 'register';
+    const payload = { phone: $('phoneInput').value, password: $('phonePassword').value };
+    if (reg) payload.name = $('phoneName').value;
     const btn = $('phoneSubmit');
     btn.disabled = true;
     try {
-      if (phone.step === 1) {
-        await sendPhoneCode();
-      } else {
-        const code = $('phoneCode').value.replace(/\D/g, '');
-        if (code.length !== 6) throw new Error('Kod 6 ta raqamdan iborat.');
-        await completeLogin('/api/auth/phone/verify', { phone: phone.number, code, name: surveyName() });
-        clearInterval(phone.timer);
-        $('phoneDialog').close();
-      }
+      await completeLogin(reg ? '/api/auth/phone/register' : '/api/auth/phone/login', payload);
+      $('phonePassword').value = '';
+      $('phoneDialog').close();
     } catch (err) {
       phoneError(err.message);
     } finally {
@@ -211,24 +179,7 @@ window.AccountUI = (() => {
     }
   });
 
-  $('phoneResend').addEventListener('click', async () => {
-    phoneError('');
-    try {
-      await sendPhoneCode();
-    } catch (err) {
-      phoneError(err.message);
-    }
-  });
-
-  $('phoneCancel').addEventListener('click', () => {
-    clearInterval(phone.timer);
-    $('phoneDialog').close();
-  });
-
-  // Kod to'liq yozilganda avtomatik yuboramiz.
-  $('phoneCode').addEventListener('input', (e) => {
-    if (e.target.value.replace(/\D/g, '').length === 6) $('phoneForm').requestSubmit();
-  });
+  $('phoneCancel').addEventListener('click', () => $('phoneDialog').close());
 
   async function refresh() {
     try {

@@ -1,4 +1,4 @@
-// Kirish (Telegram, Google, telefon kodi) va imzolangan tokenlar (sessiya, dars).
+// Kirish (Telegram, Google, telefon va parol) va imzolangan tokenlar (sessiya, dars).
 const crypto = require('crypto');
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
@@ -90,17 +90,21 @@ async function verifyGoogle(idToken) {
   };
 }
 
-// ---------- Telefon kodi ----------
+// ---------- Telefon raqam + parol ----------
 
-// SMS kodini bazada ochiq saqlamaymiz — faqat imzo (HMAC) bilan.
-function hashCode(phone, code) {
-  return crypto.createHmac('sha256', SECRET).update(`phone:${phone}:${code}`).digest('hex');
+// Parolni scrypt bilan (tuz qo'shib) saqlaymiz: "scrypt$tuz$xesh".
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(String(password), salt, 32).toString('hex');
+  return `scrypt$${salt}$${hash}`;
 }
 
-function sameHash(a, b) {
-  const x = Buffer.from(String(a));
-  const y = Buffer.from(String(b));
-  return x.length === y.length && crypto.timingSafeEqual(x, y);
+function checkPassword(password, stored) {
+  const [kind, salt, hash] = String(stored || '').split('$');
+  if (kind !== 'scrypt' || !salt || !hash) return false;
+  const got = crypto.scryptSync(String(password), salt, 32);
+  const want = Buffer.from(hash, 'hex');
+  return got.length === want.length && crypto.timingSafeEqual(got, want);
 }
 
 const b64 = (s) => Buffer.from(s).toString('base64url');
@@ -195,8 +199,8 @@ module.exports = {
   verifyTelegram,
   GOOGLE_CLIENT_ID,
   verifyGoogle,
-  hashCode,
-  sameHash,
+  hashPassword,
+  checkPassword,
   sessionUserId,
   sessionCookie,
   clearCookie,

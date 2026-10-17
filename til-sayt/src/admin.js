@@ -231,6 +231,21 @@ async function handleSettings(req, res) {
   sendJson(res, 200, { settings: await settings.update(body.settings) });
 }
 
+// Telefon bilan kirgan foydalanuvchi parolini unutsa: admin yangi vaqtinchalik parol beradi.
+async function handlePassword(req, res) {
+  if (!(await guard(req, res))) return;
+  const body = await readJson(req, res);
+  if (!body) return;
+  const user = await db.getUser(String(body.userId || ''));
+  if (!user || !user.id.startsWith('p:')) {
+    sendJson(res, 404, { error: 'Telefon bilan kirgan foydalanuvchi topilmadi.' });
+    return;
+  }
+  const password = String(crypto.randomInt(10000000, 100000000));
+  await db.setPassword(user.id, auth.hashPassword(password));
+  sendJson(res, 200, { ok: true, password });
+}
+
 const GET_ROUTES = {
   '/api/admin/me': handleMe,
   '/api/admin/stats': handleStats,
@@ -244,6 +259,7 @@ const POST_ROUTES = {
   '/api/admin/login': handleLogin,
   '/api/admin/logout': handleLogout,
   '/api/admin/premium': handlePremium,
+  '/api/admin/password': handlePassword,
   '/api/admin/codes': handleCodes,
   '/api/admin/settings': handleSettings,
 };

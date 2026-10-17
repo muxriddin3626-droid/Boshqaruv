@@ -675,20 +675,20 @@
 
   <dialog class="sheet" id="phoneDialog">
     <form id="phoneForm" novalidate>
-      <h2>📱 Telefon raqam bilan kirish</h2>
-      <p id="phoneHint">Raqamingizga SMS orqali 6 xonali kod yuboramiz.</p>
-      <div id="phoneStep1">
-        <input type="tel" id="phoneInput" placeholder="+998 90 123 45 67" autocomplete="tel" inputmode="tel" maxlength="20">
+      <h2>📱 Telefon raqam bilan</h2>
+      <div class="speak-lang tabs phone-tabs" role="tablist">
+        <button type="button" class="pill active" data-phone-mode="login">Kirish</button>
+        <button type="button" class="pill" data-phone-mode="register">Ro'yxatdan o'tish</button>
       </div>
-      <div id="phoneStep2" hidden>
-        <input type="text" id="phoneCode" placeholder="Kod (6 ta raqam)" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
-        <button type="button" class="link-btn" id="phoneResend" disabled>Kodni qayta yuborish</button>
-      </div>
+      <input type="tel" id="phoneInput" placeholder="+998 90 123 45 67" autocomplete="tel" inputmode="tel" maxlength="20">
+      <input type="text" id="phoneName" placeholder="Ismingiz" autocomplete="name" maxlength="60" hidden>
+      <input type="password" id="phonePassword" placeholder="Parol" autocomplete="current-password" maxlength="100">
       <p class="form-error" id="phoneError" role="alert" hidden></p>
       <div class="end-actions">
-        <button type="submit" class="primary" id="phoneSubmit">Kod yuborish</button>
+        <button type="submit" class="primary" id="phoneSubmit">Kirish</button>
         <button type="button" class="secondary" id="phoneCancel">Bekor qilish</button>
       </div>
+      <p class="phone-forgot" id="phoneForgot"></p>
     </form>
   </dialog>
 

@@ -102,7 +102,7 @@ Goethe-Institut (Toshkentda bor), shuningdek telc, ÖSD, TestDaF; rus tili — �
 
 ### Akkaunt, Premium va do'stlar
 
-- 🔐 **Telegram, Google yoki telefon raqam (SMS kod) orqali kirish** — parolsiz. Natijalar (so'zlar, streak, kurs,
+- 🔐 **Telegram, Google yoki telefon raqam + parol orqali kirish** — parolsiz. Natijalar (so'zlar, streak, kurs,
   sertifikatlar, sozlamalar) bazaga sinxronlanadi va istalgan qurilmada ochiladi.
   Kirmasdan ham ishlatish mumkin — unda natijalar faqat shu brauzerda qoladi.
 - ⭐ **Kunlik bepul limit va Premium** — bepul: kuniga 2 ta ovozli dars, 6 ta
@@ -149,7 +149,7 @@ O'qituvchining qoidalari va o'yin topshiriqlari `src/prompt.js` faylida turadi.
   admin so'rovlari, `src/settings.js` — paneldan o'zgartiriladigan sozlamalar
 - `src/server.js` — sahifani ko'rsatadi va Claude bilan bog'lanadi. API kalit
   faqat serverda turadi, brauzerga chiqmaydi. `src/account.js`, `src/auth.js`,
-  `src/db.js` — akkaunt, kirish (Telegram, Google, telefon), limitlar, Premium, do'stlar va baza. `src/sms.js` — telefon kodi uchun SMS (Eskiz/Twilio).
+  `src/db.js` — akkaunt, kirish (Telegram, Google, telefon), limitlar, Premium, do'stlar va baza.
 
 Ovozni tanish brauzerning o'zida ishlaydi (Web Speech API). Eng yaxshi natija —
 Chrome (Android va kompyuter).
@@ -218,27 +218,19 @@ sozlangan bo'lsa, o'sha tugma saytda chiqadi. Hammasi uchun `SESSION_SECRET` ker
 Server Google bergan ID tokenni Google'ning ochiq kalitlari bilan tekshiradi
 (imzo, `aud`, `iss`, muddat). Foydalanuvchi ID'si `g:<google-id>` ko'rinishida.
 
-### Telefon raqam (SMS kod)
+### Telefon raqam va parol
 
-Foydalanuvchi raqamini yozadi → 6 xonali kod SMS bilan keladi → kodni yozib
-kiradi. Ism so'ralmaydi (anketada yozilgan bo'lsa, o'sha olinadi, bo'lmasa "O'quvchi"). Kod 5 daqiqa amal qiladi, 5 marta
-noto'g'ri yozilsa bekor bo'ladi, qayta yuborish — 60 soniyadan keyin; bitta
-raqamga kuniga 5 ta, bitta IP'dan 10 ta SMS. Kod bazada ochiq saqlanmaydi.
-ID: `p:998901234567`.
+Hech narsa sozlash shart emas — standart yoqilgan (o'chirish: `PHONE_LOGIN=off`).
+Foydalanuvchi «Ro'yxatdan o'tish»da raqami, ismi va parolini yozadi, keyin
+«Kirish»da raqam + parol bilan kiradi. SMS yuborilmaydi (pul ketmaydi), lekin
+raqam haqiqatan o'sha odamniki ekani tekshirilmaydi.
 
-SMS xizmati kerak (pullik, har SMS uchun):
-
-- **Eskiz.uz** (O'zbekiston raqamlari uchun, tavsiya): eskiz.uz da ro'yxatdan
-  o'ting, shartnoma tuzing va hisobni to'ldiring. **Muhim:** Eskiz faqat
-  moderatsiyadan o'tgan matnlarni yuboradi — kabinetda shablon qo'shing,
-  masalan `Til Ustoz: kirish kodingiz %d`, va tasdiqlangan matnni
-  `SMS_TEMPLATE` ga `{code}` bilan yozing (`Til Ustoz: kirish kodingiz {code}`).
-  Sozlamalar: `SMS_PROVIDER=eskiz`, `ESKIZ_EMAIL`, `ESKIZ_PASSWORD`,
-  `ESKIZ_FROM` (standart `4546`, o'z nomingiz tasdiqlansa — o'sha).
-- **Twilio** (xalqaro raqamlar): `SMS_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID`,
-  `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` (Twilio raqamingiz).
-- **Sinov uchun**: `SMS_PROVIDER=console` — SMS yuborilmaydi, kod server
-  logiga yoziladi. Haqiqiy saytda ishlatmang!
+- Parol bazada ochiq saqlanmaydi (scrypt + tuz).
+- Parolni taxmin qilishdan himoya: 15 daqiqada bitta raqamga 8 ta, bitta
+  IP'dan 20 ta xato urinish.
+- Parolni unutsa: admin panel → foydalanuvchi → **🔑 Yangi parol berish** —
+  vaqtinchalik parolni unga Telegram orqali yuborasiz.
+- ID: `p:998901234567`.
 
 ### Baza
 
@@ -263,11 +255,11 @@ Bo'limlar:
 
 - 📊 **Statistika** — foydalanuvchilar, bugun/7 kunda yangilar va faollar, Premium,
   taklif orqali kelganlar, kodlar, haftalik XP, oxirgi 14 kundagi ro'yxatdan
-  o'tishlar grafigi, kirish usullari (Telegram/Google/telefon), bugungi SMS kodlar, bugungi darslar/o'yinlar/imtihonlar soni (mehmonlar bilan),
+  o'tishlar grafigi, kirish usullari (Telegram/Google/telefon), bugungi darslar/o'yinlar/imtihonlar soni (mehmonlar bilan),
   anketa natijalari (maqsad, kasb, daraja, yosh, qiziqishlar).
 - 👥 **Foydalanuvchilar** — qidiruv (ism, ID, telefon, taklif kodi), oxirgi faollik,
   haftalik XP, kim nechta odam taklif qilgani; bosilsa — anketa, so'zlar, kurs,
-  sertifikatlar va **Premium berish / olib qo'yish**.
+  sertifikatlar, **Premium berish / olib qo'yish** va telefon akkauntlari uchun **yangi parol berish**.
 - 🎟️ **Kodlar** — Premium kodlar yaratish, ro'yxat (kim, qachon ishlatgan),
   ishlatilmaganlarini bir bosishda nusxalash.
 - ⚙️ **Sozlamalar** — bepul limitlar (yoki butunlay o'chirish), narx, bog'lanish,

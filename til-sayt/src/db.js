@@ -58,12 +58,10 @@ const ready = (async () => {
         created_at INTEGER NOT NULL,
         PRIMARY KEY (a, b)
       )`,
-      `CREATE TABLE IF NOT EXISTS phone_codes (
-        phone TEXT PRIMARY KEY,
-        code_hash TEXT NOT NULL,
-        expires_at INTEGER NOT NULL,
-        attempts INTEGER NOT NULL DEFAULT 0,
-        sent_at INTEGER NOT NULL
+      `CREATE TABLE IF NOT EXISTS passwords (
+        user_id TEXT PRIMARY KEY,
+        hash TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
       )`,
     ],
     'write'
@@ -314,7 +312,7 @@ async function usageOn(day) {
   const r = await client.execute({
     sql: `SELECT kind, SUM(count) AS n, COUNT(DISTINCT subject) AS people,
                  SUM(CASE WHEN subject LIKE 'ip:%' THEN 1 ELSE 0 END) AS guests
-          FROM usage WHERE day = ? AND subject NOT LIKE 'smsip:%' GROUP BY kind`,
+          FROM usage WHERE day = ? GROUP BY kind`,
     args: [day],
   });
   const out = {};
@@ -388,43 +386,24 @@ async function listCodes(limit = 100) {
   }));
 }
 
-// ---------- Telefon orqali kirish kodlari ----------
+// ---------- Telefon raqam bilan kirish: parollar ----------
 
-async function getPhoneCode(phone) {
-  const r = await client.execute({ sql: 'SELECT * FROM phone_codes WHERE phone = ?', args: [phone] });
-  const x = r.rows[0];
-  return (
-    x && {
-      hash: String(x.code_hash),
-      expiresAt: Number(x.expires_at),
-      attempts: Number(x.attempts),
-      sentAt: Number(x.sent_at),
-    }
-  );
+async function getPassword(userId) {
+  const r = await client.execute({ sql: 'SELECT hash FROM passwords WHERE user_id = ?', args: [userId] });
+  return r.rows[0] ? String(r.rows[0].hash) : null;
 }
 
-async function savePhoneCode(phone, hash, expiresAt) {
+async function setPassword(userId, hash) {
   await client.execute({
-    sql: `INSERT INTO phone_codes (phone, code_hash, expires_at, attempts, sent_at) VALUES (?, ?, ?, 0, ?)
-          ON CONFLICT(phone) DO UPDATE SET code_hash = excluded.code_hash, expires_at = excluded.expires_at,
-            attempts = 0, sent_at = excluded.sent_at`,
-    args: [phone, hash, expiresAt, Date.now()],
+    sql: `INSERT INTO passwords (user_id, hash, updated_at) VALUES (?, ?, ?)
+          ON CONFLICT(user_id) DO UPDATE SET hash = excluded.hash, updated_at = excluded.updated_at`,
+    args: [userId, hash, Date.now()],
   });
 }
 
-async function bumpPhoneAttempts(phone) {
-  await client.execute({ sql: 'UPDATE phone_codes SET attempts = attempts + 1 WHERE phone = ?', args: [phone] });
-}
-
-async function deletePhoneCode(phone) {
-  await client.execute({ sql: 'DELETE FROM phone_codes WHERE phone = ? OR expires_at < ?', args: [phone, Date.now() - DAY] });
-}
-
 module.exports = {
-  getPhoneCode,
-  savePhoneCode,
-  bumpPhoneAttempts,
-  deletePhoneCode,
+  getPassword,
+  setPassword,
   getSettings,
   setSettings,
   adminCounts,

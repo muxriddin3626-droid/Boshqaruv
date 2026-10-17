@@ -1,9 +1,7 @@
 // Akkaunt: Telegram, Google yoki telefon raqam orqali kirish, ma'lumotlarni sinxronlash, kunlik limitlar,
 // Premium kodlari, do'stlar va haftalik reyting.
 const db = require('./db');
-const crypto = require('crypto');
 const auth = require('./auth');
-const sms = require('./sms');
 
 const settings = require('./settings');
 
@@ -114,8 +112,7 @@ function config() {
   return {
     telegramBot: auth.enabled ? auth.BOT_USERNAME : null,
     googleClientId: auth.GOOGLE_CLIENT_ID || null,
-    phoneLogin: sms.enabled,
-    phoneUzOnly: sms.onlyUzbek,
+    phoneLogin: PHONE_LOGIN,
     limits: settings.get().limitsOn ? settings.freeLimits() : null,
     premiumContact: settings.get().premiumContact,
     premiumPrice: settings.get().premiumPrice,
@@ -185,95 +182,91 @@ async function handleGoogleLogin(req, res) {
   await finishLogin(req, res, profile, body.ref);
 }
 
-// ---------- Telefon raqam orqali kirish (SMS kod) ----------
+// ---------- Telefon raqam va parol bilan kirish ----------
 
-const CODE_MINUTES = 5;
-const RESEND_SECONDS = 60;
-const MAX_ATTEMPTS = 5;
-const SMS_PER_PHONE = 5; // kuniga bitta raqamga
-const SMS_PER_IP = 10; // kuniga bitta IP'dan
+const PHONE_LOGIN = process.env.PHONE_LOGIN !== 'off';
+const MIN_PASSWORD = 6;
 
 // Raqamni faqat raqamlarga keltiramiz: "90 123-45-67" → 998901234567.
 function normalizePhone(raw) {
   let digits = String(raw || '').replace(/\D/g, '');
   if (digits.length === 9) digits = `998${digits}`;
-  if (!/^\d{10,15}$/.test(digits)) return null;
-  if (sms.onlyUzbek && !/^998\d{9}$/.test(digits)) return null;
-  return digits;
+  return /^\d{10,15}$/.test(digits) ? digits : null;
 }
 
-async function handlePhoneStart(req, res) {
-  if (!sms.enabled) {
-    sendJson(res, 404, { error: 'Telefon orqali kirish sozlanmagan.' });
-    return;
+// Parolni taxmin qilishdan himoya: 15 daqiqada raqamga 8 ta, IP'ga 20 ta xato urinish.
+const failures = new Map();
+const FAIL_WINDOW = 15 * 60000;
+
+function recentFailures(key) {
+  const list = (failures.get(key) || []).filter((t) => Date.now() - t < FAIL_WINDOW);
+  failures.set(key, list);
+  return list.length;
+}
+
+function addFailure(key) {
+  failures.set(key, [...(failures.get(key) || []), Date.now()]);
+}
+
+setInterval(() => {
+  for (const key of failures.keys()) if (!recentFailures(key)) failures.delete(key);
+}, FAIL_WINDOW).unref();
+
+async function phoneBody(req, res) {
+  if (!PHONE_LOGIN) {
+    sendJson(res, 404, { error: "Telefon orqali kirish o'chirilgan." });
+    return null;
   }
   const body = await readJson(req, res);
-  if (!body) return;
+  if (!body) return null;
   const phone = normalizePhone(body.phone);
   if (!phone) {
-    sendJson(res, 400, { error: sms.onlyUzbek ? "Raqamni to'g'ri kiriting: +998 90 123 45 67" : "Raqamni mamlakat kodi bilan to'g'ri kiriting." });
-    return;
+    sendJson(res, 400, { error: "Raqamni to'g'ri kiriting: +998 90 123 45 67" });
+    return null;
   }
-  const last = await db.getPhoneCode(phone);
-  const wait = last ? Math.ceil((last.sentAt + RESEND_SECONDS * 1000 - Date.now()) / 1000) : 0;
-  if (wait > 0) {
-    sendJson(res, 429, { error: `Kodni qayta yuborish uchun ${wait} soniya kuting.`, wait });
-    return;
-  }
-  const day = tashkentDay();
-  const byPhone = (await db.getUsage(`sms:${phone}`, day)).sms || 0;
-  const byIp = (await db.getUsage(`smsip:${clientIp(req)}`, day)).sms || 0;
-  if (byPhone >= SMS_PER_PHONE || byIp >= SMS_PER_IP) {
-    sendJson(res, 429, { error: "Bugun juda ko'p kod so'raldi. Ertaga urinib ko'ring yoki boshqa usulda kiring." });
-    return;
-  }
-  const code = String(crypto.randomInt(100000, 1000000));
-  await db.savePhoneCode(phone, auth.hashCode(phone, code), Date.now() + CODE_MINUTES * 60000);
-  try {
-    await sms.sendCode(phone, code);
-  } catch (err) {
-    console.error('SMS:', err.message);
-    await db.deletePhoneCode(phone);
-    sendJson(res, 502, { error: "SMS yuborib bo'lmadi. Birozdan keyin qayta urinib ko'ring." });
-    return;
-  }
-  await db.incrementUsage(`sms:${phone}`, day, 'sms');
-  await db.incrementUsage(`smsip:${clientIp(req)}`, day, 'sms');
-  sendJson(res, 200, { sent: true, phone, resendIn: RESEND_SECONDS, minutes: CODE_MINUTES });
+  return { ...body, phone, password: String(body.password || '') };
 }
 
-async function handlePhoneVerify(req, res) {
-  if (!sms.enabled) {
-    sendJson(res, 404, { error: 'Telefon orqali kirish sozlanmagan.' });
-    return;
-  }
-  const body = await readJson(req, res);
+async function handlePhoneRegister(req, res) {
+  const body = await phoneBody(req, res);
   if (!body) return;
-  const phone = normalizePhone(body.phone);
-  const code = String(body.code || '').replace(/\D/g, '');
-  const row = phone && (await db.getPhoneCode(phone));
-  if (!row || row.expiresAt < Date.now()) {
-    sendJson(res, 400, { error: 'Kod eskirgan. Yangi kod so\'rang.', expired: true });
+  const name = String(body.name || '').trim().replace(/\s+/g, ' ');
+  if (!name) {
+    sendJson(res, 400, { error: 'Ismingizni yozing.' });
     return;
   }
-  if (row.attempts >= MAX_ATTEMPTS) {
-    sendJson(res, 429, { error: "Urinishlar ko'p bo'ldi. Yangi kod so'rang.", expired: true });
+  if (body.password.length < MIN_PASSWORD || body.password.length > 100) {
+    sendJson(res, 400, { error: `Parol kamida ${MIN_PASSWORD} ta belgi bo'lsin.` });
     return;
   }
-  if (!auth.sameHash(row.hash, auth.hashCode(phone, code))) {
-    await db.bumpPhoneAttempts(phone);
-    sendJson(res, 401, { error: "Kod noto'g'ri. Qaytadan tekshiring." });
+  const id = `p:${body.phone}`;
+  if (await db.getUser(id)) {
+    sendJson(res, 409, { error: "Bu raqam allaqachon ro'yxatdan o'tgan. «Kirish» bo'limidan kiring." });
     return;
   }
-  await db.deletePhoneCode(phone);
-  const [first, ...rest] = String(body.name || '').trim().replace(/\s+/g, ' ').split(' ');
-  const profile = {
-    id: `p:${phone}`,
-    firstName: (first || "O'quvchi").slice(0, 64),
-    lastName: rest.join(' ').slice(0, 64),
-    photoUrl: '',
-  };
-  await finishLogin(req, res, profile, body.ref, { keepExisting: true });
+  const [first, ...rest] = name.split(' ');
+  await db.setPassword(id, auth.hashPassword(body.password));
+  await finishLogin(req, res, { id, firstName: first.slice(0, 64), lastName: rest.join(' ').slice(0, 64), photoUrl: '' }, body.ref);
+}
+
+async function handlePhoneLogin(req, res) {
+  const body = await phoneBody(req, res);
+  if (!body) return;
+  const ipKey = `ip:${clientIp(req)}`;
+  const phoneKey = `p:${body.phone}`;
+  if (recentFailures(phoneKey) >= 8 || recentFailures(ipKey) >= 20) {
+    sendJson(res, 429, { error: "Urinishlar ko'p bo'ldi. 15 daqiqadan keyin qayta urinib ko'ring." });
+    return;
+  }
+  const id = `p:${body.phone}`;
+  const stored = await db.getPassword(id);
+  if (!stored || !auth.checkPassword(body.password, stored)) {
+    addFailure(phoneKey);
+    addFailure(ipKey);
+    sendJson(res, 401, { error: "Raqam yoki parol noto'g'ri." });
+    return;
+  }
+  await finishLogin(req, res, { id }, null, { keepExisting: true });
 }
 
 async function handleLogout(req, res) {
@@ -396,8 +389,8 @@ const GET_ROUTES = {
 const POST_ROUTES = {
   '/api/auth/telegram': handleTelegramLogin,
   '/api/auth/google': handleGoogleLogin,
-  '/api/auth/phone/start': handlePhoneStart,
-  '/api/auth/phone/verify': handlePhoneVerify,
+  '/api/auth/phone/register': handlePhoneRegister,
+  '/api/auth/phone/login': handlePhoneLogin,
   '/api/auth/logout': handleLogout,
   '/api/state': handleState,
   '/api/friends/add': handleAddFriend,
@@ -411,6 +404,7 @@ module.exports = {
   quota,
   sendLimit,
   config,
+  normalizePhone,
   ready: db.ready.then(() => settings.load()),
   currentUser,
   readJson,

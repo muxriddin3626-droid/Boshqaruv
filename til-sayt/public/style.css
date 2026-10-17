@@ -1123,8 +1123,8 @@ h1 {
   font: inherit;
   font-size: 17px;
 }
-#phoneCode { letter-spacing: 0.3em; text-align: center; font-variant-numeric: tabular-nums; }
-#phoneResend { margin: 0 0 8px; }
+#phoneDialog .phone-tabs { margin: 4px 0 14px; }
+.phone-forgot { margin: 12px 0 0 !important; font-size: 13px; text-align: center; }
 .form-error { margin: 0 0 12px; color: var(--danger) !important; font-size: 14px; }
 
 .account .panel {

@@ -155,7 +155,6 @@
       const u = s.usage[kind] || { count: 0, people: 0, guests: 0 };
       usage.appendChild(kpi(LABELS.kind[kind], fmtNum(u.count), `${u.people} kishi (${u.guests} mehmon)`));
     }
-    if (s.usage.sms) usage.appendChild(kpi('📱 SMS kodlar', fmtNum(s.usage.sms.count), `${s.usage.sms.people} ta raqamga`));
     const lim = s.settings.limitsOn ? `Bepul limit: ${s.settings.freeLessons} / ${s.settings.freePractice} / ${s.settings.freeExam}` : "Limitlar o'chirilgan";
     usage.appendChild(kpi('⚙️ Limitlar', s.settings.limitsOn ? 'Yoqilgan' : "O'chiq", lim));
 
@@ -381,6 +380,24 @@
     }));
     prem.appendChild(row);
     box.appendChild(prem);
+
+    if (u.id.startsWith('p:')) {
+      const pw = el('div', 'user-premium');
+      pw.appendChild(el('h3', '', '🔑 Parol'));
+      pw.appendChild(el('p', '', "Parolini unutgan bo'lsa — yangi vaqtinchalik parol bering va unga yuboring."));
+      const out = el('p', 'new-password');
+      pw.appendChild(button('chip', 'Yangi parol berish', async () => {
+        if (!confirm("Eski parol ishlamay qoladi. Yangi parol berilsinmi?")) return;
+        try {
+          const r = await api('/api/admin/password', { userId: u.id });
+          out.textContent = `Yangi parol: ${r.password}`;
+        } catch (err) {
+          toast(err.message);
+        }
+      }));
+      pw.appendChild(out);
+      box.appendChild(pw);
+    }
 
     const dlg = $('userDialog');
     if (!dlg.open) dlg.showModal();
