@@ -7,8 +7,11 @@ uslubida). Telefonda ham, kompyuterda ham ishlaydi:
   tilida ustoz **Minji** (Hangul bilan, hurmatli 해요체 uslubida; qo'shimchalarni
   o'zbek tili qo'shimchalariga qiyoslab tushuntiradi);
   Hangulni bilmaganlar uchun: har bir koreyscha matn ostida **lotincha o'qilishi**
-  chiqadi (menyuda o'chirib qo'yish mumkin), menyuda **«Hangul alifbosi»** bo'limi —
-  harflar, ovozi va harf testi (`public/hangul.js`);
+  chiqadi (menyuda o'chirib qo'yish mumkin), menyuda **«Hangul alifbosi»** bo'limi:
+  9 bosqichli harflar kursi (har bosqichda yangi harflar, eslab qolish usuli, ovozi,
+  so'zlar va 8 savollik mashq — 6 ta to'g'ri bo'lsa keyingi bosqich ochiladi),
+  Minji bilan ovozli «harflar darsi», barcha harflar jadvali va aralash test
+  (`public/hangul.js`, AI'siz ishlaydi — limitga kirmaydi);
 - dars oldidan tanlanadi: ustoz rejimi (**Mehribon** yoki **Qattiqqo'l** — hazil aralash
   koyiydi, lekin so'kinmaydi), mavzu (tanishuv, do'kon, restoran, sayohat, ish
   suhbati yoki erkin suhbat) va daraja ("Bilmayman" desangiz, ustoz o'zi aniqlaydi);

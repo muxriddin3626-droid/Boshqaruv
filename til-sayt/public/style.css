@@ -1297,3 +1297,31 @@ body.ko-tr-off [data-ko-tr]::after { display: none; }
   border: 1px solid var(--border); border-radius: 28px; background: var(--surface);
   color: var(--text); font-size: 72px; font-weight: 700; cursor: pointer;
 }
+
+/* Hangul harflari kursi */
+.hg-lessons { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.hg-lesson {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; text-align: left;
+  border: 1px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer;
+}
+.hg-lesson.done { border-color: #2fb36d; }
+.hg-lesson.locked { opacity: 0.55; }
+.hg-lesson .act-text { flex: 1; min-width: 0; }
+.hg-preview { display: block; color: var(--muted); font-size: 15px; letter-spacing: 0.08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hg-state { font-size: 18px; }
+.hg-extra { display: flex; flex-direction: column; gap: 8px; }
+.hg-title { font-size: 21px; margin: 4px 0 10px; }
+.hg-cards { display: flex; flex-direction: column; gap: 8px; }
+.hg-card {
+  display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 14px; text-align: left;
+  border: 1px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer;
+}
+.hg-card:active { transform: scale(0.98); }
+.hg-card .hg-jamo { font-size: 44px; min-width: 56px; text-align: center; }
+.hg-card-text { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.hg-card-text b { font-size: 18px; }
+.hg-word { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.hg-word-tr { color: var(--muted); font-style: italic; font-size: 15px; }
+.hg-word .muted { margin-left: auto; font-size: 14px; }
+.hg-big.word { width: auto; min-width: 140px; padding: 0 22px; font-size: 44px; }
+.hg-hangul-opts .option { font-size: 26px; font-weight: 700; }

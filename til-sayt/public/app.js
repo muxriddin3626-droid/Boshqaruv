@@ -510,6 +510,8 @@
   function startLesson(opts = {}) {
     const t = TUTORS[lang];
     lessonOpts = { unit: opts.unit || null, prof: opts.prof || null, scenario: opts.scenario || null };
+    // Maxsus mavzu (masalan, Hangul harflari darsi) — faqat shu dars uchun.
+    if (opts.topic) lessonOpts.topic = opts.topic;
     lessonUnit = lessonOpts.unit;
     lessonSeconds = lessonOpts.scenario ? ROLEPLAY_SECONDS : LESSON_SECONDS;
     goalReached = false;
@@ -531,6 +533,8 @@
         ? `${t.name} · ${theme.prof.icon} ${theme.theme.title}`
         : unit
           ? `${t.name} · ${unit.icon} ${unit.title}`
+          : lessonOpts.topic === 'hangul'
+            ? `${t.name} · 🔤 Harflar darsi`
           : `${t.name} · ${MODE_LABELS[settings.mode]} · ${topic ? topic.textContent : ''}`;
     typeForm.hidden = true;
     setSubtitle('');

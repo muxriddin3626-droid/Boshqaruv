@@ -55,6 +55,8 @@ const TOPICS = {
   food: 'Restoranda — taom buyurtma qilish, hisob so\'rash',
   travel: "Sayohat — aeroport, mehmonxona, yo'l so'rash",
   job: "Ish suhbati — o'zini tanishtirish, tajriba, kuchli tomonlar",
+  hangul:
+    "HANGUL HARFLARI DARSI. O'quvchi koreys yozuvini endi o'rganyapti. Har javobda faqat 1-2 ta yangi harf yoki bo'g'in o'rgat: 'uz' segmentida harfning shakli va tovushini o'zbekcha, lotincha qisqa tushuntir (eslab qolish usuli bilan, masalan «ㅏ — tik chiziq, tayoqcha o'ngga, «a» deb o'qiladi»), so'ng 'ko' segmentida o'sha bo'g'in yoki oddiy so'zni ayt (masalan 아, 가, 나비) — u ekranda Hangul bilan ko'rinadi — va o'quvchidan ovoz chiqarib takrorlashni so'ra. Tartib: asosiy unlilar (아 어 오 우 으 이), keyin ㄱ ㄴ ㄷ ㄹ ㅁ ㅂ ㅅ ㅈ ㅎ, keyin oddiy so'zlar (나, 아이, 바다, 나비, 하나). Takrorlaganda talaffuzini baholab, xatosini tuzat. Har 3-4 javobda o'rgangan harflardan kichik savol ber: «가 qanday o'qiladi?». Koreys tilida uzun gapirma — bu o'qish darsi, asosiy tushuntirish o'zbekcha.",
   migrant:
     "Chet elda ishlovchi migrant hayoti (Rossiya, Germaniya yoki Janubiy Koreyada — tanlangan tilga qarab) — politsiya hujjat tekshiruvi, ish beruvchi bilan suhbat va ish haqi, migratsiya xizmati (Rossiyada MFC/МВД, Germaniyada Ausländerbehörde, Koreyada 출입국관리사무소 va 고용센터), shifokor, kvartira ijarasi, bank va pul o'tkazmasi. Amaliy, kundalik iboralar.",
 };
