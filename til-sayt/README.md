@@ -6,6 +6,9 @@ uslubida). Telefonda ham, kompyuterda ham ishlaydi:
 - til tanlanadi: rus tilida ustoz **Anna**, nemis tilida ustoz **Hans**, koreys
   tilida ustoz **Minji** (Hangul bilan, hurmatli 해요체 uslubida; qo'shimchalarni
   o'zbek tili qo'shimchalariga qiyoslab tushuntiradi);
+  Hangulni bilmaganlar uchun: har bir koreyscha matn ostida **lotincha o'qilishi**
+  chiqadi (menyuda o'chirib qo'yish mumkin), menyuda **«Hangul alifbosi»** bo'limi —
+  harflar, ovozi va harf testi (`public/hangul.js`);
 - dars oldidan tanlanadi: ustoz rejimi (**Mehribon** yoki **Qattiqqo'l** — hazil aralash
   koyiydi, lekin so'kinmaydi), mavzu (tanishuv, do'kon, restoran, sayohat, ish
   suhbati yoki erkin suhbat) va daraja ("Bilmayman" desangiz, ustoz o'zi aniqlaydi);

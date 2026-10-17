@@ -86,8 +86,18 @@
       <div class="daily-links">
         <button type="button" class="link-btn" id="ratingBtn">🏆 Haftalik reyting</button>
         <button type="button" class="link-btn" id="badgesBtn">🏅 Yutuqlar</button>
+        <button type="button" class="link-btn" id="koTrToggle" hidden>🔤 Lotincha o'qilishi</button>
       </div>
     </section>
+
+    <button type="button" class="big-card course-card hangul-card" id="hangulCard" hidden>
+      <span class="act-icon">🔤</span>
+      <span class="act-text">
+        <span class="act-title">Hangul alifbosi</span>
+        <span class="act-desc">Koreys harflarini o'rganing: ovozi va harf testi bilan</span>
+      </span>
+      <span class="course-count no-tr">한글</span>
+    </button>
 
     <button type="button" class="big-card course-card" id="courseCard">
       <span class="act-icon">🗺️</span>
@@ -588,6 +598,15 @@
   </main>
 
   <!-- 17. Yutuqlar -->
+  <main id="hangulScreen" class="screen hangul-screen" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">🔤 Hangul alifbosi</span>
+      <span></span>
+    </div>
+    <div class="hangul-body" id="hangulBody"></div>
+  </main>
+
   <main id="badgesScreen" class="screen badges-screen" hidden>
     <div class="game-bar">
       <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
@@ -721,6 +740,7 @@
   <script src="app.js"></script>
   <script src="games.js"></script>
   <script src="practice.js"></script>
+  <script src="hangul.js"></script>
   <script src="exam.js"></script>
   <script src="cert.js"></script>
   <script src="account-ui.js"></script>

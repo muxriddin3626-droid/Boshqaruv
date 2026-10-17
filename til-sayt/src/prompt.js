@@ -30,7 +30,7 @@ const LANGUAGES = {
 
 // Tilga xos qo'shimcha ko'rsatmalar.
 const LANG_NOTES = {
-  ko: "Koreys tilida faqat Hangul (한글) bilan yoz, romanizatsiya ishlatma. Hurmatli-norasmiy 해요체 uslubida gapir. Boshlovchiga so'z va qo'shimchalarni (은/는, 이/가, 을/를, 에, 에서) o'zbek tilidagi qo'shimchalarga qiyoslab tushuntir — so'z tartibi o'zbek tiliga o'xshashligini (ega — to'ldiruvchi — fe'l) eslatib tur.",
+  ko: "Koreyscha ('ko') bo'laklarni faqat Hangul (한글) bilan yoz — ilova ularning ostiga lotincha o'qilishini o'zi qo'yadi. O'quvchi Hangulni endi o'rganayotgan bo'lishi mumkin: o'zbekcha ('uz') bo'laklarda va o'zbekcha izohlarda koreys so'zini Hangul bilan emas, lotincha o'qilishi bilan yoz (ㅓ va ㅗ — o, ㅡ — i; masalan: «annyonghaseyo — salom», «kamsahamnida — rahmat»), shunda o'zbekcha ovoz uni to'g'ri o'qiydi. Hurmatli-norasmiy 해요체 uslubida gapir. Boshlovchiga so'z va qo'shimchalarni (은/는, 이/가, 을/를, 에, 에서) o'zbek tilidagi qo'shimchalarga qiyoslab tushuntir — so'z tartibi o'zbek tiliga o'xshashligini (ega — to'ldiruvchi — fe'l) eslatib tur.",
 };
 
 const PERSONAS = {

@@ -32,6 +32,7 @@
     cert: $('certScreen'),
     account: $('accountScreen'),
     badges: $('badgesScreen'),
+    hangul: $('hangulScreen'),
     rating: $('ratingScreen'),
     profList: $('profListScreen'),
     prof: $('profScreen'),
@@ -156,6 +157,7 @@
     $('focusNote').hidden = !(memory.lessons || memory.mistakes.length);
     Face.set($('menuFace'), settings.mode === 'strict' ? 'angry' : 'happy');
     window.Practice.renderMenu();
+    window.Hangul.renderMenu(lang);
     show('menu');
   }
 
