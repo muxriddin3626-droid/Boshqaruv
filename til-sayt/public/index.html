@@ -61,6 +61,14 @@
     <div class="face-slot" id="menuFace" data-face="happy" data-state="idle"></div>
     <h1 id="menuTitle">Anna bilan rus tili</h1>
 
+    <button type="button" class="goal-card" id="goalCard" hidden>
+      <span class="goal-text">
+        <span id="goalHello"></span>
+        <b id="goalLabel"></b>
+      </span>
+      <span class="goal-go">→</span>
+    </button>
+
     <section class="daily" id="daily">
       <div class="daily-top">
         <span class="streak" id="streak">🔥 0 kun</span>
@@ -233,6 +241,7 @@
 
     <div class="end-actions">
       <button type="button" class="primary big" id="setupDoneBtn">Tayyor</button>
+      <button type="button" class="secondary" id="surveyEditBtn">📝 Anketani o'zgartirish</button>
     </div>
   </main>
 
@@ -635,6 +644,22 @@
     <div class="role-list" id="roleList"></div>
   </main>
 
+  <!-- 22. Ro'yxatdan o'tish anketasi -->
+  <main id="surveyScreen" class="screen survey" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="surveyClose">✕</button>
+      <span class="game-title" id="surveyTitle">📝 Anketa</span>
+      <span class="game-score" id="surveyStep"></span>
+    </div>
+    <div class="progress" aria-hidden="true"><div class="progress-fill" id="surveyProgress"></div></div>
+    <div class="face-slot small" id="surveyFace" data-face="happy" data-state="idle"></div>
+    <div class="survey-body" id="surveyBody"></div>
+    <div class="survey-nav">
+      <button type="button" class="secondary" id="surveyBack">← Назад</button>
+      <button type="button" class="primary big" id="surveyNext">Дальше →</button>
+    </div>
+  </main>
+
   <dialog class="sheet" id="limitDialog">
     <form method="dialog">
       <div class="face-slot small" id="limitFace" data-face="surprised" data-state="idle"></div>
@@ -675,6 +700,7 @@
   <script src="account-ui.js"></script>
   <script src="social.js"></script>
   <script src="roles.js"></script>
+  <script src="survey.js"></script>
   <script src="pwa.js"></script>
 </body>
 </html>

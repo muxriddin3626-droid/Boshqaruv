@@ -17,6 +17,7 @@ const {
   REPORT_SCHEMA,
   COURSE,
   SC,
+  PROFILE_TEXT,
   EXAMS,
   EXAM_SCHEMAS,
   GRADE_SCHEMA,
@@ -263,7 +264,7 @@ async function handleChat(req, res) {
     const reply = await askJson({
       system: [
         { type: 'text', text: TUTOR_PROMPT, cache_control: { type: 'ephemeral' } },
-        { type: 'text', text: sessionPrompt(lang, cleanSettings(body.settings), cleanMemory(body.memory)) },
+        { type: 'text', text: sessionPrompt(lang, cleanSettings(body.settings), cleanMemory(body.memory), cleanProfile(body.profile)) },
       ],
       messages,
       schema: REPLY_SCHEMA,
@@ -414,6 +415,22 @@ function cleanGame(type, raw) {
   return { items: ok.slice(0, count) };
 }
 
+// Anketa: faqat ma'lum qiymatlar va qisqa matnlar qabul qilinadi.
+function cleanProfile(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const pick = (map, v) => (typeof v === 'string' && Object.hasOwn(map, v) ? v : null);
+  const name = str(raw.name, 40).replace(/[<>{}\[\]`]/g, '');
+  const city = str(raw.city, 40).replace(/[<>{}\[\]`]/g, '');
+  return {
+    name,
+    city,
+    age: pick(PROFILE_TEXT.age, raw.age),
+    goal: pick(PROFILE_TEXT.goal, raw.goal),
+    prof: pick(PROFILE_TEXT.prof, raw.prof),
+    interests: (Array.isArray(raw.interests) ? raw.interests : []).filter((i) => typeof i === 'string' && Object.hasOwn(PROFILE_TEXT.interests, i)).slice(0, 6),
+  };
+}
+
 function cleanMemory(raw) {
   const m = raw || {};
   const lessons = Number.isInteger(m.lessons) && m.lessons > 0 ? Math.min(m.lessons, 10000) : 0;
@@ -448,7 +465,7 @@ async function handleGame(req, res) {
 
   try {
     const raw = await askJson({
-      system: gamePrompt(lang, type, settings, cleanFocus(body.focus)),
+      system: gamePrompt(lang, type, settings, cleanFocus(body.focus), cleanProfile(body.profile)),
       messages: [{ role: 'user', content: "Mashqni tayyorla." }],
       schema: GAMES[type].schema,
       fast: true,

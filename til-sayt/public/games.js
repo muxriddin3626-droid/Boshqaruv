@@ -527,6 +527,7 @@ window.Games = (() => {
         type,
         settings: { ...App.settings(), unit: ctx.unit, exam: ctx.exam, prof: ctx.prof },
         focus: App.focus(),
+        profile: App.profile(),
       });
       if (token !== loadToken) return;
       data = result;

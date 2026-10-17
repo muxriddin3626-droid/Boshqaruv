@@ -66,6 +66,14 @@ window.Practice = (() => {
 
   function renderMenu() {
     const lang = App.lang();
+    // Anketadagi maqsadga mos tavsiya.
+    const goal = window.Survey && window.Survey.goalCard(lang);
+    $('goalCard').hidden = !goal;
+    if (goal) {
+      $('goalHello').textContent = `${goal.name ? `${goal.name}, ` : ''}maqsadingiz: ${goal.goal}`;
+      $('goalLabel').textContent = goal.label;
+      $('goalCard').onclick = goal.run;
+    }
     const d = Learn.daily();
     $('streak').textContent = `🔥 ${d.streak} kun`;
     $('streak').classList.toggle('cold', d.streak === 0);
@@ -366,6 +374,7 @@ window.Practice = (() => {
         type: 'story',
         settings: App.settings(),
         focus: App.focus(),
+        profile: App.profile(),
       });
     } catch (err) {
       if (token !== storyToken) return;

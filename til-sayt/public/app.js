@@ -35,6 +35,7 @@
     profList: $('profListScreen'),
     prof: $('profScreen'),
     roles: $('rolesScreen'),
+    survey: $('surveyScreen'),
   };
   const face = $('face');
   const statusText = $('statusText');
@@ -454,6 +455,7 @@
         lang,
         settings: { ...settings, ...lessonOpts },
         memory: Learn.memory(lang),
+        profile: window.Survey.profile(lang),
         messages: history,
         lessonToken,
       });
@@ -652,9 +654,19 @@
 
   // ---------- Tugmalar ----------
 
+  // Til tanlangach: birinchi marta bo'lsa — ro'yxatdan o'tish anketasi, keyin menyu.
   document.querySelectorAll('.lang-card').forEach((btn) => {
-    btn.addEventListener('click', () => openMenu(btn.dataset.lang));
+    btn.addEventListener('click', () => {
+      lang = btn.dataset.lang;
+      if (window.Survey.done(lang)) openMenu(lang);
+      else {
+        unlockAudio();
+        window.Survey.start(lang);
+      }
+    });
   });
+
+  $('surveyEditBtn').addEventListener('click', () => window.Survey.start(lang, () => openMenu(lang)));
 
   $('settingsSummary').addEventListener('click', openSetup);
   $('setupDoneBtn').addEventListener('click', () => openMenu());
@@ -766,6 +778,11 @@
     tutor: () => TUTORS[lang],
     settings: () => settings,
     focus: loadFocus,
+    profile: () => window.Survey.profile(lang),
+    setSettings: (patch) => {
+      settings = { ...settings, ...patch };
+      saveSettings();
+    },
     startLesson,
     locale: () => LOCALES[lang],
     config: () => configReady,

@@ -19,6 +19,19 @@ uslubida). Telefonda ham, kompyuterda ham ishlaydi:
 - dars oxirida **hisobot** chiqadi: taxminiy daraja, xatolar va ularning to'g'risi,
   yangi so'zlar tarjimasi bilan, keyingi dars uchun maslahat.
 
+### Ro'yxatdan o'tish anketasi
+
+Til tanlangach birinchi marta 9 savollik anketa ochiladi. Savollar **tanlangan
+tilda** (rus tili — ruscha, nemis tili — nemischa), ostida o'zbekcha tarjima;
+🔊 tugmasi savolni ovozda o'qiydi — anketaning o'zi ham kichik dars. Savollar:
+ism, yosh, qayerdan, nima uchun o'rganadi (rus tilida — patent varianti ham),
+daraja, kasb, kuniga necha daqiqa, qiziqishlar, qanday ustoz yoqadi.
+
+Javoblar: daraja, mavzu, ustoz rejimi va kunlik maqsad o'zi sozlanadi; ustoz
+o'quvchini ismi bilan chaqiradi, misollarni kasbi va qiziqishlaridan oladi;
+menyuda maqsadga mos tavsiya chiqadi (masalan patent → patent imtihoni, ish →
+kasbiy kurs). Anketani sozlamalardan qayta to'ldirish mumkin (`public/survey.js`).
+
 ### Tez o'rganish uchun
 
 - 🗺️ **Kurs xaritasi (A1 → B1)** — 12 bosqich (salomlashish, raqamlar, oila, kun
@@ -129,7 +142,8 @@ O'qituvchining qoidalari va o'yin topshiriqlari `src/prompt.js` faylida turadi.
   `exams.js` va `exam.js` — sinov imtihonlari, `cert.js` — sertifikat)
 - `public/` (davomi): `store.js` — saqlash va sinxronlash, `account-ui.js` —
   akkaunt va Premium, `social.js` — nishonlar va reyting, `roles.js` va
-  `scenarios.js` — kasbiy kurslar va rolli vaziyatlar, `sw.js` va `pwa.js` — oflayn
+  `scenarios.js` — kasbiy kurslar va rolli vaziyatlar, `survey.js` — ro'yxatdan
+  o'tish anketasi, `sw.js` va `pwa.js` — oflayn
   ishlash va o'rnatish
 - `src/server.js` — sahifani ko'rsatadi va Claude bilan bog'lanadi. API kalit
   faqat serverda turadi, brauzerga chiqmaydi. `src/account.js`, `src/auth.js`,

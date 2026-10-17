@@ -114,7 +114,47 @@ function memoryLines(memory) {
   return lines;
 }
 
-function sessionPrompt(lang, settings, memory) {
+// Ro'yxatdan o'tish anketasidan o'quvchi haqida.
+const PROFILE_TEXT = {
+  age: { u18: '18 yoshgacha', '18_25': '18-25 yosh', '26_35': '26-35 yosh', '36_50': '36-50 yosh', '50p': "50 yoshdan katta" },
+  goal: {
+    patent: 'Rossiyada ishlash uchun patent olish',
+    work: 'chet elda ishlash',
+    study: "o'qish",
+    family: "oila, ko'chib o'tish",
+    exam: 'til imtihonini topshirish',
+    travel: 'sayohat',
+    self: "o'zi uchun",
+  },
+  prof: {
+    builder: 'quruvchi', driver: 'haydovchi', cook: 'oshpaz yoki ofitsiant', seller: 'sotuvchi yoki kassir',
+    courier: 'kuryer yoki omborchi', nurse: 'hamshira yoki parvarishchi', factory: 'zavod ishchisi',
+    cleaner: 'tozalash xizmati', student: 'talaba', other: '',
+  },
+  interests: {
+    football: 'futbol', sport: 'sport', films: 'kino', music: 'musiqa', food: 'ovqat va oshpazlik', travel: 'sayohat',
+    tech: 'texnologiya', cars: 'mashinalar', family: 'oila', nature: 'tabiat', books: 'kitoblar', games: "o'yinlar",
+  },
+};
+
+function profileLines(profile) {
+  if (!profile) return [];
+  const parts = [];
+  if (profile.name) parts.push(`ismi ${profile.name}`);
+  if (profile.age) parts.push(PROFILE_TEXT.age[profile.age]);
+  if (profile.city) parts.push(`${profile.city}dan`);
+  if (profile.goal) parts.push(`maqsadi: ${PROFILE_TEXT.goal[profile.goal]}`);
+  if (profile.prof && PROFILE_TEXT.prof[profile.prof]) parts.push(`kasbi: ${PROFILE_TEXT.prof[profile.prof]}`);
+  const interests = (profile.interests || []).map((i) => PROFILE_TEXT.interests[i]).filter(Boolean);
+  if (interests.length) parts.push(`qiziqishlari: ${interests.join(', ')}`);
+  if (!parts.length) return [];
+  return [
+    `O'quvchi haqida (ro'yxatdan o'tishdagi anketadan): ${parts.join('; ')}.`,
+    "Unga ismi bilan murojaat qil, misol va savollarni uning maqsadi, kasbi va qiziqishlariga yaqin qil (lekin har gapda emas, tabiiy).",
+  ];
+}
+
+function sessionPrompt(lang, settings, memory, profile) {
   const p = PERSONAS[lang];
   const scenario = settings.scenario && SC.findScenario(settings.scenario);
   if (scenario) {
@@ -123,6 +163,7 @@ function sessionPrompt(lang, settings, memory) {
       `Sening asl isming ${p.name} (ustoz), lekin hozir rol o'ynaysan.`,
       ...roleplayLines(scenario),
       `Foydalanuvchi darajasi: ${LEVELS[settings.level]} Darajaga mos so'zlar ishlat.`,
+      ...profileLines(profile),
     ].join('\n\n');
   }
   const [topic, ...rest] = topicLines(lang, settings, LEVELS);
@@ -132,6 +173,7 @@ function sessionPrompt(lang, settings, memory) {
     MODES[settings.mode],
     `${topic} Suhbatni shu mavzu atrofida olib bor, rolli o'yin qilsa ham bo'ladi.`,
     ...rest,
+    ...profileLines(profile),
     memoryLines(memory).join('\n'),
   ].join('\n\n');
 }
@@ -392,13 +434,17 @@ const GAMES = {
   },
 };
 
-function gamePrompt(lang, type, settings, focus) {
+function gamePrompt(lang, type, settings, focus, profile) {
   const parts = [
     `Sen tajribali ${LANGUAGES[lang]} o'qituvchisisan va o'zbek tilida so'zlashuvchi o'quvchi uchun qiziqarli mashq tuzasan.`,
     ...topicLines(lang, settings, GAME_LEVELS),
     "Barcha izoh va tarjimalar o'zbek tilida, lotin yozuvida bo'lsin. Har bir savolning faqat bitta to'g'ri javobi bo'lsin. Har safar yangi, takrorlanmaydigan misollar o'yla.",
     GAMES[type].task,
   ];
+  const interests = ((profile && profile.interests) || []).map((i) => PROFILE_TEXT.interests[i]).filter(Boolean);
+  if (interests.length && !settings.exam) {
+    parts.push(`O'quvchining qiziqishlari: ${interests.join(', ')}. Mavzuga mos kelsa, ba'zi misollarni shulardan ol.`);
+  }
   if (settings.exam) {
     parts.push("Bu bosqich IMTIHONI: savollar faqat shu bosqich mavzusi va grammatikasi bo'yicha bo'lsin, osondan qiyinga qarab.");
   } else if (focus.words.length || focus.mistakes.length) {
@@ -529,6 +575,7 @@ function examGradePrompt(lang, exam, section) {
 }
 
 module.exports = {
+  PROFILE_TEXT,
   SC,
   EXAMS,
   EXAM_SCHEMAS,
