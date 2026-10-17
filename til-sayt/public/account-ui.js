@@ -220,6 +220,10 @@ window.AccountUI = (() => {
   // Ishga tushganda: sozlamalar va foydalanuvchini olamiz.
   App.config().then(async (c) => {
     config = c || {};
+    // Admin panelidan qo'yilgan e'lon.
+    const ann = $('announceBar');
+    ann.textContent = config.announcement || '';
+    ann.hidden = !config.announcement;
     await refresh();
     renderLoginButtons();
     if (me.user) window.Store.setLoggedIn(true);

@@ -1232,3 +1232,5 @@ h1 {
 .goal-text { flex: 1; display: flex; flex-direction: column; }
 .goal-text span { font-size: 13px; opacity: 0.9; }
 .goal-go { font-size: 22px; font-weight: 700; }
+
+.announce { width: 100%; max-width: 520px; margin-bottom: 10px; padding: 10px 14px; border-radius: 14px; border: 1px solid #f59e0b; background: color-mix(in srgb, #f59e0b 12%, var(--surface)); text-align: left; font-weight: 600; }

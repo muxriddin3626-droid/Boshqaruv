@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
 const account = require('./account');
+const admin = require('./admin');
 const auth = require('./auth');
 const {
   TUTOR_PROMPT,
@@ -686,13 +687,25 @@ function runRoute(route, req, res) {
 
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
-  const route = req.method === 'POST' ? ROUTES[url] || account.POST_ROUTES[url] : account.GET_ROUTES[url];
+  const route =
+    req.method === 'POST'
+      ? ROUTES[url] || account.POST_ROUTES[url] || admin.POST_ROUTES[url]
+      : account.GET_ROUTES[url] || admin.GET_ROUTES[url];
   if (route) {
     runRoute(route, req, res);
     return;
   }
   if (url === '/api/config' && req.method === 'GET') {
     sendJson(res, 200, { voice: Boolean(AZURE_KEY && AZURE_REGION), ...account.config() });
+    return;
+  }
+  // Admin panel sahifasi (qidiruv tizimlariga ko'rsatilmaydi).
+  if (url === '/admin' && (req.method === 'GET' || req.method === 'HEAD')) {
+    fs.readFile(path.join(PUBLIC_DIR, 'admin.html'), (err, data) => {
+      if (err) return res.writeHead(404).end();
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' });
+      res.end(data);
+    });
     return;
   }
   if (req.method === 'GET' || req.method === 'HEAD') {

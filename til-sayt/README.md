@@ -145,6 +145,8 @@ O'qituvchining qoidalari va o'yin topshiriqlari `src/prompt.js` faylida turadi.
   `scenarios.js` — kasbiy kurslar va rolli vaziyatlar, `survey.js` — ro'yxatdan
   o'tish anketasi, `sw.js` va `pwa.js` — oflayn
   ishlash va o'rnatish
+- `public/admin.html`, `admin.js`, `admin.css` — admin panel; `src/admin.js` —
+  admin so'rovlari, `src/settings.js` — paneldan o'zgartiriladigan sozlamalar
 - `src/server.js` — sahifani ko'rsatadi va Claude bilan bog'lanadi. API kalit
   faqat serverda turadi, brauzerga chiqmaydi. `src/account.js`, `src/auth.js`,
   `src/db.js` — akkaunt, Telegram kirish, limitlar, Premium, do'stlar va baza.
@@ -199,6 +201,35 @@ Brauzerda http://localhost:3000 ni oching (mikrofon `localhost` yoki `https` man
 4. Doimiy baza uchun Turso (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`) — `hisob-bot`
    README'sidagi kabi. Usiz baza lokal faylda (`til-sayt.db`) bo'ladi va Render'ning
    bepul tarifida qayta ishga tushganda o'chib ketadi.
+
+## Admin panel
+
+Manzil: `https://SIZNING-SAYT/admin` (qidiruv tizimlariga ko'rsatilmaydi).
+
+Kirish ikki usulda:
+
+- `ADMIN_SECRET` paroli bilan (12 soatga; parolni taxmin qilishdan himoya — daqiqasiga 5 urinish);
+- yoki Telegram ID'ingizni `ADMIN_TELEGRAM_IDS` ga yozing (vergul bilan bir nechta):
+  saytda Telegram orqali kirsangiz, `/admin` o'zi ochiladi. ID'ni @userinfobot dan bilish mumkin.
+
+Bo'limlar:
+
+- 📊 **Statistika** — foydalanuvchilar, bugun/7 kunda yangilar va faollar, Premium,
+  taklif orqali kelganlar, kodlar, haftalik XP, oxirgi 14 kundagi ro'yxatdan
+  o'tishlar grafigi, bugungi darslar/o'yinlar/imtihonlar soni (mehmonlar bilan),
+  anketa natijalari (maqsad, kasb, daraja, yosh, qiziqishlar).
+- 👥 **Foydalanuvchilar** — qidiruv (ism, Telegram ID, taklif kodi), oxirgi faollik,
+  haftalik XP, kim nechta odam taklif qilgani; bosilsa — anketa, so'zlar, kurs,
+  sertifikatlar va **Premium berish / olib qo'yish**.
+- 🎟️ **Kodlar** — Premium kodlar yaratish, ro'yxat (kim, qachon ishlatgan),
+  ishlatilmaganlarini bir bosishda nusxalash.
+- ⚙️ **Sozlamalar** — bepul limitlar (yoki butunlay o'chirish), narx, bog'lanish,
+  taklif bonusi va **saytdagi e'lon** (menyuning tepasida hamma ko'radi). Serverni
+  qayta ishga tushirmasdan darhol kuchga kiradi; `.env` dagi qiymatlar standart
+  qiymat bo'lib qoladi.
+
+Eslatma: anketa va o'rganish statistikasi faqat Telegram orqali kirgan
+foydalanuvchilar bo'yicha (kirmaganlarning ma'lumoti faqat ularning telefonida).
 
 ## Premium kodlari
 

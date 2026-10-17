@@ -1,19 +1,10 @@
 // Akkaunt: Telegram orqali kirish, ma'lumotlarni sinxronlash, kunlik limitlar,
 // Premium kodlari, do'stlar va haftalik reyting.
-const crypto = require('crypto');
 const db = require('./db');
 const auth = require('./auth');
 
-const FREE = {
-  lesson: Number(process.env.FREE_LESSONS || 2),
-  practice: Number(process.env.FREE_PRACTICE || 6),
-  exam: Number(process.env.FREE_EXAM_SECTIONS || 10),
-};
-const LIMITS_ON = process.env.FREE_LIMITS !== 'off';
-const REF_BONUS_DAYS = Number(process.env.REF_BONUS_DAYS || 3);
-const ADMIN_SECRET = process.env.ADMIN_SECRET || '';
-const PREMIUM_CONTACT = process.env.PREMIUM_CONTACT || '';
-const PREMIUM_PRICE = process.env.PREMIUM_PRICE || '';
+const settings = require('./settings');
+
 const MAX_STATE_BYTES = 2 * 1024 * 1024;
 
 // Kun Toshkent vaqti (UTC+5) bo'yicha hisoblanadi.
@@ -76,7 +67,8 @@ async function currentUser(req) {
 // hisobga yozish (xatolikda foydalanuvchi limitini yo'qotmaydi).
 async function quota(req, kind) {
   const user = await currentUser(req);
-  if (!LIMITS_ON || isPremium(user)) return { ok: true, commit: async () => {} };
+  const FREE = settings.freeLimits();
+  if (!settings.get().limitsOn || isPremium(user)) return { ok: true, commit: async () => {} };
   const subject = user ? `u:${user.id}` : `ip:${clientIp(req)}`;
   const day = tashkentDay();
   const used = (await db.getUsage(subject, day))[kind] || 0;
@@ -119,10 +111,11 @@ async function usageFor(req, user) {
 function config() {
   return {
     telegramBot: auth.enabled ? auth.BOT_USERNAME : null,
-    limits: LIMITS_ON ? FREE : null,
-    premiumContact: PREMIUM_CONTACT,
-    premiumPrice: PREMIUM_PRICE,
-    refBonusDays: REF_BONUS_DAYS,
+    limits: settings.get().limitsOn ? settings.freeLimits() : null,
+    premiumContact: settings.get().premiumContact,
+    premiumPrice: settings.get().premiumPrice,
+    refBonusDays: settings.get().refBonusDays,
+    announcement: settings.get().announcement,
   };
 }
 
@@ -132,7 +125,7 @@ async function handleMe(req, res) {
     user: user ? publicUser(user) : null,
     premium: isPremium(user),
     usage: await usageFor(req, user),
-    limits: LIMITS_ON ? FREE : null,
+    limits: settings.get().limitsOn ? settings.freeLimits() : null,
   });
 }
 
@@ -152,10 +145,11 @@ async function handleTelegramLogin(req, res) {
     if (inviter && inviter.id !== user.id) {
       await db.setReferredBy(user.id, inviter.id);
       await db.addFriends(user.id, inviter.id);
-      if (REF_BONUS_DAYS > 0) {
-        await db.addPremiumDays(user.id, REF_BONUS_DAYS);
-        await db.addPremiumDays(inviter.id, REF_BONUS_DAYS);
-        bonus = REF_BONUS_DAYS;
+      const refDays = settings.get().refBonusDays;
+      if (refDays > 0) {
+        await db.addPremiumDays(user.id, refDays);
+        await db.addPremiumDays(inviter.id, refDays);
+        bonus = refDays;
       }
     }
   }
@@ -274,21 +268,6 @@ async function handleRedeem(req, res) {
   sendJson(res, 200, { ok: true, days, premiumUntil: until });
 }
 
-// Premium kodlarini yaratish (faqat ADMIN_SECRET bilan).
-async function handleAdminCodes(req, res) {
-  const body = await readJson(req, res);
-  if (!body) return;
-  const given = Buffer.from(String(body.secret || ''));
-  const want = Buffer.from(ADMIN_SECRET);
-  if (!ADMIN_SECRET || given.length !== want.length || !crypto.timingSafeEqual(given, want)) {
-    sendJson(res, 403, { error: "Ruxsat yo'q." });
-    return;
-  }
-  const count = Math.min(Math.max(parseInt(body.count, 10) || 1, 1), 100);
-  const days = Math.min(Math.max(parseInt(body.days, 10) || 30, 1), 3650);
-  sendJson(res, 200, { codes: await db.createCodes(count, days), days });
-}
-
 const GET_ROUTES = {
   '/api/me': handleMe,
   '/api/state': handleState,
@@ -302,7 +281,20 @@ const POST_ROUTES = {
   '/api/friends/add': handleAddFriend,
   '/api/rating/visibility': handleRatingVisibility,
   '/api/premium/redeem': handleRedeem,
-  '/api/admin/codes': handleAdminCodes,
 };
 
-module.exports = { GET_ROUTES, POST_ROUTES, quota, sendLimit, config, ready: db.ready };
+module.exports = {
+  GET_ROUTES,
+  POST_ROUTES,
+  quota,
+  sendLimit,
+  config,
+  ready: db.ready.then(() => settings.load()),
+  currentUser,
+  readJson,
+  sendJson,
+  clientIp,
+  tashkentDay,
+  weekStart,
+  isPremium,
+};

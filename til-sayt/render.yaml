@@ -29,3 +29,5 @@ services:
         sync: false
       - key: PREMIUM_PRICE
         sync: false
+      - key: ADMIN_TELEGRAM_IDS
+        sync: false

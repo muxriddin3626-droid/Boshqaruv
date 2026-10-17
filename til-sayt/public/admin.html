@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Til Ustoz Admin</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body class="admin-body">
+  <header class="admin-top">
+    <span class="brand">tilustoz · <b>admin</b></span>
+    <nav class="admin-tabs" id="tabs" hidden>
+      <button type="button" class="tab active" data-tab="stats">📊 Statistika</button>
+      <button type="button" class="tab" data-tab="users">👥 Foydalanuvchilar</button>
+      <button type="button" class="tab" data-tab="codes">🎟️ Kodlar</button>
+      <button type="button" class="tab" data-tab="settings">⚙️ Sozlamalar</button>
+    </nav>
+    <button type="button" class="link-btn" id="logoutBtn" hidden>Chiqish</button>
+  </header>
+
+  <!-- Kirish -->
+  <main class="admin-main" id="loginView" hidden>
+    <section class="panel login-panel">
+      <h1>🔐 Admin panelga kirish</h1>
+      <form id="loginForm">
+        <input type="password" id="secretInput" placeholder="ADMIN_SECRET paroli" autocomplete="current-password" required>
+        <button type="submit" class="primary">Kirish</button>
+      </form>
+      <p class="hint-left" id="loginHint"></p>
+      <p class="error" id="loginError" hidden></p>
+    </section>
+  </main>
+
+  <!-- Statistika -->
+  <main class="admin-main" id="statsView" hidden>
+    <div class="kpis" id="kpis"></div>
+
+    <section class="panel">
+      <h2>Ro'yxatdan o'tishlar — oxirgi 14 kun</h2>
+      <div class="chart" id="signupChart"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Bugungi foydalanish</h2>
+      <div class="usage-grid" id="usageToday"></div>
+      <p class="hint-left">Bu yerda kirmagan foydalanuvchilar (mehmonlar) ham hisobga olingan.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Anketa natijalari</h2>
+      <p class="hint-left" id="surveyNote"></p>
+      <div class="dist-grid" id="surveyDist"></div>
+    </section>
+  </main>
+
+  <!-- Foydalanuvchilar -->
+  <main class="admin-main" id="usersView" hidden>
+    <form class="search-row" id="searchForm">
+      <input type="search" id="searchInput" placeholder="Ism, Telegram ID yoki taklif kodi bo'yicha qidirish">
+      <button type="submit" class="secondary">Qidirish</button>
+    </form>
+    <p class="hint-left" id="usersCount"></p>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Foydalanuvchi</th>
+            <th>Ro'yxatdan o'tgan</th>
+            <th>Oxirgi faollik</th>
+            <th class="num">Hafta XP</th>
+            <th class="num">Taklif qilgan</th>
+            <th>Premium</th>
+          </tr>
+        </thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <button type="button" class="secondary" id="prevPage">← Oldingi</button>
+      <button type="button" class="secondary" id="nextPage">Keyingi →</button>
+    </div>
+  </main>
+
+  <!-- Kodlar -->
+  <main class="admin-main" id="codesView" hidden>
+    <section class="panel">
+      <h2>Yangi Premium kodlar</h2>
+      <form class="code-create" id="codeForm">
+        <label>Soni <input type="number" id="codeCount" min="1" max="100" value="5"></label>
+        <label>Kun <input type="number" id="codeDays" min="1" max="3650" value="30"></label>
+        <button type="submit" class="primary">Yaratish</button>
+      </form>
+      <div class="new-codes" id="newCodes" hidden></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Kodlar ro'yxati</h2>
+        <button type="button" class="secondary" id="copyUnused">📋 Ishlatilmaganlarini nusxalash</button>
+      </div>
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr><th>Kod</th><th class="num">Kun</th><th>Yaratilgan</th><th>Holati</th></tr>
+          </thead>
+          <tbody id="codesBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Sozlamalar -->
+  <main class="admin-main" id="settingsView" hidden>
+    <form class="panel settings-form" id="settingsForm">
+      <h2>Kunlik bepul limitlar</h2>
+      <label class="toggle"><input type="checkbox" id="setLimitsOn"> <span>Limitlar yoqilgan (o'chirilsa — hamma uchun cheksiz)</span></label>
+      <div class="field-row">
+        <label>Ovozli darslar <input type="number" id="setFreeLessons" min="0" max="1000"></label>
+        <label>O'yin va hikoyalar <input type="number" id="setFreePractice" min="0" max="1000"></label>
+        <label>Imtihon bo'limlari <input type="number" id="setFreeExam" min="0" max="1000"></label>
+      </div>
+
+      <h2>Premium va takliflar</h2>
+      <div class="field-row">
+        <label>Narx (matn) <input type="text" id="setPremiumPrice" maxlength="100" placeholder="30 000 so'm / oy"></label>
+        <label>Bog'lanish <input type="text" id="setPremiumContact" maxlength="100" placeholder="@sizning_telegram"></label>
+        <label>Taklif bonusi (kun) <input type="number" id="setRefBonusDays" min="0" max="365"></label>
+      </div>
+
+      <h2>Saytdagi e'lon</h2>
+      <label class="wide">Menyuning tepasida hamma ko'radi. Bo'sh qoldirilsa — ko'rinmaydi.
+        <textarea id="setAnnouncement" maxlength="300" rows="3" placeholder="Masalan: 🎉 Yangi kasbiy kurslar qo'shildi!"></textarea>
+      </label>
+
+      <div class="end-actions">
+        <button type="submit" class="primary">Saqlash</button>
+      </div>
+      <p class="hint-left">O'zgarishlar darhol kuchga kiradi, serverni qayta ishga tushirish shart emas.</p>
+    </form>
+  </main>
+
+  <dialog class="sheet user-sheet" id="userDialog">
+    <div id="userDetail"></div>
+    <form method="dialog" class="end-actions">
+      <button type="submit" class="secondary">Yopish</button>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="admin.js"></script>
+</body>
+</html>

@@ -100,7 +100,28 @@ function checkLessonToken(token) {
   return Boolean(p && p.kind === 'lesson');
 }
 
+// Admin sessiyasi (ADMIN_SECRET paroli bilan kirganda): 12 soat.
+const ADMIN_COOKIE = 'tu_admin';
+const ADMIN_HOURS = 12;
+
+function adminCookie(req) {
+  const token = sign({ kind: 'admin', exp: Date.now() + ADMIN_HOURS * 3600000 });
+  return `${ADMIN_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${ADMIN_HOURS * 3600}${isHttps(req) ? '; Secure' : ''}`;
+}
+
+function clearAdminCookie(req) {
+  return `${ADMIN_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${isHttps(req) ? '; Secure' : ''}`;
+}
+
+function hasAdminCookie(req) {
+  const p = verify(parseCookies(req)[ADMIN_COOKIE]);
+  return Boolean(p && p.kind === 'admin');
+}
+
 module.exports = {
+  adminCookie,
+  clearAdminCookie,
+  hasAdminCookie,
   enabled,
   BOT_USERNAME,
   verifyTelegram,

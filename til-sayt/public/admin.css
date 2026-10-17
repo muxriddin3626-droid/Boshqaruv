@@ -1,0 +1,127 @@
+/* Admin panel */
+
+.admin-body { display: block; }
+
+.admin-top {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 12px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-tabs { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+.tab { flex: none; white-space: nowrap; padding: 7px 12px; border: none; border-radius: 10px; background: transparent; color: var(--muted); font-size: 14px; }
+.tab.active { background: var(--accent); color: var(--accent-text); }
+.admin-top .link-btn { margin: 0; }
+
+.admin-main { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid; gap: 14px; }
+.admin-main .panel { padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); min-width: 0; }
+.admin-main h2 { margin: 0 0 12px; font-size: 16px; }
+.panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.panel-head h2 { margin: 0; }
+
+.login-panel { max-width: 420px; margin: 40px auto; }
+.login-panel h1 { font-size: 22px; margin: 0 0 14px; }
+#loginForm { display: flex; gap: 8px; }
+#loginForm input, .search-row input, .code-create input, .settings-form input, .settings-form textarea {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.error { color: var(--danger); margin: 8px 0 0; }
+
+/* Ko'rsatkich plitkalari */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.kpi { display: flex; flex-direction: column; gap: 2px; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.kpi-label { color: var(--muted); font-size: 13px; }
+.kpi-value { font-size: 26px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.kpi-sub { color: var(--muted); font-size: 12px; }
+.kpis.small .kpi { padding: 10px; }
+.kpis.small .kpi-value { font-size: 20px; }
+.usage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+
+/* Ustunli grafik */
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart .grid { stroke: var(--border); stroke-width: 1; }
+.chart .baseline { stroke: var(--muted); stroke-width: 1; opacity: 0.6; }
+.chart .axis { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart .bar { fill: #4f8ef7; }
+.chart .hit { fill: transparent; cursor: pointer; }
+.chart .hit:hover { fill: color-mix(in srgb, var(--text) 5%, transparent); }
+.chart-tip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Taqsimotlar */
+.dist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+.dist h3 { margin: 0 0 8px; font-size: 14px; }
+.dist-row { display: grid; grid-template-columns: 9.5em 1fr 2.5em; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+.dist-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dist-bar { height: 10px; border-radius: 0 4px 4px 0; background: var(--bg); }
+.dist-fill { height: 100%; border-radius: 0 4px 4px 0; background: #4f8ef7; }
+.dist-value { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Jadvallar */
+.search-row { display: flex; gap: 8px; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.admin-table th, .admin-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.admin-table th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.admin-table tr.clickable { cursor: pointer; }
+.admin-table tr.clickable:hover { background: var(--bg); }
+.muted { color: var(--muted); }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.pill-badge { padding: 2px 8px; border-radius: 999px; background: var(--bg); font-size: 12px; }
+.pill-badge.pro { background: color-mix(in srgb, #f59e0b 20%, var(--surface)); }
+.pill-badge.free { background: color-mix(in srgb, #2fb36d 16%, var(--surface)); }
+.pager { display: flex; justify-content: space-between; }
+.pager button:disabled { opacity: 0.4; }
+
+.code-create { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.code-create label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); width: 110px; }
+.new-codes { margin-top: 12px; padding: 12px; border-radius: 12px; background: var(--bg); }
+.new-codes pre { margin: 6px 0 10px; font-size: 15px; }
+
+.settings-form { display: grid; gap: 10px; }
+.settings-form h2 { margin-top: 8px; }
+.field-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.settings-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.settings-form label.toggle { flex-direction: row; color: var(--text); font-size: 15px; }
+.settings-form .end-actions { justify-content: flex-start; }
+
+.user-sheet { width: min(560px, calc(100% - 24px)); }
+.user-sheet h2 { margin: 0 0 4px; }
+.user-lang, .user-premium { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.user-lang h3, .user-premium h3 { margin: 0 0 6px; font-size: 15px; }
+.user-lang p, .user-premium p { margin: 2px 0; font-size: 14px; }
+.chip.danger { border-color: var(--danger); color: var(--danger); }
+
+@media (max-width: 600px) {
+  .admin-top { justify-content: space-between; }
+  .admin-tabs { order: 3; flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .dist-row { grid-template-columns: 8em 1fr 2em; }
+  .admin-table th:nth-child(2), .admin-table td:nth-child(2) { display: none; }
+}
