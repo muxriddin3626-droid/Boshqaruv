@@ -25,6 +25,9 @@ const {
   examSectionPrompt,
   examGradePrompt,
   GAMES,
+  THEMES,
+  VOCAB_SCHEMA,
+  vocabPrompt,
   gamePrompt,
   sessionPrompt,
 } = require('./prompt');
@@ -59,7 +62,7 @@ const MAX_TTS_CHARS = 600;
 
 // Suhbat tarixi brauzerda saqlanadi va har so'rovda yuboriladi. Server suhbat
 // uchun oxirgi MAX_HISTORY ta, hisobot uchun MAX_REPORT_HISTORY ta xabarni oladi.
-const MAX_HISTORY = 40;
+const MAX_HISTORY = 60;
 const MAX_REPORT_HISTORY = 120;
 const MAX_MESSAGE_CHARS = 4000;
 const MAX_BODY_BYTES = 400 * 1024;
@@ -315,8 +318,11 @@ async function handleReport(req, res) {
     return;
   }
 
-  const scenario = SC.findScenario(cleanSettings(body.settings).scenario);
-  const scenarioNote = scenario ? `\nBu rolli vaziyat edi: "${scenario.title}". Ustoz rolni o'ynadi: ${scenario.role}. O'quvchining maqsadi: ${scenario.goal}.` : '';
+  const reportSettings = cleanSettings(body.settings);
+  const scenario = SC.findScenario(reportSettings.scenario);
+  const scenarioNote =
+    (scenario ? `\nBu rolli vaziyat edi: "${scenario.title}". Ustoz rolni o'ynadi: ${scenario.role}. O'quvchining maqsadi: ${scenario.goal}.` : '') +
+    (reportSettings.topic === 'vocab' ? "\nBu LUG'AT DARSI edi: words ro'yxatiga darsda o'rgatilgan barcha yangi so'zlarni yoz (40 tagacha)." : '');
   const transcript = history
     .map((m) => (m.role === 'user' ? `O'quvchi: ${m.content}` : `Ustoz: ${assistantText(m.content)}`))
     .join('\n');
@@ -480,6 +486,55 @@ async function handleGame(req, res) {
     }
     await q.commit();
     sendJson(res, 200, game);
+  } catch (err) {
+    sendClaudeError(res, err);
+  }
+}
+
+// ---------- Lug'at: mavzuli so'z to'plami ----------
+
+async function handleVocab(req, res) {
+  if (rateLimited('chat', clientIp(req))) {
+    sendJson(res, 429, { error: "So'rovlar juda ko'p. Bir daqiqadan keyin yana urinib ko'ring." });
+    return;
+  }
+  const body = await readJson(req, res);
+  if (!body) return;
+  const theme = THEMES.byId(body.theme);
+  if (!Object.hasOwn(LANGUAGES, body.lang) || !theme) {
+    sendJson(res, 400, { error: "Noto'g'ri so'rov." });
+    return;
+  }
+  const level = Object.hasOwn(LEVELS, body.level) && body.level !== 'auto' ? body.level : 'a1';
+  const exclude = (Array.isArray(body.exclude) ? body.exclude : []).map((w) => str(w, 60)).filter(Boolean).slice(-150);
+  const q = await account.quota(req, 'practice');
+  if (!q.ok) {
+    account.sendLimit(res, q);
+    return;
+  }
+  try {
+    const raw = await askJson({
+      system: vocabPrompt(body.lang, theme, level, exclude, cleanProfile(body.profile)),
+      messages: [{ role: 'user', content: "Lug'at to'plamini tayyorla." }],
+      schema: VOCAB_SCHEMA,
+      fast: true,
+    });
+    const seen = new Set(exclude.map((w) => w.toLowerCase()));
+    const words = ((raw && raw.words) || [])
+      .map((w) => ({
+        word: str(w && w.word, 80),
+        translation: str(w && w.translation, 120),
+        example: str(w && w.example, 200),
+        example_uz: str(w && w.example_uz, 200),
+      }))
+      .filter((w) => w.word && w.translation && !seen.has(w.word.toLowerCase()) && seen.add(w.word.toLowerCase()))
+      .slice(0, THEMES.PACK_SIZE);
+    if (words.length < 5) {
+      sendJson(res, 502, { error: "So'zlarni tayyorlab bo'lmadi, qayta urinib ko'ring." });
+      return;
+    }
+    await q.commit();
+    sendJson(res, 200, { words });
   } catch (err) {
     sendClaudeError(res, err);
   }
@@ -674,6 +729,7 @@ const ROUTES = {
   '/api/chat': handleChat,
   '/api/report': handleReport,
   '/api/game': handleGame,
+  '/api/vocab': handleVocab,
   '/api/exam/section': handleExamSection,
   '/api/exam/grade': handleExamGrade,
   '/api/tts': handleTts,

@@ -33,6 +33,7 @@
     account: $('accountScreen'),
     badges: $('badgesScreen'),
     hangul: $('hangulScreen'),
+    vocab: $('vocabScreen'),
     rating: $('ratingScreen'),
     profList: $('profListScreen'),
     prof: $('profScreen'),
@@ -105,7 +106,7 @@
   }
 
   function loadSettings() {
-    const defaults = { mode: 'kind', topic: 'free', level: 'auto' };
+    const defaults = { mode: 'kind', topic: 'free', level: 'auto', length: '10' };
     return { ...defaults, ...Store.get(SETTINGS_KEY, {}) };
   }
 
@@ -147,7 +148,7 @@
     const t = TUTORS[lang];
     $('menuTitle').textContent = `${t.name} bilan ${t.lang}`;
     $('settingsText').textContent =
-      `${settings.mode === 'strict' ? '🔥' : '😊'} ${MODE_LABELS[settings.mode]} · ${chipLabel('topic', settings.topic)} · ${chipLabel('level', settings.level)}`;
+      `${settings.mode === 'strict' ? '🔥' : '😊'} ${MODE_LABELS[settings.mode]} · ${chipLabel('topic', settings.topic)} · ${chipLabel('level', settings.level)} · ⏱️ ${settings.length || 10} daq`;
     const best = loadStored(BEST_KEY + lang) || {};
     document.querySelectorAll('[data-best]').forEach((el) => {
       const b = best[el.dataset.best];
@@ -158,6 +159,7 @@
     Face.set($('menuFace'), settings.mode === 'strict' ? 'angry' : 'happy');
     window.Practice.renderMenu();
     window.Hangul.renderMenu(lang);
+    window.Vocab.renderCard();
     show('menu');
   }
 
@@ -513,7 +515,7 @@
     // Maxsus mavzu (masalan, Hangul harflari darsi) — faqat shu dars uchun.
     if (opts.topic) lessonOpts.topic = opts.topic;
     lessonUnit = lessonOpts.unit;
-    lessonSeconds = lessonOpts.scenario ? ROLEPLAY_SECONDS : LESSON_SECONDS;
+    lessonSeconds = lessonOpts.scenario ? ROLEPLAY_SECONDS : (Number(settings.length) || 10) * 60;
     goalReached = false;
     const unit = lessonUnit && COURSE.byId(lessonUnit);
     const scenario = lessonOpts.scenario && SCENARIOS.findScenario(lessonOpts.scenario);
@@ -526,7 +528,7 @@
     speakLang = 'target';
     document.querySelectorAll('.pill').forEach((p) => p.classList.toggle('active', p.dataset.speak === 'target'));
     $('speakTarget').textContent = t.speakLabel;
-    const topic = document.querySelector(`[data-group="topic"] [data-value="${settings.topic}"]`);
+    const topic = document.querySelector(`[data-group="topic"] [data-value="${lessonOpts.topic || settings.topic}"]`);
     $('lessonInfo').textContent = scenario
       ? `🎭 ${scenario.title}`
       : theme

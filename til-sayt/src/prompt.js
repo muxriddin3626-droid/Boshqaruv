@@ -22,6 +22,8 @@ Bu OVOZLI dars: foydalanuvchi mikrofon orqali gapiradi, sening javobing esa ovoz
 - Dars foydalanuvchining "Salom" xabari bilan boshlanadi: o'zingni ismingni aytib tanishtir, mavzuni qisqa e'lon qil va birinchi oddiy savolni ber.
 - "goal_reached" — faqat rolli vaziyatda ishlatiladi (pastda aytiladi); oddiy darsda doim false.`;
 
+const THEMES = require('../public/themes.js');
+
 const LANGUAGES = {
   ru: 'rus tili',
   de: 'nemis tili',
@@ -55,6 +57,8 @@ const TOPICS = {
   food: 'Restoranda — taom buyurtma qilish, hisob so\'rash',
   travel: "Sayohat — aeroport, mehmonxona, yo'l so'rash",
   job: "Ish suhbati — o'zini tanishtirish, tajriba, kuchli tomonlar",
+  vocab:
+    "KO'P SO'Z O'RGANISH (lug'at darsi). Maqsad — bir darsda iloji boricha ko'p yangi so'z yodlatish (20-40 ta). Har javobda 2-3 ta yangi foydali so'zni o'rgat: so'zni o'rganilayotgan tilda ayt, 'uz' segmentida tarjimasini va qisqa misolini ber, so'ng o'quvchidan shu so'zlarni ishlatib javob berishni so'ra. Har 4-5 javobda oldin o'rgatilgan so'zlardan tezkor so'roq qil («'olma' qanday edi?» yoki teskarisi) — xato qilsa, qayta eslat va keyinroq yana so'ra. So'zlarni mavzular bo'yicha guruhla (masalan, avval ovqat, keyin uy), o'quvchining darajasi va qiziqishlariga mos tanla. Har 10 ta so'zdan keyin o'zbekcha qisqa xulosa: «Bugun N ta so'z o'rgandik!».",
   hangul:
     "HANGUL HARFLARI DARSI. O'quvchi koreys yozuvini endi o'rganyapti. Har javobda faqat 1-2 ta yangi harf yoki bo'g'in o'rgat: 'uz' segmentida harfning shakli va tovushini o'zbekcha, lotincha qisqa tushuntir (eslab qolish usuli bilan, masalan «ㅏ — tik chiziq, tayoqcha o'ngga, «a» deb o'qiladi»), so'ng 'ko' segmentida o'sha bo'g'in yoki oddiy so'zni ayt (masalan 아, 가, 나비) — u ekranda Hangul bilan ko'rinadi — va o'quvchidan ovoz chiqarib takrorlashni so'ra. Tartib: asosiy unlilar (아 어 오 우 으 이), keyin ㄱ ㄴ ㄷ ㄹ ㅁ ㅂ ㅅ ㅈ ㅎ, keyin oddiy so'zlar (나, 아이, 바다, 나비, 하나). Takrorlaganda talaffuzini baholab, xatosini tuzat. Har 3-4 javobda o'rgangan harflardan kichik savol ber: «가 qanday o'qiladi?». Koreys tilida uzun gapirma — bu o'qish darsi, asosiy tushuntirish o'zbekcha.",
   migrant:
@@ -220,7 +224,7 @@ O'ZBEK TILIDA (lotin yozuvida) qisqa hisobot tayyorla:
 - summary: 1-2 gap — nimalar haqida gaplashildi va o'quvchi qanday ishladi. Rag'batlantiruvchi bo'lsin.
 - level: o'quvchining taxminiy CEFR darajasi, masalan "A1" yoki "A2".
 - mistakes: o'quvchining eng muhim xatolari, ko'pi bilan 6 ta. wrong — o'quvchi aytgan variant, correct — to'g'ri variant, explanation — o'zbekcha bir gaplik izoh. Xato bo'lmasa, bo'sh ro'yxat.
-- words: darsda uchragan, o'quvchiga foydali yangi so'z yoki iboralar, ko'pi bilan 8 ta, o'zbekcha tarjimasi bilan.
+- words: darsda uchragan, o'quvchiga foydali yangi so'z yoki iboralar, ko'pi bilan 8 ta (agar bu lug'at darsi bo'lsa — darsda o'rgatilgan BARCHA yangi so'zlar, 40 tagacha), o'zbekcha tarjimasi bilan.
 - tip: keyingi dars uchun bitta aniq maslahat.
 - score: dars natijasi 0 dan 100 gacha butun son (topshiriq yoki maqsadga erishish, til sifati, ravonlik). Rolli vaziyat bo'lsa, asosan o'quvchi maqsadga qanchalik erishgani va qanchalik tushunarli gapirganiga qarab bahola.`;
 
@@ -595,7 +599,50 @@ function examGradePrompt(lang, exam, section) {
   ].join('\n\n');
 }
 
+// ---------- Lug'at: mavzuli so'z to'plami ----------
+
+const VOCAB_SCHEMA = {
+  type: 'object',
+  properties: {
+    words: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          word: { type: 'string' },
+          translation: { type: 'string' },
+          example: { type: 'string' },
+          example_uz: { type: 'string' },
+        },
+        required: ['word', 'translation', 'example', 'example_uz'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['words'],
+  additionalProperties: false,
+};
+
+function vocabPrompt(lang, theme, level, exclude, profile) {
+  return [
+    `Sen tajribali ${LANGUAGES[lang]} o'qituvchisisan va o'zbek tilida so'zlashuvchi o'quvchi uchun lug'at to'plami tuzasan.`,
+    LANG_NOTES[lang] || '',
+    `Mavzu: ${theme.title} — ${theme.topic}.`,
+    `Daraja: ${LEVELS[level] || LEVELS.a1}`,
+    `Aynan ${THEMES.PACK_SIZE} ta so'z yoki qisqa ibora ber — shu mavzuda eng foydali va ko'p ishlatiladiganlaridan boshlab. Har biri boshqasidan farqli bo'lsin.`,
+    "word — o'rganilayotgan tilda (nemis otlari artikli bilan, masalan «der Tisch»; ruscha urg'u belgisiz; koreyscha Hangul bilan, lug'at shaklida). translation — o'zbekcha tarjima (lotin yozuvida, qisqa). example — shu so'z ishlatilgan juda qisqa, oddiy gap (o'rganilayotgan tilda). example_uz — gapning o'zbekcha tarjimasi.",
+    exclude.length ? `O'quvchi bu so'zlarni allaqachon o'rgangan — ularni BERMA, yangilarini ber:
+${exclude.join(', ')}` : '',
+    ...profileLines(profile).slice(0, 1),
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+}
+
 module.exports = {
+  THEMES,
+  VOCAB_SCHEMA,
+  vocabPrompt,
   PROFILE_TEXT,
   SC,
   EXAMS,

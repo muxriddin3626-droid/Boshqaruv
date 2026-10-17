@@ -15,7 +15,9 @@ uslubida). Telefonda ham, kompyuterda ham ishlaydi:
 - dars oldidan tanlanadi: ustoz rejimi (**Mehribon** yoki **Qattiqqo'l** — hazil aralash
   koyiydi, lekin so'kinmaydi), mavzu (tanishuv, do'kon, restoran, sayohat, ish
   suhbati yoki erkin suhbat) va daraja ("Bilmayman" desangiz, ustoz o'zi aniqlaydi);
-- 10 daqiqalik dars boshlanadi (yuqorida taymer va "Stop" tugmasi);
+- dars boshlanadi — **10, 20 yoki 30 daqiqa** (tanlanadi; yuqorida taymer va "Stop" tugmasi);
+- **«📚 Ko'p so'z yodlash»** mavzusi: ustoz bir darsda 20-40 ta yangi so'z o'rgatadi,
+  tez-tez so'roq qilib takrorlatadi, darsdan keyin hammasi daftarga tushadi;
 - ekran o'rtasidagi ustoz yuzchasi gapiradi va kayfiyatini ko'rsatadi:
   xotirjam, xursand, yulduz ko'zli, o'ylayotgan, hayron va olovli "jahldor"
   (bir xil xato takrorlansa — hazil tariqasida);
@@ -41,6 +43,13 @@ menyuda maqsadga mos tavsiya chiqadi (masalan patent → patent imtihoni, ish �
 kasbiy kurs). Anketani sozlamalardan qayta to'ldirish mumkin (`public/survey.js`).
 
 ### Tez o'rganish uchun
+
+- 📚 **Lug'at** — 26 mavzu (ovqat, ish, qurilish, zavod, xavfsizlik, kasalxona,
+  hujjatlar...), har birida 20 talik so'z to'plamlari (misol gaplar bilan, cheksiz —
+  har safar yangi so'zlar). Yodlash: 5 tadan tanishtirish → so'z→tarjima va
+  tarjima→so'z savollari, xato qilinganlar qayta so'raladi. Yodlanganlar daftarga
+  tushib, aqlli takrorlashga qo'shiladi. Kunlik maqsad: 10/20/30/50 ta yangi so'z
+  (`public/themes.js`, `public/vocab.js`, `/api/vocab`).
 
 - 🗺️ **Kurs xaritasi (A1 → B1)** — 12 bosqich (salomlashish, raqamlar, oila, kun
   tartibi, ovqat, do'kon, shahar, o'tgan zamon, ob-havo, sog'liq, ish, sayohat).

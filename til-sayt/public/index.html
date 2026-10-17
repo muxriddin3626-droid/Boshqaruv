@@ -108,6 +108,15 @@
       <span class="course-count" id="courseCount">0/12</span>
     </button>
 
+    <button type="button" class="big-card course-card vocab-card" id="vocabCard">
+      <span class="act-icon">📚</span>
+      <span class="act-text">
+        <span class="act-title">Lug'at — so'z yodlash</span>
+        <span class="act-desc" id="vocabDesc">26 mavzu, har birida yuzlab so'z</span>
+      </span>
+      <span class="course-count" id="vocabCount">0/20</span>
+    </button>
+
     <button type="button" class="big-card review-card" id="reviewCard">
       <span class="act-icon">🧠</span>
       <span class="act-text">
@@ -234,6 +243,16 @@
         <button type="button" class="chip" data-value="travel">✈️ Sayohat</button>
         <button type="button" class="chip" data-value="job">💼 Ish suhbati</button>
         <button type="button" class="chip" data-value="migrant">🛂 Migrant hayoti</button>
+        <button type="button" class="chip" data-value="vocab">📚 Ko'p so'z yodlash</button>
+      </div>
+    </section>
+
+    <section class="option-group">
+      <h2>Dars davomiyligi</h2>
+      <div class="chips" data-group="length">
+        <button type="button" class="chip selected" data-value="10">⏱️ 10 daqiqa</button>
+        <button type="button" class="chip" data-value="20">⏱️ 20 daqiqa</button>
+        <button type="button" class="chip" data-value="30">⏱️ 30 daqiqa</button>
       </div>
     </section>
 
@@ -598,6 +617,15 @@
   </main>
 
   <!-- 17. Yutuqlar -->
+  <main id="vocabScreen" class="screen hangul-screen" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="vocabBack">← Menyu</button>
+      <span class="game-title" id="vocabTitle">📚 Lug'at</span>
+      <span class="game-score" id="vocabScore"></span>
+    </div>
+    <div class="hangul-body" id="vocabBody"></div>
+  </main>
+
   <main id="hangulScreen" class="screen hangul-screen" hidden>
     <div class="game-bar">
       <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
@@ -741,6 +769,8 @@
   <script src="games.js"></script>
   <script src="practice.js"></script>
   <script src="hangul.js"></script>
+  <script src="themes.js"></script>
+  <script src="vocab.js"></script>
   <script src="exam.js"></script>
   <script src="cert.js"></script>
   <script src="account-ui.js"></script>

@@ -161,7 +161,7 @@ function clearCookie(req) {
 
 // Ovozli dars tokeni: dars boshlanganda beriladi va keyingi xabarlarda talab qilinadi,
 // shunda kunlik limit har bir yangi dars uchun bir marta hisoblanadi.
-const LESSON_MS = 15 * 60 * 1000;
+const LESSON_MS = 45 * 60 * 1000; // eng uzun dars 30 daqiqa + zaxira
 
 function lessonToken() {
   return sign({ kind: 'lesson', exp: Date.now() + LESSON_MS });
