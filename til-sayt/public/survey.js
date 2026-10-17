@@ -345,10 +345,10 @@ window.Survey = (() => {
     actions.append(startBtn, menuBtn);
     body.appendChild(actions);
 
-    // Telegram orqali kirish taklifi (natijalar yo'qolmasligi uchun) — sozlangan bo'lsa.
+    // Akkauntga kirish taklifi (natijalar yo'qolmasligi uchun) — sozlangan bo'lsa.
     if (!$('startLogin').hidden) {
       const login = el('div', 'login-hint');
-      login.appendChild(el('p', '', "🔐 Anketa va natijalaringiz yo'qolmasligi uchun Telegram orqali kiring (ixtiyoriy)."));
+      login.appendChild(el('p', '', "🔐 Anketa va natijalaringiz yo'qolmasligi uchun akkauntga kiring (ixtiyoriy)."));
       login.appendChild(button('secondary', '🔐 Kirish', () => {
         finish();
         window.AccountUI.open();

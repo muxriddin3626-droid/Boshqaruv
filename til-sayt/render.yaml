@@ -29,5 +29,15 @@ services:
         sync: false
       - key: PREMIUM_PRICE
         sync: false
-      - key: ADMIN_TELEGRAM_IDS
+      - key: ADMIN_USER_IDS
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: SMS_PROVIDER
+        sync: false
+      - key: SMS_TEMPLATE
+        sync: false
+      - key: ESKIZ_EMAIL
+        sync: false
+      - key: ESKIZ_PASSWORD
         sync: false

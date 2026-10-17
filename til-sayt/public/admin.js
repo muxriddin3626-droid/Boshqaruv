@@ -82,7 +82,7 @@
     if (me.admin) return openTab('stats');
     $('loginHint').textContent = [
       me.passwordLogin ? '' : "Diqqat: serverda ADMIN_SECRET sozlanmagan — parol bilan kirib bo'lmaydi.",
-      me.telegramAdmins ? "Telegram ID'ingiz admin ro'yxatida bo'lsa, avval saytda Telegram orqali kiring va bu sahifani yangilang." : '',
+      me.accountAdmins ? "Akkauntingiz admin ro'yxatida bo'lsa, avval saytda akkauntga kiring va bu sahifani yangilang." : '',
     ]
       .filter(Boolean)
       .join(' ');
@@ -143,7 +143,8 @@
       kpi('⭐ Premium', fmtNum(c.premium), c.users ? `${Math.round((c.premium / c.users) * 100)}% foydalanuvchilar` : ''),
       kpi('👥 Taklif orqali', fmtNum(c.referred), 'ro\'yxatdan o\'tgan'),
       kpi('🎟️ Kodlar', `${fmtNum(c.codesUsed)} / ${fmtNum(c.codesTotal)}`, 'ishlatilgan / jami'),
-      kpi('🔥 Haftalik XP', fmtNum(c.weekXp), 'barcha foydalanuvchilar')
+      kpi('🔥 Haftalik XP', fmtNum(c.weekXp), 'barcha foydalanuvchilar'),
+      kpi('🔐 Kirish usuli', fmtNum(c.users - c.google - c.phone), `Telegram · ${fmtNum(c.google)} Google · ${fmtNum(c.phone)} telefon`)
     );
 
     renderBarChart($('signupChart'), s.signups);
@@ -154,13 +155,14 @@
       const u = s.usage[kind] || { count: 0, people: 0, guests: 0 };
       usage.appendChild(kpi(LABELS.kind[kind], fmtNum(u.count), `${u.people} kishi (${u.guests} mehmon)`));
     }
+    if (s.usage.sms) usage.appendChild(kpi('📱 SMS kodlar', fmtNum(s.usage.sms.count), `${s.usage.sms.people} ta raqamga`));
     const lim = s.settings.limitsOn ? `Bepul limit: ${s.settings.freeLessons} / ${s.settings.freePractice} / ${s.settings.freeExam}` : "Limitlar o'chirilgan";
     usage.appendChild(kpi('⚙️ Limitlar', s.settings.limitsOn ? 'Yoqilgan' : "O'chiq", lim));
 
     const sv = s.survey;
     $('surveyNote').textContent = sv.total
-      ? `${sv.total} ta anketa (rus tili: ${sv.langs.ru}, nemis tili: ${sv.langs.de}). Faqat Telegram orqali kirganlar hisoblanadi.`
-      : "Hali anketa yo'q. Faqat Telegram orqali kirgan foydalanuvchilarning anketasi serverga saqlanadi.";
+      ? `${sv.total} ta anketa (rus tili: ${sv.langs.ru}, nemis tili: ${sv.langs.de}). Faqat akkauntga kirganlar hisoblanadi.`
+      : "Hali anketa yo'q. Faqat akkauntga kirgan foydalanuvchilarning anketasi serverga saqlanadi.";
     const dist = $('surveyDist');
     dist.textContent = '';
     for (const [key, title] of [
@@ -281,7 +283,7 @@
       const tr = el('tr', 'clickable');
       const name = el('td');
       name.appendChild(el('b', '', [u.firstName, u.lastName].filter(Boolean).join(' ') || '—'));
-      name.appendChild(el('span', 'muted', ` · ID ${u.id}`));
+      name.appendChild(el('span', 'muted', ` · ${loginLabel(u.id)}`));
       const premium = u.premiumUntil > Date.now();
       tr.append(
         name,
@@ -322,6 +324,13 @@
     loadUsers();
   });
 
+  // Akkaunt ID'sidan kirish usuli.
+  function loginLabel(id) {
+    if (id.startsWith('g:')) return 'Google';
+    if (id.startsWith('p:')) return `📱 +${id.slice(2)}`;
+    return `Telegram ${id}`;
+  }
+
   async function openUser(id) {
     let d;
     try {
@@ -334,7 +343,7 @@
     box.textContent = '';
     box.appendChild(el('h2', '', [u.firstName, u.lastName].filter(Boolean).join(' ') || '—'));
     const premium = u.premiumUntil > Date.now();
-    box.appendChild(el('p', 'muted', `Telegram ID: ${u.id} · taklif kodi: ${u.refCode} · reytingda: ${u.showInRating ? 'ha' : "yo'q"}`));
+    box.appendChild(el('p', 'muted', `${loginLabel(u.id)} · taklif kodi: ${u.refCode} · reytingda: ${u.showInRating ? 'ha' : "yo'q"}`));
 
     const facts = el('div', 'kpis small');
     facts.append(

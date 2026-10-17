@@ -44,7 +44,7 @@
     <p class="hint">Mikrofonga ruxsat so'raladi. Eng yaxshi ishlashi uchun Chrome brauzeridan foydalaning.</p>
     <div class="login-hint" id="startLogin" hidden>
       <p>🔐 Natijalaringiz yo'qolmasligi va boshqa telefonda ham ochilishi uchun kiring:</p>
-      <div class="tg-slot" data-tg-slot></div>
+      <div class="login-slot" data-login-slot></div>
     </div>
   </main>
 
@@ -531,9 +531,9 @@
 
     <section class="panel" id="loginPanel">
       <h2>🔐 Kirish</h2>
-      <p>Telegram orqali kiring — so'zlaringiz, streak, kurs va sertifikatlar saqlanadi va istalgan telefonda ochiladi. Parol kerak emas.</p>
-      <div class="tg-slot" data-tg-slot></div>
-      <p class="hint-left" id="loginOff" hidden>Telegram orqali kirish hali sozlanmagan (sayt egasi uchun: README → "Akkaunt").</p>
+      <p>Telegram, Google yoki telefon raqamingiz orqali kiring — so'zlaringiz, streak, kurs va sertifikatlar saqlanadi va istalgan telefonda ochiladi. Parol kerak emas.</p>
+      <div class="login-slot" data-login-slot></div>
+      <p class="hint-left" id="loginOff" hidden>Kirish hali sozlanmagan (sayt egasi uchun: README → "Akkaunt").</p>
     </section>
 
     <section class="panel" id="profilePanel" hidden>
@@ -604,7 +604,7 @@
       <button type="button" class="pill" data-tab="global">🌍 Hammasi</button>
     </div>
     <div class="login-hint" id="ratingLogin" hidden>
-      <p>Reytingda qatnashish va do'stlar bilan bellashish uchun Telegram orqali kiring.</p>
+      <p>Reytingda qatnashish va do'stlar bilan bellashish uchun akkauntga kiring.</p>
       <button type="button" class="primary" id="ratingLoginBtn">🔐 Kirish</button>
     </div>
     <p class="lead small" id="ratingNote"></p>
@@ -669,6 +669,26 @@
       <div class="end-actions">
         <button type="button" class="primary" id="limitPremium">⭐ Premium haqida</button>
         <button type="submit" class="secondary">Keyinroq</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="sheet" id="phoneDialog">
+    <form id="phoneForm" novalidate>
+      <h2>📱 Telefon raqam bilan kirish</h2>
+      <p id="phoneHint">Raqamingizga SMS orqali 6 xonali kod yuboramiz.</p>
+      <div id="phoneStep1">
+        <input type="tel" id="phoneInput" placeholder="+998 90 123 45 67" autocomplete="tel" inputmode="tel" maxlength="20">
+      </div>
+      <div id="phoneStep2" hidden>
+        <input type="text" id="phoneCode" placeholder="Kod (6 ta raqam)" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
+        <input type="text" id="phoneName" placeholder="Ismingiz" autocomplete="name" maxlength="60" hidden>
+        <button type="button" class="link-btn" id="phoneResend" disabled>Kodni qayta yuborish</button>
+      </div>
+      <p class="form-error" id="phoneError" role="alert" hidden></p>
+      <div class="end-actions">
+        <button type="submit" class="primary" id="phoneSubmit">Kod yuborish</button>
+        <button type="button" class="secondary" id="phoneCancel">Bekor qilish</button>
       </div>
     </form>
   </dialog>

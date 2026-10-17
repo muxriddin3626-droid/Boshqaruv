@@ -1,4 +1,4 @@
-// Akkaunt oynasi: Telegram orqali kirish, Premium, kunlik limitlar va do'stlarni taklif qilish.
+// Akkaunt oynasi: Telegram, Google yoki telefon raqam orqali kirish, Premium, kunlik limitlar va do'stlarni taklif qilish.
 window.AccountUI = (() => {
   const App = window.App;
   const $ = (id) => document.getElementById(id);
@@ -32,43 +32,195 @@ window.AccountUI = (() => {
     }
   }
 
-  // Telegram tugmasini kerakli joylarga qo'yamiz.
+  const loginOn = () => Boolean(config.telegramBot || config.googleClientId || config.phoneLogin);
+
+  // Kirish tugmalarini (Telegram, Google, telefon) kerakli joylarga qo'yamiz.
   function renderLoginButtons() {
-    document.querySelectorAll('[data-tg-slot]').forEach((slot) => {
+    document.querySelectorAll('[data-login-slot]').forEach((slot) => {
       slot.textContent = '';
-      if (!config.telegramBot || me.user) return;
-      const s = document.createElement('script');
-      s.async = true;
-      s.src = 'https://telegram.org/js/telegram-widget.js?22';
-      s.setAttribute('data-telegram-login', config.telegramBot);
-      s.setAttribute('data-size', 'large');
-      s.setAttribute('data-radius', '12');
-      s.setAttribute('data-onauth', 'TUonTelegramAuth(user)');
-      s.setAttribute('data-request-access', 'write');
-      slot.appendChild(s);
+      if (me.user) return;
+      if (config.telegramBot) {
+        const tg = document.createElement('div');
+        tg.className = 'tg-slot';
+        const s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://telegram.org/js/telegram-widget.js?22';
+        s.setAttribute('data-telegram-login', config.telegramBot);
+        s.setAttribute('data-size', 'large');
+        s.setAttribute('data-radius', '12');
+        s.setAttribute('data-onauth', 'TUonTelegramAuth(user)');
+        s.setAttribute('data-request-access', 'write');
+        tg.appendChild(s);
+        slot.appendChild(tg);
+      }
+      if (config.googleClientId) {
+        const g = document.createElement('div');
+        g.className = 'g-slot';
+        slot.appendChild(g);
+        renderGoogle(g);
+      }
+      if (config.phoneLogin) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'secondary phone-btn';
+        b.textContent = '📱 Telefon raqam bilan';
+        b.addEventListener('click', openPhone);
+        slot.appendChild(b);
+      }
     });
   }
 
-  window.TUonTelegramAuth = async (user) => {
+  // Har qanday usulda kirgandan keyingi umumiy qadam. Xatoni chaqiruvchiga qaytaradi.
+  async function completeLogin(path, payload) {
     let ref = null;
     try {
       ref = localStorage.getItem(REF_KEY);
     } catch {}
+    const r = await App.postJson(path, { ...payload, ref });
     try {
-      const r = await App.postJson('/api/auth/telegram', { user, ref });
-      try {
-        localStorage.removeItem(REF_KEY);
-      } catch {}
-      window.Practice.toast(
-        r.bonus ? `🎉 Xush kelibsiz, ${r.user.firstName}! Taklif uchun ${r.bonus} kun Premium sovg'a!` : `👋 Xush kelibsiz, ${r.user.firstName}!`,
-        3500
-      );
-      await refresh();
-      window.Store.setLoggedIn(true);
-    } catch (err) {
-      window.Practice.toast(err.message);
+      localStorage.removeItem(REF_KEY);
+    } catch {}
+    window.Practice.toast(
+      r.bonus ? `🎉 Xush kelibsiz, ${r.user.firstName}! Taklif uchun ${r.bonus} kun Premium sovg'a!` : `👋 Xush kelibsiz, ${r.user.firstName}!`,
+      3500
+    );
+    await refresh();
+    window.Store.setLoggedIn(true);
+    return r;
+  }
+
+  window.TUonTelegramAuth = (user) => completeLogin('/api/auth/telegram', { user }).catch((err) => window.Practice.toast(err.message));
+
+  // ---------- Google ----------
+
+  let googleReady = null;
+
+  function loadGoogle() {
+    if (!googleReady) {
+      googleReady = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://accounts.google.com/gsi/client';
+        s.async = true;
+        s.onload = () => {
+          window.google.accounts.id.initialize({
+            client_id: config.googleClientId,
+            callback: (resp) =>
+              completeLogin('/api/auth/google', { credential: resp.credential }).catch((err) => window.Practice.toast(err.message)),
+          });
+          resolve(window.google.accounts.id);
+        };
+        s.onerror = () => {
+          googleReady = null;
+          reject(new Error('Google yuklanmadi'));
+        };
+        document.head.appendChild(s);
+      });
     }
-  };
+    return googleReady;
+  }
+
+  function renderGoogle(box) {
+    loadGoogle()
+      .then((gid) =>
+        gid.renderButton(box, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width: 260, locale: 'uz' })
+      )
+      .catch(() => {});
+  }
+
+  // ---------- Telefon raqam (SMS kod) ----------
+
+  const phone = { number: '', step: 1, timer: null };
+
+  function phoneError(text) {
+    $('phoneError').textContent = text || '';
+    $('phoneError').hidden = !text;
+  }
+
+  function setPhoneStep(step) {
+    phone.step = step;
+    $('phoneStep1').hidden = step !== 1;
+    $('phoneStep2').hidden = step !== 2;
+    $('phoneSubmit').textContent = step === 1 ? 'Kod yuborish' : 'Kirish';
+  }
+
+  function openPhone() {
+    const d = $('phoneDialog');
+    setPhoneStep(1);
+    phoneError('');
+    $('phoneHint').textContent = config.phoneUzOnly
+      ? "O'zbekiston raqamingizga SMS orqali 6 xonali kod yuboramiz."
+      : 'Raqamingizga SMS orqali 6 xonali kod yuboramiz.';
+    $('phoneCode').value = '';
+    if (d.showModal && !d.open) d.showModal();
+    $('phoneInput').focus();
+  }
+
+  function startResendTimer(seconds) {
+    clearInterval(phone.timer);
+    let left = seconds;
+    const btn = $('phoneResend');
+    const tick = () => {
+      btn.disabled = left > 0;
+      btn.textContent = left > 0 ? `Kodni qayta yuborish (${left})` : 'Kodni qayta yuborish';
+      if (left-- <= 0) clearInterval(phone.timer);
+    };
+    tick();
+    phone.timer = setInterval(tick, 1000);
+  }
+
+  // 998901234567 → +998 90 123 45 67
+  const fmtPhone = (p) => (/^998\d{9}$/.test(p) ? p.replace(/^(998)(\d\d)(\d{3})(\d\d)(\d\d)$/, '+$1 $2 $3 $4 $5') : `+${p}`);
+
+  async function sendPhoneCode() {
+    const r = await App.postJson('/api/auth/phone/start', { phone: $('phoneInput').value });
+    phone.number = r.phone;
+    setPhoneStep(2);
+    $('phoneName').hidden = !r.isNew;
+    $('phoneHint').textContent = `Kod ${fmtPhone(r.phone)} raqamiga yuborildi. U ${r.minutes} daqiqa amal qiladi.${r.isNew ? ' Siz yangi foydalanuvchisiz — ismingizni ham yozing.' : ''}`;
+    startResendTimer(r.resendIn);
+    $('phoneCode').focus();
+  }
+
+  $('phoneForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    phoneError('');
+    const btn = $('phoneSubmit');
+    btn.disabled = true;
+    try {
+      if (phone.step === 1) {
+        await sendPhoneCode();
+      } else {
+        const code = $('phoneCode').value.replace(/\D/g, '');
+        if (code.length !== 6) throw new Error('Kod 6 ta raqamdan iborat.');
+        await completeLogin('/api/auth/phone/verify', { phone: phone.number, code, name: $('phoneName').value });
+        clearInterval(phone.timer);
+        $('phoneDialog').close();
+      }
+    } catch (err) {
+      phoneError(err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  $('phoneResend').addEventListener('click', async () => {
+    phoneError('');
+    try {
+      await sendPhoneCode();
+    } catch (err) {
+      phoneError(err.message);
+    }
+  });
+
+  $('phoneCancel').addEventListener('click', () => {
+    clearInterval(phone.timer);
+    $('phoneDialog').close();
+  });
+
+  // Kod to'liq yozilganda avtomatik yuboramiz.
+  $('phoneCode').addEventListener('input', (e) => {
+    if (e.target.value.replace(/\D/g, '').length === 6 && $('phoneName').hidden) $('phoneForm').requestSubmit();
+  });
 
   async function refresh() {
     try {
@@ -89,18 +241,18 @@ window.AccountUI = (() => {
     const user = me.user;
     // Menyu tepasidagi akkaunt qatori
     const bar = $('accountBar');
-    bar.hidden = !config.telegramBot && !me.limits;
+    bar.hidden = !loginOn() && !me.limits;
     setAvatar($('accountAvatar'), user);
     $('accountName').textContent = user ? user.name : 'Kirish';
-    $('accountPlan').textContent = user ? planText() : config.telegramBot ? "Natijalarni saqlash uchun kiring" : planText();
+    $('accountPlan').textContent = user ? planText() : loginOn() ? "Natijalarni saqlash uchun kiring" : planText();
     $('planBadge').textContent = me.premium ? '⭐ PRO' : me.limits ? 'Bepul' : '';
     $('planBadge').classList.toggle('pro', me.premium);
 
-    $('startLogin').hidden = !config.telegramBot || Boolean(user);
+    $('startLogin').hidden = !loginOn() || Boolean(user);
 
     // Akkaunt ekrani
     $('loginPanel').hidden = Boolean(user);
-    $('loginOff').hidden = Boolean(config.telegramBot);
+    $('loginOff').hidden = loginOn();
     $('profilePanel').hidden = !user;
     $('invitePanel').hidden = !user;
     if (user) {
@@ -132,7 +284,7 @@ window.AccountUI = (() => {
     if (config.premiumContact) buy.push(`Sotib olish uchun yozing: ${config.premiumContact} — to'lovdan keyin sizga kod beriladi.`);
     $('premiumBuy').textContent = buy.join(' ');
     $('premiumBuy').hidden = !buy.length;
-    $('codeForm').hidden = !config.telegramBot;
+    $('codeForm').hidden = !loginOn();
   }
 
   function open() {

@@ -1,5 +1,6 @@
 // Admin panel: statistika, foydalanuvchilar, Premium, kodlar va sozlamalar.
-// Kirish: ADMIN_SECRET paroli bilan yoki Telegram ID ADMIN_TELEGRAM_IDS ro'yxatida bo'lsa.
+// Kirish: ADMIN_SECRET paroli bilan yoki akkaunt ID'si ADMIN_USER_IDS (yoki ADMIN_TELEGRAM_IDS) ro'yxatida bo'lsa.
+// ID: Telegram — raqam, Google — "g:...", telefon — "p:998901234567".
 const crypto = require('crypto');
 const db = require('./db');
 const auth = require('./auth');
@@ -8,7 +9,7 @@ const account = require('./account');
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || '';
 const ADMIN_IDS = new Set(
-  String(process.env.ADMIN_TELEGRAM_IDS || '')
+  `${process.env.ADMIN_USER_IDS || ''},${process.env.ADMIN_TELEGRAM_IDS || ''}`
     .split(',')
     .map((x) => x.trim())
     .filter(Boolean)
@@ -66,7 +67,7 @@ async function handleLogout(req, res) {
 }
 
 async function handleMe(req, res) {
-  sendJson(res, 200, { admin: await isAdmin(req), passwordLogin: Boolean(ADMIN_SECRET), telegramAdmins: ADMIN_IDS.size > 0 });
+  sendJson(res, 200, { admin: await isAdmin(req), passwordLogin: Boolean(ADMIN_SECRET), accountAdmins: ADMIN_IDS.size > 0 });
 }
 
 // ---------- Statistika ----------

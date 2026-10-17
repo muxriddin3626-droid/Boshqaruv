@@ -1,7 +1,9 @@
-// Akkaunt: Telegram orqali kirish, ma'lumotlarni sinxronlash, kunlik limitlar,
+// Akkaunt: Telegram, Google yoki telefon raqam orqali kirish, ma'lumotlarni sinxronlash, kunlik limitlar,
 // Premium kodlari, do'stlar va haftalik reyting.
 const db = require('./db');
+const crypto = require('crypto');
 const auth = require('./auth');
+const sms = require('./sms');
 
 const settings = require('./settings');
 
@@ -111,6 +113,9 @@ async function usageFor(req, user) {
 function config() {
   return {
     telegramBot: auth.enabled ? auth.BOT_USERNAME : null,
+    googleClientId: auth.GOOGLE_CLIENT_ID || null,
+    phoneLogin: sms.enabled,
+    phoneUzOnly: sms.onlyUzbek,
     limits: settings.get().limitsOn ? settings.freeLimits() : null,
     premiumContact: settings.get().premiumContact,
     premiumPrice: settings.get().premiumPrice,
@@ -129,19 +134,15 @@ async function handleMe(req, res) {
   });
 }
 
-async function handleTelegramLogin(req, res) {
-  const body = await readJson(req, res);
-  if (!body) return;
-  const tg = auth.verifyTelegram(body.user);
-  if (!tg) {
-    sendJson(res, 401, { error: "Telegram ma'lumoti tasdiqlanmadi. Qaytadan urinib ko'ring." });
-    return;
-  }
-  const { user, created } = await db.upsertUser(tg);
+// Kirish usulidan qat'i nazar umumiy qism: foydalanuvchini yaratish, taklif bonusi va sessiya.
+// keepExisting — mavjud foydalanuvchining ismini o'zgartirmaslik (telefon orqali kirganda).
+async function finishLogin(req, res, profile, ref, { keepExisting = false } = {}) {
+  const existing = keepExisting && (await db.getUser(profile.id));
+  const { user, created } = existing ? { user: existing, created: false } : await db.upsertUser(profile);
   let bonus = 0;
   // Taklif havolasi orqali kelgan yangi foydalanuvchi: ikkalasi do'st bo'ladi va bonus oladi.
-  if (created && typeof body.ref === 'string') {
-    const inviter = await db.getUserByRef(body.ref.trim().toUpperCase());
+  if (created && typeof ref === 'string') {
+    const inviter = await db.getUserByRef(ref.trim().toUpperCase());
     if (inviter && inviter.id !== user.id) {
       await db.setReferredBy(user.id, inviter.id);
       await db.addFriends(user.id, inviter.id);
@@ -155,6 +156,125 @@ async function handleTelegramLogin(req, res) {
   }
   const fresh = await db.getUser(user.id);
   sendJson(res, 200, { user: publicUser(fresh), premium: isPremium(fresh), created, bonus }, { 'Set-Cookie': auth.sessionCookie(req, user.id) });
+}
+
+async function handleTelegramLogin(req, res) {
+  const body = await readJson(req, res);
+  if (!body) return;
+  const tg = auth.verifyTelegram(body.user);
+  if (!tg) {
+    sendJson(res, 401, { error: "Telegram ma'lumoti tasdiqlanmadi. Qaytadan urinib ko'ring." });
+    return;
+  }
+  await finishLogin(req, res, tg, body.ref);
+}
+
+async function handleGoogleLogin(req, res) {
+  const body = await readJson(req, res);
+  if (!body) return;
+  let profile = null;
+  try {
+    profile = await auth.verifyGoogle(body.credential);
+  } catch (err) {
+    console.error('Google:', err.message);
+  }
+  if (!profile) {
+    sendJson(res, 401, { error: "Google ma'lumoti tasdiqlanmadi. Qaytadan urinib ko'ring." });
+    return;
+  }
+  await finishLogin(req, res, profile, body.ref);
+}
+
+// ---------- Telefon raqam orqali kirish (SMS kod) ----------
+
+const CODE_MINUTES = 5;
+const RESEND_SECONDS = 60;
+const MAX_ATTEMPTS = 5;
+const SMS_PER_PHONE = 5; // kuniga bitta raqamga
+const SMS_PER_IP = 10; // kuniga bitta IP'dan
+
+// Raqamni faqat raqamlarga keltiramiz: "90 123-45-67" → 998901234567.
+function normalizePhone(raw) {
+  let digits = String(raw || '').replace(/\D/g, '');
+  if (digits.length === 9) digits = `998${digits}`;
+  if (!/^\d{10,15}$/.test(digits)) return null;
+  if (sms.onlyUzbek && !/^998\d{9}$/.test(digits)) return null;
+  return digits;
+}
+
+async function handlePhoneStart(req, res) {
+  if (!sms.enabled) {
+    sendJson(res, 404, { error: 'Telefon orqali kirish sozlanmagan.' });
+    return;
+  }
+  const body = await readJson(req, res);
+  if (!body) return;
+  const phone = normalizePhone(body.phone);
+  if (!phone) {
+    sendJson(res, 400, { error: sms.onlyUzbek ? "Raqamni to'g'ri kiriting: +998 90 123 45 67" : "Raqamni mamlakat kodi bilan to'g'ri kiriting." });
+    return;
+  }
+  const last = await db.getPhoneCode(phone);
+  const wait = last ? Math.ceil((last.sentAt + RESEND_SECONDS * 1000 - Date.now()) / 1000) : 0;
+  if (wait > 0) {
+    sendJson(res, 429, { error: `Kodni qayta yuborish uchun ${wait} soniya kuting.`, wait });
+    return;
+  }
+  const day = tashkentDay();
+  const byPhone = (await db.getUsage(`sms:${phone}`, day)).sms || 0;
+  const byIp = (await db.getUsage(`smsip:${clientIp(req)}`, day)).sms || 0;
+  if (byPhone >= SMS_PER_PHONE || byIp >= SMS_PER_IP) {
+    sendJson(res, 429, { error: "Bugun juda ko'p kod so'raldi. Ertaga urinib ko'ring yoki boshqa usulda kiring." });
+    return;
+  }
+  const code = String(crypto.randomInt(100000, 1000000));
+  await db.savePhoneCode(phone, auth.hashCode(phone, code), Date.now() + CODE_MINUTES * 60000);
+  try {
+    await sms.sendCode(phone, code);
+  } catch (err) {
+    console.error('SMS:', err.message);
+    await db.deletePhoneCode(phone);
+    sendJson(res, 502, { error: "SMS yuborib bo'lmadi. Birozdan keyin qayta urinib ko'ring." });
+    return;
+  }
+  await db.incrementUsage(`sms:${phone}`, day, 'sms');
+  await db.incrementUsage(`smsip:${clientIp(req)}`, day, 'sms');
+  const isNew = !(await db.getUser(`p:${phone}`));
+  sendJson(res, 200, { sent: true, phone, isNew, resendIn: RESEND_SECONDS, minutes: CODE_MINUTES });
+}
+
+async function handlePhoneVerify(req, res) {
+  if (!sms.enabled) {
+    sendJson(res, 404, { error: 'Telefon orqali kirish sozlanmagan.' });
+    return;
+  }
+  const body = await readJson(req, res);
+  if (!body) return;
+  const phone = normalizePhone(body.phone);
+  const code = String(body.code || '').replace(/\D/g, '');
+  const row = phone && (await db.getPhoneCode(phone));
+  if (!row || row.expiresAt < Date.now()) {
+    sendJson(res, 400, { error: 'Kod eskirgan. Yangi kod so\'rang.', expired: true });
+    return;
+  }
+  if (row.attempts >= MAX_ATTEMPTS) {
+    sendJson(res, 429, { error: "Urinishlar ko'p bo'ldi. Yangi kod so'rang.", expired: true });
+    return;
+  }
+  if (!auth.sameHash(row.hash, auth.hashCode(phone, code))) {
+    await db.bumpPhoneAttempts(phone);
+    sendJson(res, 401, { error: "Kod noto'g'ri. Qaytadan tekshiring." });
+    return;
+  }
+  await db.deletePhoneCode(phone);
+  const [first, ...rest] = String(body.name || '').trim().replace(/\s+/g, ' ').split(' ');
+  const profile = {
+    id: `p:${phone}`,
+    firstName: (first || "O'quvchi").slice(0, 64),
+    lastName: rest.join(' ').slice(0, 64),
+    photoUrl: '',
+  };
+  await finishLogin(req, res, profile, body.ref, { keepExisting: true });
 }
 
 async function handleLogout(req, res) {
@@ -253,7 +373,7 @@ async function handleRatingVisibility(req, res) {
 async function handleRedeem(req, res) {
   const user = await currentUser(req);
   if (!user) {
-    sendJson(res, 401, { error: 'Kodni ishlatish uchun avval Telegram orqali kiring.' });
+    sendJson(res, 401, { error: 'Kodni ishlatish uchun avval akkauntga kiring.' });
     return;
   }
   const body = await readJson(req, res);
@@ -276,6 +396,9 @@ const GET_ROUTES = {
 
 const POST_ROUTES = {
   '/api/auth/telegram': handleTelegramLogin,
+  '/api/auth/google': handleGoogleLogin,
+  '/api/auth/phone/start': handlePhoneStart,
+  '/api/auth/phone/verify': handlePhoneVerify,
   '/api/auth/logout': handleLogout,
   '/api/state': handleState,
   '/api/friends/add': handleAddFriend,

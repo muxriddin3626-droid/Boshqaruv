@@ -1,4 +1,4 @@
-// Telegram orqali kirish va imzolangan tokenlar (sessiya, dars).
+// Kirish (Telegram, Google, telefon kodi) va imzolangan tokenlar (sessiya, dars).
 const crypto = require('crypto');
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
@@ -11,6 +11,7 @@ const SESSION_DAYS = 60;
 const SESSION_COOKIE = 'tu_session';
 
 const enabled = Boolean(BOT_TOKEN && BOT_USERNAME);
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 
 // Telegram Login Widget ma'lumotini tekshiradi: https://core.telegram.org/widgets/login#checking-authorization
 function verifyTelegram(data) {
@@ -33,6 +34,73 @@ function verifyTelegram(data) {
     lastName: String(data.last_name || '').slice(0, 64),
     photoUrl: String(data.photo_url || '').slice(0, 300),
   };
+}
+
+// ---------- Google ----------
+
+// Google'ning ochiq kalitlari (ID tokenlarni tekshirish uchun) — keshlab turamiz.
+const GOOGLE_CERTS = 'https://www.googleapis.com/oauth2/v3/certs';
+let googleKeys = { keys: new Map(), until: 0, fetched: 0 };
+
+async function googleKey(kid) {
+  // Noma'lum kalit bo'lsa ham daqiqasiga bir martadan ko'p so'ramaymiz.
+  const stale = Date.now() > googleKeys.until || (!googleKeys.keys.has(kid) && Date.now() - googleKeys.fetched > 60000);
+  if (stale) {
+    const res = await fetch(GOOGLE_CERTS);
+    if (!res.ok) throw new Error(`Google kalitlari olinmadi: ${res.status}`);
+    const { keys } = await res.json();
+    const age = Number((/max-age=(\d+)/.exec(res.headers.get('cache-control') || '') || [])[1]) || 3600;
+    googleKeys = {
+      keys: new Map(keys.map((k) => [k.kid, crypto.createPublicKey({ key: k, format: 'jwk' })])),
+      until: Date.now() + age * 1000,
+      fetched: Date.now(),
+    };
+  }
+  return googleKeys.keys.get(kid) || null;
+}
+
+// "Google bilan kirish" tugmasi bergan ID tokenni tekshiradi:
+// https://developers.google.com/identity/gsi/web/guides/verify-google-id-token
+async function verifyGoogle(idToken) {
+  if (!GOOGLE_CLIENT_ID || typeof idToken !== 'string') return null;
+  const parts = idToken.split('.');
+  if (parts.length !== 3) return null;
+  let header;
+  let claims;
+  try {
+    header = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+    claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+  } catch {
+    return null;
+  }
+  if (header.alg !== 'RS256' || typeof header.kid !== 'string') return null;
+  const key = await googleKey(header.kid);
+  if (!key) return null;
+  const ok = crypto.verify('RSA-SHA256', Buffer.from(`${parts[0]}.${parts[1]}`), key, Buffer.from(parts[2], 'base64url'));
+  if (!ok) return null;
+  if (claims.aud !== GOOGLE_CLIENT_ID) return null;
+  if (claims.iss !== 'accounts.google.com' && claims.iss !== 'https://accounts.google.com') return null;
+  if (!(Number(claims.exp) * 1000 > Date.now()) || typeof claims.sub !== 'string') return null;
+  const first = claims.given_name || String(claims.name || '').split(' ')[0] || String(claims.email || '').split('@')[0];
+  return {
+    id: `g:${claims.sub}`,
+    firstName: String(first || '').slice(0, 64),
+    lastName: String(claims.family_name || '').slice(0, 64),
+    photoUrl: String(claims.picture || '').slice(0, 300),
+  };
+}
+
+// ---------- Telefon kodi ----------
+
+// SMS kodini bazada ochiq saqlamaymiz — faqat imzo (HMAC) bilan.
+function hashCode(phone, code) {
+  return crypto.createHmac('sha256', SECRET).update(`phone:${phone}:${code}`).digest('hex');
+}
+
+function sameHash(a, b) {
+  const x = Buffer.from(String(a));
+  const y = Buffer.from(String(b));
+  return x.length === y.length && crypto.timingSafeEqual(x, y);
 }
 
 const b64 = (s) => Buffer.from(s).toString('base64url');
@@ -125,6 +193,10 @@ module.exports = {
   enabled,
   BOT_USERNAME,
   verifyTelegram,
+  GOOGLE_CLIENT_ID,
+  verifyGoogle,
+  hashCode,
+  sameHash,
   sessionUserId,
   sessionCookie,
   clearCookie,

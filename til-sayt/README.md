@@ -102,7 +102,7 @@ Goethe-Institut (Toshkentda bor), shuningdek telc, ÖSD, TestDaF; rus tili — �
 
 ### Akkaunt, Premium va do'stlar
 
-- 🔐 **Telegram orqali kirish** — parolsiz. Natijalar (so'zlar, streak, kurs,
+- 🔐 **Telegram, Google yoki telefon raqam (SMS kod) orqali kirish** — parolsiz. Natijalar (so'zlar, streak, kurs,
   sertifikatlar, sozlamalar) bazaga sinxronlanadi va istalgan qurilmada ochiladi.
   Kirmasdan ham ishlatish mumkin — unda natijalar faqat shu brauzerda qoladi.
 - ⭐ **Kunlik bepul limit va Premium** — bepul: kuniga 2 ta ovozli dars, 6 ta
@@ -149,7 +149,7 @@ O'qituvchining qoidalari va o'yin topshiriqlari `src/prompt.js` faylida turadi.
   admin so'rovlari, `src/settings.js` — paneldan o'zgartiriladigan sozlamalar
 - `src/server.js` — sahifani ko'rsatadi va Claude bilan bog'lanadi. API kalit
   faqat serverda turadi, brauzerga chiqmaydi. `src/account.js`, `src/auth.js`,
-  `src/db.js` — akkaunt, Telegram kirish, limitlar, Premium, do'stlar va baza.
+  `src/db.js` — akkaunt, kirish (Telegram, Google, telefon), limitlar, Premium, do'stlar va baza. `src/sms.js` — telefon kodi uchun SMS (Eskiz/Twilio).
 
 Ovozni tanish brauzerning o'zida ishlaydi (Web Speech API). Eng yaxshi natija —
 Chrome (Android va kompyuter).
@@ -190,7 +190,12 @@ npm start
 
 Brauzerda http://localhost:3000 ni oching (mikrofon `localhost` yoki `https` manzilda ishlaydi).
 
-## Akkaunt (Telegram orqali kirish) sozlash
+## Akkaunt (kirish) sozlash
+
+Kirishning uch usuli bor — xohlaganingizni yoqing (bittasi yetarli). Qaysi biri
+sozlangan bo'lsa, o'sha tugma saytda chiqadi. Hammasi uchun `SESSION_SECRET` kerak.
+
+### Telegram
 
 1. Telegram'da @BotFather → `/newbot` — bot yarating (masalan `TilUstozBot`),
    tokenni oling.
@@ -198,9 +203,48 @@ Brauzerda http://localhost:3000 ni oching (mikrofon `localhost` yoki `https` man
    (masalan `til-sayt.onrender.com`). Telegram tugmasi faqat shu domenda ishlaydi.
 3. Muhit o'zgaruvchilari: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME` va
    `SESSION_SECRET` (uzun tasodifiy satr).
-4. Doimiy baza uchun Turso (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`) — `hisob-bot`
-   README'sidagi kabi. Usiz baza lokal faylda (`til-sayt.db`) bo'ladi va Render'ning
-   bepul tarifida qayta ishga tushganda o'chib ketadi.
+
+### Google
+
+1. https://console.cloud.google.com → yangi loyiha → **APIs & Services → OAuth
+   consent screen** (External, ilova nomi "Til Ustoz", email) → saqlang.
+2. **Credentials → Create credentials → OAuth client ID** → turi
+   **Web application** → **Authorized JavaScript origins** ga sayt manzilini
+   qo'shing (masalan `https://til-sayt.onrender.com`; lokal sinov uchun
+   `http://localhost:3000` va `http://localhost`).
+3. Hosil bo'lgan **Client ID** ni `GOOGLE_CLIENT_ID` ga yozing (maxfiy kalit
+   — client secret — kerak emas).
+
+Server Google bergan ID tokenni Google'ning ochiq kalitlari bilan tekshiradi
+(imzo, `aud`, `iss`, muddat). Foydalanuvchi ID'si `g:<google-id>` ko'rinishida.
+
+### Telefon raqam (SMS kod)
+
+Foydalanuvchi raqamini yozadi → 6 xonali kod SMS bilan keladi → kodni yozib
+kiradi (yangi bo'lsa, ismini ham so'raydi). Kod 5 daqiqa amal qiladi, 5 marta
+noto'g'ri yozilsa bekor bo'ladi, qayta yuborish — 60 soniyadan keyin; bitta
+raqamga kuniga 5 ta, bitta IP'dan 10 ta SMS. Kod bazada ochiq saqlanmaydi.
+ID: `p:998901234567`.
+
+SMS xizmati kerak (pullik, har SMS uchun):
+
+- **Eskiz.uz** (O'zbekiston raqamlari uchun, tavsiya): eskiz.uz da ro'yxatdan
+  o'ting, shartnoma tuzing va hisobni to'ldiring. **Muhim:** Eskiz faqat
+  moderatsiyadan o'tgan matnlarni yuboradi — kabinetda shablon qo'shing,
+  masalan `Til Ustoz: kirish kodingiz %d`, va tasdiqlangan matnni
+  `SMS_TEMPLATE` ga `{code}` bilan yozing (`Til Ustoz: kirish kodingiz {code}`).
+  Sozlamalar: `SMS_PROVIDER=eskiz`, `ESKIZ_EMAIL`, `ESKIZ_PASSWORD`,
+  `ESKIZ_FROM` (standart `4546`, o'z nomingiz tasdiqlansa — o'sha).
+- **Twilio** (xalqaro raqamlar): `SMS_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID`,
+  `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` (Twilio raqamingiz).
+- **Sinov uchun**: `SMS_PROVIDER=console` — SMS yuborilmaydi, kod server
+  logiga yoziladi. Haqiqiy saytda ishlatmang!
+
+### Baza
+
+Doimiy baza uchun Turso (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`) — `hisob-bot`
+README'sidagi kabi. Usiz baza lokal faylda (`til-sayt.db`) bo'ladi va Render'ning
+bepul tarifida qayta ishga tushganda o'chib ketadi.
 
 ## Admin panel
 
@@ -209,16 +253,19 @@ Manzil: `https://SIZNING-SAYT/admin` (qidiruv tizimlariga ko'rsatilmaydi).
 Kirish ikki usulda:
 
 - `ADMIN_SECRET` paroli bilan (12 soatga; parolni taxmin qilishdan himoya — daqiqasiga 5 urinish);
-- yoki Telegram ID'ingizni `ADMIN_TELEGRAM_IDS` ga yozing (vergul bilan bir nechta):
-  saytda Telegram orqali kirsangiz, `/admin` o'zi ochiladi. ID'ni @userinfobot dan bilish mumkin.
+- yoki akkaunt ID'ingizni `ADMIN_USER_IDS` ga yozing (vergul bilan bir nechta):
+  saytga shu akkaunt bilan kirsangiz, `/admin` o'zi ochiladi. ID: Telegram uchun
+  raqam (@userinfobot dan bilish mumkin), telefon uchun `p:998901234567`, Google
+  uchun `g:...` (admin panelidagi foydalanuvchi oynasida ko'rinadi).
+  Eski `ADMIN_TELEGRAM_IDS` ham ishlayveradi.
 
 Bo'limlar:
 
 - 📊 **Statistika** — foydalanuvchilar, bugun/7 kunda yangilar va faollar, Premium,
   taklif orqali kelganlar, kodlar, haftalik XP, oxirgi 14 kundagi ro'yxatdan
-  o'tishlar grafigi, bugungi darslar/o'yinlar/imtihonlar soni (mehmonlar bilan),
+  o'tishlar grafigi, kirish usullari (Telegram/Google/telefon), bugungi SMS kodlar, bugungi darslar/o'yinlar/imtihonlar soni (mehmonlar bilan),
   anketa natijalari (maqsad, kasb, daraja, yosh, qiziqishlar).
-- 👥 **Foydalanuvchilar** — qidiruv (ism, Telegram ID, taklif kodi), oxirgi faollik,
+- 👥 **Foydalanuvchilar** — qidiruv (ism, ID, telefon, taklif kodi), oxirgi faollik,
   haftalik XP, kim nechta odam taklif qilgani; bosilsa — anketa, so'zlar, kurs,
   sertifikatlar va **Premium berish / olib qo'yish**.
 - 🎟️ **Kodlar** — Premium kodlar yaratish, ro'yxat (kim, qachon ishlatgan),
@@ -228,7 +275,7 @@ Bo'limlar:
   qayta ishga tushirmasdan darhol kuchga kiradi; `.env` dagi qiymatlar standart
   qiymat bo'lib qoladi.
 
-Eslatma: anketa va o'rganish statistikasi faqat Telegram orqali kirgan
+Eslatma: anketa va o'rganish statistikasi faqat akkauntga kirgan
 foydalanuvchilar bo'yicha (kirmaganlarning ma'lumoti faqat ularning telefonida).
 
 ## Premium kodlari
