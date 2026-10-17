@@ -66,6 +66,13 @@ const ready = (async () => {
     ],
     'write'
   );
+  // Eski bazalarga yangi ustunlar (bor bo'lsa — xato e'tiborsiz qoldiriladi).
+  for (const sql of [
+    "ALTER TABLE users ADD COLUMN plan TEXT NOT NULL DEFAULT 'standard'",
+    "ALTER TABLE codes ADD COLUMN plan TEXT NOT NULL DEFAULT 'standard'",
+  ]) {
+    await client.execute(sql).catch(() => {});
+  }
 })();
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -86,6 +93,7 @@ const rowToUser = (r) =>
     refCode: String(r.ref_code),
     referredBy: r.referred_by == null ? null : String(r.referred_by),
     premiumUntil: Number(r.premium_until),
+    plan: r.plan == null ? 'standard' : String(r.plan),
     showInRating: Number(r.show_in_rating) === 1,
   };
 
@@ -123,12 +131,16 @@ async function upsertUser({ id, firstName, lastName, photoUrl }) {
   throw new Error("Foydalanuvchini yaratib bo'lmadi");
 }
 
-async function addPremiumDays(userId, days) {
+// Obuna kunlarini qo'shadi. plan berilsa — tarif ham shunga o'zgaradi (berilmasa, avvalgisi qoladi).
+async function addPremiumDays(userId, days, plan) {
   const user = await getUser(userId);
   if (!user) return null;
   const from = Math.max(Date.now(), user.premiumUntil);
   const until = from + days * DAY;
-  await client.execute({ sql: 'UPDATE users SET premium_until = ? WHERE id = ?', args: [until, userId] });
+  await client.execute({
+    sql: 'UPDATE users SET premium_until = ?, plan = ? WHERE id = ?',
+    args: [until, plan || user.plan || 'standard', userId],
+  });
   return until;
 }
 
@@ -224,11 +236,11 @@ async function getUsage(subject, day) {
   return out;
 }
 
-async function incrementUsage(subject, day, kind) {
+async function incrementUsage(subject, day, kind, n = 1) {
   await client.execute({
-    sql: `INSERT INTO usage (subject, day, kind, count) VALUES (?, ?, ?, 1)
-          ON CONFLICT(subject, day, kind) DO UPDATE SET count = count + 1`,
-    args: [subject, day, kind],
+    sql: `INSERT INTO usage (subject, day, kind, count) VALUES (?, ?, ?, ?)
+          ON CONFLICT(subject, day, kind) DO UPDATE SET count = count + excluded.count`,
+    args: [subject, day, kind, n],
   });
 }
 
@@ -238,23 +250,23 @@ async function cleanupUsage(beforeDay) {
 
 // ---------- Premium kodlari ----------
 
-async function createCodes(count, days) {
+async function createCodes(count, days, plan = 'standard') {
   const codes = [];
   for (let i = 0; i < count; i++) {
     const code = `TU-${randomCode(4)}-${randomCode(4)}`;
-    await client.execute({ sql: 'INSERT INTO codes (code, days, created_at) VALUES (?, ?, ?)', args: [code, days, Date.now()] });
+    await client.execute({ sql: 'INSERT INTO codes (code, days, created_at, plan) VALUES (?, ?, ?, ?)', args: [code, days, Date.now(), plan] });
     codes.push(code);
   }
   return codes;
 }
 
-// Kodni ishlatadi. Muvaffaqiyatli bo'lsa kun sonini, aks holda null qaytaradi.
+// Kodni ishlatadi. Muvaffaqiyatli bo'lsa { days, plan }, aks holda null qaytaradi.
 async function redeemCode(code, userId) {
   const r = await client.execute({
-    sql: 'UPDATE codes SET used_by = ?, used_at = ? WHERE code = ? AND used_by IS NULL RETURNING days',
+    sql: 'UPDATE codes SET used_by = ?, used_at = ? WHERE code = ? AND used_by IS NULL RETURNING days, plan',
     args: [userId, Date.now(), code],
   });
-  return r.rows[0] ? Number(r.rows[0].days) : null;
+  return r.rows[0] ? { days: Number(r.rows[0].days), plan: String(r.rows[0].plan || 'standard') } : null;
 }
 
 // ---------- Sozlamalar (admin panelidan o'zgartiriladi) ----------
@@ -379,6 +391,7 @@ async function listCodes(limit = 100) {
   return r.rows.map((x) => ({
     code: String(x.code),
     days: Number(x.days),
+    plan: String(x.plan || 'standard'),
     createdAt: Number(x.created_at),
     usedBy: x.used_by == null ? null : String(x.used_by),
     usedByName: x.used_by == null ? '' : [x.first_name, x.last_name].filter(Boolean).join(' '),

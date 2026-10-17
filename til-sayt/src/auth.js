@@ -163,13 +163,15 @@ function clearCookie(req) {
 // shunda kunlik limit har bir yangi dars uchun bir marta hisoblanadi.
 const LESSON_MS = 45 * 60 * 1000; // eng uzun dars 30 daqiqa + zaxira
 
-function lessonToken() {
-  return sign({ kind: 'lesson', exp: Date.now() + LESSON_MS });
+// last — oxirgi javob vaqti: obunachilarning kunlik dars daqiqalarini hisoblash uchun.
+function lessonToken(last = Date.now()) {
+  return sign({ kind: 'lesson', last, exp: Date.now() + LESSON_MS });
 }
 
+// Token to'g'ri bo'lsa uning ma'lumotini, aks holda null qaytaradi.
 function checkLessonToken(token) {
   const p = verify(token);
-  return Boolean(p && p.kind === 'lesson');
+  return p && p.kind === 'lesson' ? p : null;
 }
 
 // Admin sessiyasi (ADMIN_SECRET paroli bilan kirganda): 12 soat.

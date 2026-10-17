@@ -516,6 +516,14 @@
     if (opts.topic) lessonOpts.topic = opts.topic;
     lessonUnit = lessonOpts.unit;
     lessonSeconds = lessonOpts.scenario ? ROLEPLAY_SECONDS : (Number(settings.length) || 10) * 60;
+    // Obunada — tarifdagi bugungi qolgan daqiqalar; bepul rejada — 10 daqiqa.
+    const acc = window.AccountUI && window.AccountUI.me();
+    if (acc && acc.plan) {
+      const left = acc.plan.minutes * 60 - ((acc.usage && acc.usage.voice) || 0);
+      lessonSeconds = Math.max(60, Math.min(lessonSeconds, left));
+    } else if (acc && acc.limits && !acc.premium) {
+      lessonSeconds = Math.min(lessonSeconds, LESSON_SECONDS);
+    }
     goalReached = false;
     const unit = lessonUnit && COURSE.byId(lessonUnit);
     const scenario = lessonOpts.scenario && SCENARIOS.findScenario(lessonOpts.scenario);
@@ -575,6 +583,7 @@
         : "O'yinlar va menyu";
     $('againBtn').textContent = roleplay ? 'Yana urinish' : 'Yana gaplashish';
     show('end');
+    if (window.AccountUI) window.AccountUI.refresh();
     if (roleplay && goalReached) {
       Learn.bumpStat('roleplayWins');
       window.Roles.markDone(lessonOpts.scenario, 'role');

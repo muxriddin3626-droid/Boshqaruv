@@ -191,7 +191,8 @@ window.AccountUI = (() => {
   }
 
   function planText() {
-    if (me.premium) return `⭐ Premium · ${fmtDate(me.user.premiumUntil)} gacha`;
+    if (me.premium && me.plan) return `⭐ ${me.plan.name} · kuniga ${me.plan.minutes} daqiqa · ${fmtDate(me.user.premiumUntil)} gacha`;
+    if (me.premium) return `⭐ Obuna · ${fmtDate(me.user.premiumUntil)} gacha`;
     if (!me.limits) return 'Cheksiz (limitlar o\'chirilgan)';
     return 'Bepul reja';
   }
@@ -204,7 +205,7 @@ window.AccountUI = (() => {
     setAvatar($('accountAvatar'), user);
     $('accountName').textContent = user ? user.name : 'Kirish';
     $('accountPlan').textContent = user ? planText() : loginOn() ? "Natijalarni saqlash uchun kiring" : planText();
-    $('planBadge').textContent = me.premium ? '⭐ PRO' : me.limits ? 'Bepul' : '';
+    $('planBadge').textContent = me.premium ? `⭐ ${me.plan ? me.plan.name : 'PRO'}` : me.limits ? 'Bepul' : '';
     $('planBadge').classList.toggle('pro', me.premium);
 
     $('startLogin').hidden = !loginOn() || Boolean(user);
@@ -229,6 +230,13 @@ window.AccountUI = (() => {
     $('planState').textContent = planText();
     const usage = $('usageList');
     usage.textContent = '';
+    if (me.plan) {
+      const used = Math.min(Math.round((me.usage.voice || 0) / 60), me.plan.minutes);
+      const li = document.createElement('li');
+      li.textContent = `🎙️ Bugungi ovozli dars vaqti: ${used} / ${me.plan.minutes} daqiqa`;
+      if (used >= me.plan.minutes) li.className = 'full';
+      usage.appendChild(li);
+    }
     if (me.limits && !me.premium) {
       for (const [kind, limit] of Object.entries(me.limits)) {
         const used = Math.min(me.usage[kind] || 0, limit);
@@ -238,12 +246,91 @@ window.AccountUI = (() => {
         usage.appendChild(li);
       }
     }
-    const buy = [];
-    if (config.premiumPrice) buy.push(`Narxi: ${config.premiumPrice}.`);
-    if (config.premiumContact) buy.push(`Sotib olish uchun yozing: ${config.premiumContact} — to'lovdan keyin sizga kod beriladi.`);
-    $('premiumBuy').textContent = buy.join(' ');
-    $('premiumBuy').hidden = !buy.length;
+    renderPlans();
+    $('premiumBuy').textContent = config.premiumContact
+      ? `To'lov qilgach, sizga obuna kodi yuboriladi — uni pastga kiriting. Savollar bo'yicha: ${config.premiumContact}`
+      : "Obuna kodi bo'lsa, pastga kiriting.";
     $('codeForm').hidden = !loginOn();
+  }
+
+  // ---------- Tariflar ----------
+
+  let period = 1;
+
+  function priceOf(planId, months) {
+    const p = (config.prices || {})[planId] || {};
+    return Number(p[months] || 0);
+  }
+
+  // Sotib olish: sayt egasining Telegram'iga tayyor xabar bilan.
+  function buy(plan, per) {
+    const price = priceOf(plan.id, per.months);
+    const text = `Salom! Til Ustoz: ${plan.name} tarifi (kuniga ${plan.minutes} daqiqa), ${per.label} — ${window.PLANS.fmt(price)}. ${me.user ? `ID: ${me.user.id}` : ''}`;
+    const c = String(config.premiumContact || '').trim();
+    const tg = /^@?([A-Za-z0-9_]{5,32})$/.exec(c) || /t\.me\/([A-Za-z0-9_]{5,32})/.exec(c);
+    if (tg) {
+      window.open(`https://t.me/${tg[1]}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+    } else if (c) {
+      window.Practice.toast(`Sotib olish uchun yozing: ${c}`, 5000);
+    } else {
+      window.Practice.toast("Sayt egasi hali to'lov kontaktini sozlamagan.", 4000);
+    }
+  }
+
+  function renderPlans() {
+    const P = window.PLANS;
+    const plans = config.plans || P.PLANS;
+    const periods = config.periods || P.PERIODS;
+    const tabs = $('periodTabs');
+    tabs.textContent = '';
+    for (const per of periods) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `pill${per.months === period ? ' active' : ''}`;
+      const save = Math.round((1 - priceOf('standard', per.months) / (priceOf('standard', 1) * per.months || 1)) * 100);
+      b.textContent = per.label + (per.months > 1 && save > 0 ? ` · −${save}%` : '');
+      b.addEventListener('click', () => {
+        period = per.months;
+        renderPlans();
+      });
+      tabs.appendChild(b);
+    }
+    const per = periods.find((p) => p.months === period) || periods[0];
+    const box = $('planCards');
+    box.textContent = '';
+    for (const plan of plans) {
+      const price = priceOf(plan.id, per.months);
+      const current = me.premium && me.plan && me.plan.id === plan.id;
+      const card = document.createElement('div');
+      card.className = `plan-card${plan.popular ? ' popular' : ''}${current ? ' current' : ''}`;
+      if (plan.popular) {
+        const tag = document.createElement('span');
+        tag.className = 'plan-tag';
+        tag.textContent = '🔥 Eng ko\'p tanlanadi';
+        card.appendChild(tag);
+      }
+      const head = document.createElement('div');
+      head.className = 'plan-head';
+      const name = document.createElement('b');
+      name.textContent = `${plan.name} · ${plan.title}`;
+      const mins = document.createElement('span');
+      mins.textContent = plan.minutes >= 60 ? `🎙️ Kuniga ${plan.minutes / 60} soat` : `🎙️ Kuniga ${plan.minutes} daqiqa`;
+      head.append(name, mins);
+      const cost = document.createElement('div');
+      cost.className = 'plan-price';
+      cost.textContent = P.fmt(price);
+      const sub = document.createElement('span');
+      sub.className = 'plan-sub';
+      sub.textContent = per.months > 1 ? `${per.label} uchun · oyiga ${P.fmt(price / per.months)}` : 'oyiga';
+      cost.appendChild(sub);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = plan.popular ? 'primary' : 'secondary';
+      btn.textContent = current ? '✅ Joriy tarif — uzaytirish' : 'Tanlash';
+      btn.addEventListener('click', () => buy(plan, per));
+      card.append(head, cost, btn);
+      box.appendChild(card);
+    }
   }
 
   function open() {
@@ -252,9 +339,13 @@ window.AccountUI = (() => {
   }
 
   // Server "limit tugadi" degan javob qaytarganda.
-  function onLimit() {
+  function onLimit(json) {
     refresh();
     const d = $('limitDialog');
+    $('limitText').textContent =
+      json && json.voice
+        ? json.error
+        : "Kattaroq tarif bilan har kuni ko'proq dars qiling yoki ertaga davom eting. Takrorlash kartochkalari va daftar bepul va cheksiz!";
     window.Face.set($('limitFace'), 'surprised');
     if (d.showModal && !d.open) d.showModal();
   }
@@ -291,7 +382,7 @@ window.AccountUI = (() => {
     try {
       const r = await App.postJson('/api/premium/redeem', { code });
       $('codeInput').value = '';
-      window.Practice.toast(`⭐ Premium faollashdi: +${r.days} kun!`, 3500);
+      window.Practice.toast(`⭐ ${r.plan ? r.plan.name : 'Obuna'} faollashdi: +${r.days} kun!`, 3500);
       refresh();
     } catch (err) {
       window.Practice.toast(err.message, 3000);

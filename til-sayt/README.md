@@ -289,25 +289,27 @@ Bo'limlar:
 Eslatma: anketa va o'rganish statistikasi faqat akkauntga kirgan
 foydalanuvchilar bo'yicha (kirmaganlarning ma'lumoti faqat ularning telefonida).
 
-## Premium kodlari
+## Obuna tariflari va kodlar
 
-Kod yaratish (30 kunlik 10 ta):
+| Tarif | Kunlik ovozli dars | 1 oy | 3 oy | 1 yil |
+|---|---|---|---|---|
+| Light · Oddiy | 20 daqiqa | 150 000 | 405 000 | 1 350 000 |
+| **Standard · Asosiy** (eng ko'p tanlanadi) | 30 daqiqa | 200 000 | 540 000 | 1 800 000 |
+| Pro · VIP | 1 soat | 400 000 | 1 080 000 | 3 600 000 |
 
-```bash
-npm run codes -- 10 30
-```
+Narxlar (so'm) — standart; admin panel → Sozlamalar → «Tarif narxlari»da o'zgartiriladi
+(3 oy ≈ −10%, 1 yil ≈ −25%). Barcha tariflarda o'yinlar, lug'at, hikoyalar va imtihon
+sinovlari cheksiz; farqi — kunlik ovozli dars daqiqalari. Daqiqalar serverda hisoblanadi
+(javoblar orasidagi vaqt, uzun tanaffus 2 daqiqadan ortiq hisoblanmaydi); tugasa, dars
+to'xtaydi va «ertaga davom eting yoki kattaroq tarifga o'ting» oynasi chiqadi.
+Bepul rejada: kuniga 2 ta 10 daqiqalik dars (sozlanadi).
 
-yoki sayt ishlab turganda (Render'da) `ADMIN_SECRET` bilan:
-
-```bash
-curl -X POST https://SIZNING-SAYT/api/admin/codes \
-  -d '{"secret":"ADMIN_SECRET_QIYMATI","count":10,"days":30}'
-```
-
-Foydalanuvchi kodni "👤 Akkaunt → ⭐ Premium" bo'limida kiritadi. Narx va
-bog'lanish uchun `PREMIUM_PRICE` va `PREMIUM_CONTACT` (masalan `@sizning_telegram`)
-ni belgilang. Limitlarni `FREE_LESSONS`, `FREE_PRACTICE`, `FREE_EXAM_SECTIONS`
-bilan o'zgartirish yoki `FREE_LIMITS=off` bilan butunlay o'chirish mumkin.
+Sotish: foydalanuvchi akkaunt sahifasida tarif va muddatni tanlab «Tanlash»ni bosadi —
+`PREMIUM_CONTACT` (Telegram @username) ga tayyor xabar bilan o'tadi. To'lovni olgach,
+admin panel → Kodlar: tarif va muddatni tanlab kod yaratasiz va unga yuborasiz (yoki
+foydalanuvchi oynasida tarifni tanlab, «+1 oy / +3 oy / +1 yil» bosasiz).
+Terminaldan: `npm run codes -- 10 30 standard` (soni, kun, tarif: light/standard/pro).
+Payme/Click bilan avtomatik to'lov uchun merchant shartnomasi kerak — keyin ulash mumkin.
 
 ## Xarajat
 

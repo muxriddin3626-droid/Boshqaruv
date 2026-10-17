@@ -1,7 +1,7 @@
 // Oflayn ishlash: sayt fayllari telefonda saqlanadi, internet bo'lmasa ham ochiladi.
 // Takrorlash, daftar, kurs xaritasi va natijalar internetsiz ishlaydi; ustoz bilan
 // suhbat, o'yin va imtihonlar uchun internet kerak.
-const CACHE = 'til-ustoz-v9';
+const CACHE = 'til-ustoz-v10';
 const FILES = [
   '/',
   '/index.html',
@@ -16,6 +16,7 @@ const FILES = [
   '/practice.js',
   '/hangul.js',
   '/themes.js',
+  '/plans.js',
   '/vocab.js',
   '/exam.js',
   '/cert.js',

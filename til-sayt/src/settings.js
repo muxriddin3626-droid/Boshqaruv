@@ -1,6 +1,7 @@
 // Sayt sozlamalari: standart qiymatlar muhit o'zgaruvchilaridan (.env), admin panelida
 // o'zgartirilganlari bazadan olinadi. O'zgarish serverni qayta ishga tushirmasdan kuchga kiradi.
 const db = require('./db');
+const P = require('../public/plans.js');
 
 const DEFAULTS = {
   limitsOn: process.env.FREE_LIMITS !== 'off',
@@ -11,7 +12,17 @@ const DEFAULTS = {
   premiumPrice: process.env.PREMIUM_PRICE || '',
   premiumContact: process.env.PREMIUM_CONTACT || '',
   announcement: '',
+  prices: P.DEFAULT_PRICES,
 };
+
+// Narxlar: har tarif uchun { 1: so'm, 3: so'm, 12: so'm }.
+function validPrices(v) {
+  return (
+    v &&
+    typeof v === 'object' &&
+    P.PLANS.every((p) => v[p.id] && P.PERIODS.every((d) => Number.isInteger(v[p.id][d.months]) && v[p.id][d.months] >= 0 && v[p.id][d.months] <= 100000000))
+  );
+}
 
 // Har sozlama uchun tekshiruv: noto'g'ri qiymat qabul qilinmaydi.
 const VALIDATE = {
@@ -23,6 +34,7 @@ const VALIDATE = {
   premiumPrice: (v) => typeof v === 'string' && v.length <= 100,
   premiumContact: (v) => typeof v === 'string' && v.length <= 100,
   announcement: (v) => typeof v === 'string' && v.length <= 300,
+  prices: validPrices,
 };
 
 let current = { ...DEFAULTS };

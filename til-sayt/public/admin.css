@@ -126,3 +126,7 @@
   .admin-table th:nth-child(2), .admin-table td:nth-child(2) { display: none; }
 }
 .new-password { font: 700 18px ui-monospace, monospace; margin-top: 8px !important; user-select: all; }
+.prices-grid { display: grid; grid-template-columns: minmax(110px, auto) repeat(3, minmax(0, 1fr)); gap: 8px; align-items: center; margin-bottom: 8px; }
+.prices-grid b { font-size: 13px; }
+.prices-grid input { width: 100%; min-width: 0; }
+.code-create select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; }

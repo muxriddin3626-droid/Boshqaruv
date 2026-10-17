@@ -254,16 +254,27 @@ async function handleChat(req, res) {
   // Yangi dars kunlik limitdan hisoblanadi; davomidagi xabarlar dars tokeni bilan keladi.
   const isNew = !history.some((m) => m.role === 'assistant');
   let q = null;
+  let token = null;
   if (isNew) {
     q = await account.quota(req, 'lesson');
     if (!q.ok) {
       account.sendLimit(res, q);
       return;
     }
-  } else if (!auth.checkLessonToken(body.lessonToken)) {
-    sendJson(res, 403, { error: 'Dars vaqti tugadi. Yangi dars boshlang.', expired: true });
+  } else {
+    token = auth.checkLessonToken(body.lessonToken);
+    if (!token) {
+      sendJson(res, 403, { error: 'Dars vaqti tugadi. Yangi dars boshlang.', expired: true });
+      return;
+    }
+  }
+  // Obunachilar: tarif bo'yicha kunlik ovozli dars daqiqalari.
+  const vq = await account.voiceQuota(req);
+  if (vq && !vq.ok) {
+    account.sendVoiceLimit(res, vq);
     return;
   }
+  const now = Date.now();
 
   try {
     const reply = await askJson({
@@ -274,7 +285,9 @@ async function handleChat(req, res) {
       messages,
       schema: REPLY_SCHEMA,
     });
-    const lessonToken = isNew ? auth.lessonToken() : body.lessonToken;
+    const lessonToken = auth.lessonToken(now);
+    // Oldingi javobdan beri o'tgan vaqt (uzoq tanaffus 2 daqiqadan ortiq hisoblanmaydi).
+    if (vq && token && Number.isFinite(token.last)) await vq.add(Math.round(Math.min(now - token.last, 120000) / 1000));
     if (!reply) {
       sendJson(res, 200, { ...REFUSAL_REPLY, lessonToken });
       return;

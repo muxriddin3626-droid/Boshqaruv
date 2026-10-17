@@ -587,17 +587,19 @@
     </section>
 
     <section class="panel premium-panel" id="premiumPanel">
-      <h2>⭐ Premium</h2>
+      <h2>⭐ Obuna</h2>
       <p class="plan-state" id="planState"></p>
       <ul class="usage" id="usageList"></ul>
+      <div class="period-tabs" id="periodTabs" role="tablist"></div>
+      <div class="plan-cards" id="planCards"></div>
       <ul class="benefits">
-        <li>♾️ Cheksiz ovozli darslar, o'yinlar va hikoyalar</li>
-        <li>🎓 Cheksiz imtihon sinovlari (patent, ТРКИ, Goethe, EPS-TOPIK)</li>
-        <li>❤️ Loyihani qo'llab-quvvatlash</li>
+        <li>🎙️ Har kuni ustoz bilan ovozli dars — tarifdagi daqiqalar</li>
+        <li>♾️ Cheksiz o'yinlar, lug'at, hikoyalar va imtihon sinovlari</li>
+        <li>⏱️ 20 va 30 daqiqalik uzun darslar</li>
       </ul>
       <p class="premium-buy" id="premiumBuy"></p>
       <form class="code-form" id="codeForm">
-        <input type="text" id="codeInput" placeholder="Premium kod: TU-XXXX-XXXX" autocomplete="off" maxlength="20">
+        <input type="text" id="codeInput" placeholder="Obuna kodi: TU-XXXX-XXXX" autocomplete="off" maxlength="20">
         <button type="submit" class="primary">Faollashtirish</button>
       </form>
     </section>
@@ -720,7 +722,7 @@
       <h2>Bugungi bepul limit tugadi</h2>
       <p id="limitText">Premium bilan cheksiz mashq qiling yoki ertaga davom eting. Takrorlash kartochkalari va daftar bepul va cheksiz!</p>
       <div class="end-actions">
-        <button type="button" class="primary" id="limitPremium">⭐ Premium haqida</button>
+        <button type="button" class="primary" id="limitPremium">⭐ Tariflar</button>
         <button type="submit" class="secondary">Keyinroq</button>
       </div>
     </form>
@@ -765,6 +767,7 @@
   <script src="scenarios.js"></script>
   <script src="exams.js"></script>
   <script src="learn.js"></script>
+  <script src="plans.js"></script>
   <script src="app.js"></script>
   <script src="games.js"></script>
   <script src="practice.js"></script>

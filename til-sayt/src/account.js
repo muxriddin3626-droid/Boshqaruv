@@ -4,6 +4,7 @@ const db = require('./db');
 const auth = require('./auth');
 
 const settings = require('./settings');
+const PLANS = require('../public/plans.js');
 
 const MAX_STATE_BYTES = 2 * 1024 * 1024;
 
@@ -55,6 +56,8 @@ async function readJson(req, res, max = 64 * 1024) {
 }
 
 const isPremium = (user) => Boolean(user && user.premiumUntil > Date.now());
+// Faol obuna tarifi (light / standard / pro) yoki null.
+const planOf = (user) => (isPremium(user) ? PLANS.byId(user.plan) || PLANS.byId(PLANS.DEFAULT_PLAN) : null);
 
 async function currentUser(req) {
   const uid = auth.sessionUserId(req);
@@ -74,6 +77,27 @@ async function quota(req, kind) {
   const used = (await db.getUsage(subject, day))[kind] || 0;
   if (used >= FREE[kind]) return { ok: false, limit: FREE[kind], loggedIn: Boolean(user) };
   return { ok: true, commit: () => db.incrementUsage(subject, day, kind).catch(() => {}) };
+}
+
+// Obunachilarning kunlik ovozli dars vaqti (soniyada hisoblanadi). Obunasi yo'q bo'lsa — null.
+async function voiceQuota(req) {
+  const user = await currentUser(req);
+  const plan = planOf(user);
+  if (!plan) return null;
+  const subject = `u:${user.id}`;
+  const day = tashkentDay();
+  const used = (await db.getUsage(subject, day)).voice || 0;
+  const limit = plan.minutes * 60;
+  return { plan, used, limit, ok: used < limit, add: (sec) => (sec > 0 ? db.incrementUsage(subject, day, 'voice', sec).catch(() => {}) : null) };
+}
+
+function sendVoiceLimit(res, vq) {
+  sendJson(res, 402, {
+    limit: true,
+    voice: true,
+    loggedIn: true,
+    error: `Bugungi ${vq.plan.minutes} daqiqalik dars vaqtingiz tugadi (${vq.plan.name} tarifi). Ertaga davom eting yoki kattaroq tarifga o'ting. O'yinlar, lug'at va takrorlash cheksiz!`,
+  });
 }
 
 function sendLimit(res, q) {
@@ -116,6 +140,9 @@ function config() {
     limits: settings.get().limitsOn ? settings.freeLimits() : null,
     premiumContact: settings.get().premiumContact,
     premiumPrice: settings.get().premiumPrice,
+    plans: PLANS.PLANS,
+    periods: PLANS.PERIODS,
+    prices: settings.get().prices,
     refBonusDays: settings.get().refBonusDays,
     announcement: settings.get().announcement,
   };
@@ -126,6 +153,7 @@ async function handleMe(req, res) {
   sendJson(res, 200, {
     user: user ? publicUser(user) : null,
     premium: isPremium(user),
+    plan: planOf(user),
     usage: await usageFor(req, user),
     limits: settings.get().limitsOn ? settings.freeLimits() : null,
   });
@@ -371,13 +399,13 @@ async function handleRedeem(req, res) {
   const body = await readJson(req, res);
   if (!body) return;
   const code = typeof body.code === 'string' ? body.code.trim().toUpperCase() : '';
-  const days = code && (await db.redeemCode(code, user.id));
-  if (!days) {
+  const r = code && (await db.redeemCode(code, user.id));
+  if (!r) {
     sendJson(res, 404, { error: "Kod noto'g'ri yoki allaqachon ishlatilgan." });
     return;
   }
-  const until = await db.addPremiumDays(user.id, days);
-  sendJson(res, 200, { ok: true, days, premiumUntil: until });
+  const until = await db.addPremiumDays(user.id, r.days, r.plan);
+  sendJson(res, 200, { ok: true, days: r.days, plan: PLANS.byId(r.plan), premiumUntil: until });
 }
 
 const GET_ROUTES = {
@@ -403,6 +431,9 @@ module.exports = {
   POST_ROUTES,
   quota,
   sendLimit,
+  voiceQuota,
+  sendVoiceLimit,
+  planOf,
   config,
   normalizePhone,
   ready: db.ready.then(() => settings.load()),

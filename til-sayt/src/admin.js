@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const db = require('./db');
 const auth = require('./auth');
 const settings = require('./settings');
+const PLANS = require('../public/plans.js');
 const account = require('./account');
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || '';
@@ -187,10 +188,11 @@ async function handlePremium(req, res) {
     return;
   }
   const days = parseInt(body.days, 10);
+  const plan = PLANS.byId(body.plan) ? body.plan : undefined;
   if (body.remove) {
     await db.setPremiumUntil(user.id, 0);
   } else if (Number.isInteger(days) && days > 0 && days <= 3650) {
-    await db.addPremiumDays(user.id, days);
+    await db.addPremiumDays(user.id, days, plan);
   } else {
     sendJson(res, 400, { error: "Kun soni noto'g'ri." });
     return;
@@ -215,7 +217,8 @@ async function handleCodes(req, res) {
   }
   const count = Math.min(Math.max(parseInt(body.count, 10) || 1, 1), 100);
   const days = Math.min(Math.max(parseInt(body.days, 10) || 30, 1), 3650);
-  sendJson(res, 200, { codes: await db.createCodes(count, days), days });
+  const plan = PLANS.byId(body.plan) ? body.plan : PLANS.DEFAULT_PLAN;
+  sendJson(res, 200, { codes: await db.createCodes(count, days, plan), days, plan });
 }
 
 // ---------- Sozlamalar ----------

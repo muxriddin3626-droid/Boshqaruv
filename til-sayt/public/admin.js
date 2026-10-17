@@ -292,7 +292,7 @@
         el('td', 'num', u.invited)
       );
       const p = el('td');
-      p.appendChild(el('span', `pill-badge${premium ? ' pro' : ''}`, premium ? `⭐ ${fmtDate(u.premiumUntil)} gacha` : 'Bepul'));
+      p.appendChild(el('span', `pill-badge${premium ? ' pro' : ''}`, premium ? `⭐ ${planName(u.plan)} · ${fmtDate(u.premiumUntil)} gacha` : 'Bepul'));
       tr.appendChild(p);
       tr.addEventListener('click', () => openUser(u.id));
       body.appendChild(tr);
@@ -369,14 +369,24 @@
     }
 
     const prem = el('div', 'user-premium');
-    prem.appendChild(el('h3', '', '⭐ Premium'));
-    prem.appendChild(el('p', '', premium ? `Faol: ${fmtDate(u.premiumUntil)} gacha` : "Premium yo'q"));
+    prem.appendChild(el('h3', '', '⭐ Obuna'));
+    prem.appendChild(el('p', '', premium ? `Faol: ${planName(u.plan)} · ${fmtDate(u.premiumUntil)} gacha` : "Obuna yo'q"));
+    let chosen = premium ? u.plan : 'standard';
+    const plansRow = el('div', 'chips');
+    for (const pl of window.PLANS.PLANS) {
+      const c = button(`chip${pl.id === chosen ? ' selected' : ''}`, `${pl.name} · ${pl.minutes} daq`, () => {
+        chosen = pl.id;
+        plansRow.querySelectorAll('.chip').forEach((x) => x.classList.toggle('selected', x === c));
+      });
+      plansRow.appendChild(c);
+    }
+    prem.appendChild(plansRow);
     const row = el('div', 'chips');
-    for (const days of [7, 30, 90, 365]) {
-      row.appendChild(button('chip', `+${days} kun`, () => setPremium(u.id, { days })));
+    for (const [days, label] of [[7, '+7 kun'], [30, '+1 oy'], [90, '+3 oy'], [365, '+1 yil']]) {
+      row.appendChild(button('chip', label, () => setPremium(u.id, { days, plan: chosen })));
     }
     if (premium) row.appendChild(button('chip danger', "Olib qo'yish", () => {
-      if (confirm('Premium olib qo\'yilsinmi?')) setPremium(u.id, { remove: true });
+      if (confirm('Obuna olib qo\'yilsinmi?')) setPremium(u.id, { remove: true });
     }));
     prem.appendChild(row);
     box.appendChild(prem);
@@ -403,10 +413,15 @@
     if (!dlg.open) dlg.showModal();
   }
 
+  function planName(id) {
+    const p = window.PLANS.byId(id);
+    return p ? p.name : 'Standard';
+  }
+
   async function setPremium(userId, opts) {
     try {
       await api('/api/admin/premium', { userId, ...opts });
-      toast(opts.remove ? "Premium olib qo'yildi" : `+${opts.days} kun Premium berildi`);
+      toast(opts.remove ? "Obuna olib qo'yildi" : `${planName(opts.plan)}: +${opts.days} kun berildi`);
       await openUser(userId);
       loadUsers();
     } catch (err) {
@@ -428,7 +443,7 @@
     body.textContent = '';
     for (const c of codes) {
       const tr = el('tr');
-      tr.append(el('td', 'mono', c.code), el('td', 'num', c.days), el('td', '', fmtDate(c.createdAt)));
+      tr.append(el('td', 'mono', c.code), el('td', '', planName(c.plan)), el('td', 'num', c.days), el('td', '', fmtDate(c.createdAt)));
       const st = el('td');
       st.appendChild(
         el('span', `pill-badge${c.usedBy ? '' : ' free'}`, c.usedBy ? `✅ ${c.usedByName || c.usedBy} · ${fmtDate(c.usedAt)}` : '🆕 Ishlatilmagan')
@@ -439,7 +454,7 @@
     if (!codes.length) {
       const tr = el('tr');
       const td = el('td', 'muted', "Hali kod yo'q.");
-      td.colSpan = 4;
+      td.colSpan = 5;
       tr.appendChild(td);
       body.appendChild(tr);
     }
@@ -457,10 +472,10 @@
   $('codeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-      const r = await api('/api/admin/codes', { count: Number($('codeCount').value), days: Number($('codeDays').value) });
+      const r = await api('/api/admin/codes', { count: Number($('codeCount').value), days: Number($('codeDays').value), plan: $('codePlan').value });
       const box = $('newCodes');
       box.textContent = '';
-      box.appendChild(el('p', '', `${r.days} kunlik ${r.codes.length} ta yangi kod:`));
+      box.appendChild(el('p', '', `${planName(r.plan)} tarifi, ${r.days} kunlik ${r.codes.length} ta yangi kod:`));
       box.appendChild(el('pre', 'mono', r.codes.join('\n')));
       box.appendChild(button('secondary', '📋 Nusxalash', async () => toast((await copyText(r.codes.join('\n'))) ? 'Nusxalandi' : "Nusxalab bo'lmadi")));
       box.hidden = false;
@@ -471,7 +486,7 @@
   });
 
   $('copyUnused').addEventListener('click', async () => {
-    const unused = codes.filter((c) => !c.usedBy).map((c) => `${c.code} (${c.days} kun)`);
+    const unused = codes.filter((c) => !c.usedBy).map((c) => `${c.code} (${planName(c.plan)}, ${c.days} kun)`);
     if (!unused.length) return toast("Ishlatilmagan kod yo'q");
     toast((await copyText(unused.join('\n'))) ? `${unused.length} ta kod nusxalandi` : "Nusxalab bo'lmadi");
   });
@@ -484,7 +499,6 @@
     freePractice: ['setFreePractice', 'int'],
     freeExam: ['setFreeExam', 'int'],
     refBonusDays: ['setRefBonusDays', 'int'],
-    premiumPrice: ['setPremiumPrice', 'str'],
     premiumContact: ['setPremiumContact', 'str'],
     announcement: ['setAnnouncement', 'str'],
   };
@@ -500,6 +514,36 @@
       if (type === 'bool') $(id).checked = Boolean(s[key]);
       else $(id).value = s[key] ?? '';
     }
+    renderPrices(s.prices || window.PLANS.DEFAULT_PRICES);
+  }
+
+  // Narxlar jadvali: har tarif × muddat uchun bitta maydon.
+  function renderPrices(prices) {
+    const grid = $('pricesGrid');
+    grid.textContent = '';
+    grid.appendChild(el('span', ''));
+    for (const per of window.PLANS.PERIODS) grid.appendChild(el('b', '', per.label));
+    for (const pl of window.PLANS.PLANS) {
+      grid.appendChild(el('b', '', `${pl.name} · ${pl.minutes} daq`));
+      for (const per of window.PLANS.PERIODS) {
+        const input = el('input');
+        input.type = 'number';
+        input.min = '0';
+        input.step = '1000';
+        input.id = `price-${pl.id}-${per.months}`;
+        input.value = (prices[pl.id] || {})[per.months] ?? '';
+        grid.appendChild(input);
+      }
+    }
+  }
+
+  function readPrices() {
+    const out = {};
+    for (const pl of window.PLANS.PLANS) {
+      out[pl.id] = {};
+      for (const per of window.PLANS.PERIODS) out[pl.id][per.months] = parseInt($(`price-${pl.id}-${per.months}`).value, 10) || 0;
+    }
+    return out;
   }
 
   $('settingsForm').addEventListener('submit', async (e) => {
@@ -510,6 +554,7 @@
       else if (type === 'int') patch[key] = parseInt($(id).value, 10) || 0;
       else patch[key] = $(id).value;
     }
+    patch.prices = readPrices();
     try {
       await api('/api/admin/settings', { settings: patch });
       toast('✅ Saqlandi');
