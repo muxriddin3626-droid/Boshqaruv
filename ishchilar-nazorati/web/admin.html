@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boshqaruv — Admin panel</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <h1>Boshqaruv — Ishchilar nazorati</h1>
+  <button class="ghost" id="logoutBtn">Chiqish</button>
+</header>
+<main>
+
+  <div class="card">
+    <h2>Haydovchilar xaritada (jonli)</h2>
+    <div id="map"></div>
+  </div>
+
+  <div class="card">
+    <h2>Haydovchi yo'l tarixi</h2>
+    <div class="msg" id="historyMsg"></div>
+    <div class="row">
+      <div>
+        <label for="historyEmployee">Haydovchi</label>
+        <select id="historyEmployee"></select>
+      </div>
+      <div>
+        <label for="historyDate">Sana</label>
+        <input id="historyDate" type="date">
+      </div>
+    </div>
+    <button id="showHistoryBtn">Yo'lni ko'rsatish</button>
+    <button id="clearHistoryBtn" class="ghost" style="margin-left: 8px;">Tozalash</button>
+    <div id="historyMap" style="height: 360px; border-radius: var(--radius); overflow: hidden; margin-top: 16px; display: none;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Joriy holat</h2>
+    <div id="statusTableWrap">Yuklanmoqda…</div>
+  </div>
+
+  <div class="card">
+    <h2>Yangi xodim qo'shish</h2>
+    <div class="msg" id="addMsg"></div>
+    <div class="row">
+      <div>
+        <label for="name">Ism familiya</label>
+        <input id="name" placeholder="Aziz Karimov">
+      </div>
+      <div>
+        <label for="role">Lavozim</label>
+        <select id="role">
+          <option value="ishchi">Ishchi</option>
+          <option value="haydovchi">Haydovchi</option>
+        </select>
+      </div>
+      <div>
+        <label for="phone">Telefon (ixtiyoriy)</label>
+        <input id="phone" placeholder="+998 90 123 45 67">
+      </div>
+    </div>
+    <button id="addBtn">Qo'shish</button>
+  </div>
+
+  <div class="card">
+    <h2>Xodimlar ro'yxati</h2>
+    <div id="employeesTableWrap">Yuklanmoqda…</div>
+  </div>
+
+  <div class="card">
+    <h2>Keldi/ketdi tarixi (oxirgi 500 ta)</h2>
+    <div id="attendanceTableWrap">Yuklanmoqda…</div>
+  </div>
+
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
