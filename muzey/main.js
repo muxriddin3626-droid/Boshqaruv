@@ -297,7 +297,7 @@ function flowerPedestal(x, z) {
     g.add(b);
   }
   room.add(g);
-  colliders.push({ x, z, r: 0.35 });
+  colliders.push({ x, z, r: 0.35, tall: true });
 }
 
 function candle(x, z, h = 0.25 + Math.random() * 0.25, glass = true) {
@@ -349,7 +349,7 @@ function balloonColumn(x, z, h = 3.4) {
       room.add(m);
     }
   }
-  colliders.push({ x, z, r: 0.38 });
+  colliders.push({ x, z, r: 0.38, tall: true });
 }
 
 function floorOrb(x, z, r = 0.2) {
@@ -535,6 +535,46 @@ const peng = makePenguin();
 scene.add(peng.root);
 const P = { pos: new THREE.Vector3(0, 0, START_Z), yaw: Math.PI, vel: 0, phase: 0, hop: 0, hopT: 0 };
 let camYaw = Math.PI;
+// foydalanuvchi boshqaradigan kamera: masofa (zoom) va balandlik burchagi
+const view = { dist: 3.6, pitch: 0.42, lastTouch: -10 };
+const DIST_MIN = 1.4, DIST_MAX = 7.5, PITCH_MIN = 0.05, PITCH_MAX = 1.15;
+{
+  const pts = new Map();
+  let pinch0 = 0, dist0 = 0;
+  const now = () => performance.now() / 1000;
+  canvas.addEventListener("pointerdown", (e) => {
+    if (!started) return;
+    canvas.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); dist0 = view.dist; }
+    hideHint();
+  });
+  canvas.addEventListener("pointermove", (e) => {
+    const p = pts.get(e.pointerId); if (!p) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y;
+    p.x = e.clientX; p.y = e.clientY;
+    view.lastTouch = now();
+    if (pts.size === 1) {
+      // bir barmoq: aylantirish (chapga-o'ngga) va tepaga-pastga
+      camYaw -= dx * 0.008;
+      view.pitch = THREE.MathUtils.clamp(view.pitch + dy * 0.005, PITCH_MIN, PITCH_MAX);
+    } else if (pts.size === 2) {
+      // ikki barmoq: yaqinlashtirish / uzoqlashtirish
+      const [a, b] = [...pts.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (pinch0 > 0) view.dist = THREE.MathUtils.clamp(dist0 * pinch0 / d, DIST_MIN, DIST_MAX);
+    }
+  });
+  const up = (e) => { pts.delete(e.pointerId); pinch0 = 0; };
+  canvas.addEventListener("pointerup", up);
+  canvas.addEventListener("pointercancel", up);
+  // kompyuter: g'ildirak bilan zoom
+  canvas.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    view.dist = THREE.MathUtils.clamp(view.dist * Math.exp(e.deltaY * 0.0012), DIST_MIN, DIST_MAX);
+    view.lastTouch = now();
+  }, { passive: false });
+}
 camera.position.set(0, 2.35, START_Z + 3.6);
 
 // ---------- Boshqaruv ----------
@@ -603,7 +643,7 @@ $("btnMusic").onclick = () => {
 };
 
 // ---------- Ovozlar (fayl kerak emas — brauzerning o'zida yasaladi) ----------
-const sfx = { ctx: null, master: null, noise: null, lastLaugh: 0 };
+const sfx = { ctx: null, master: null, noise: null, lastFly: 0 };
 function initSound() {
   if (sfx.ctx) return;
   const AC = window.AudioContext || window.webkitAudioContext;
@@ -643,33 +683,38 @@ sfx.bump = () => {
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
   o.connect(g).connect(sfx.master); o.start(t); o.stop(t + 0.2);
 };
-// kulish: "hi-hi-hi-hi" — ingichka, yoqimli kulgi
-sfx.laugh = (big = false) => {
+// sakrab qanot qoqqanda: yumshoq qanot shitirlashi + sehrli qo'ng'iroqcha
+sfx.fly = (big = false) => {
   const ctx = sfx.ctx; if (!ctx) return;
   const now = ctx.currentTime;
-  if (now - sfx.lastLaugh < 1.2) return;
-  sfx.lastLaugh = now;
-  const n = big ? 6 : 4 + Math.floor(Math.random() * 2);
-  const base = 620 + Math.random() * 80;
-  for (let i = 0; i < n; i++) {
-    const t = now + 0.05 + i * 0.13;
-    const f = base * (1 + 0.18 * Math.sin(i * 1.3)) * (1 - i * 0.03);
-    const o = ctx.createOscillator(); o.type = "triangle";
-    o.frequency.setValueAtTime(f * 1.25, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.04); o.frequency.exponentialRampToValueAtTime(f * 0.8, t + 0.1);
-    const vib = ctx.createOscillator(); vib.frequency.value = 28;
-    const vg = ctx.createGain(); vg.gain.value = f * 0.04; vib.connect(vg).connect(o.frequency);
-    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1800; bp.Q.value = 0.8;
+  if (now - sfx.lastFly < 1.2) return;
+  sfx.lastFly = now;
+  // qanot qoqish (4-5 ta yumshoq "fr-fr")
+  const flaps = big ? 7 : 5;
+  for (let i = 0; i < flaps; i++) {
+    const t = now + i * 0.075;
+    const src = ctx.createBufferSource(); src.buffer = sfx.noise;
+    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 900 + i * 60; bp.Q.value = 1.2;
     const g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.32, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
-    // nafas ("h" tovushi)
-    const h = ctx.createBufferSource(); h.buffer = sfx.noise;
-    const hf = ctx.createBiquadFilter(); hf.type = "highpass"; hf.frequency.value = 2500;
-    const hg = ctx.createGain();
-    hg.gain.setValueAtTime(0.0001, t - 0.02); hg.gain.exponentialRampToValueAtTime(0.06, t); hg.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
-    h.connect(hf).connect(hg).connect(sfx.master); h.start(t - 0.02); h.stop(t + 0.06);
-    o.connect(bp).connect(g).connect(sfx.master);
-    o.start(t); vib.start(t); o.stop(t + 0.13); vib.stop(t + 0.13);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    src.connect(bp).connect(g).connect(sfx.master); src.start(t, Math.random() * 0.1); src.stop(t + 0.08);
   }
+  // ko'tariluvchi qo'ng'iroqcha (pentatonika) + aks-sado
+  const notes = big ? [1047, 1175, 1319, 1568, 1760, 2093] : [1319, 1568, 1760, 2093];
+  const delay = ctx.createDelay(); delay.delayTime.value = 0.16;
+  const fb = ctx.createGain(); fb.gain.value = 0.32;
+  const wet = ctx.createGain(); wet.gain.value = 0.45;
+  delay.connect(fb).connect(delay); delay.connect(wet).connect(sfx.master);
+  notes.forEach((f, i) => {
+    const t = now + 0.08 + i * 0.07;
+    for (const [mult, amp] of [[1, 0.13], [2.01, 0.04], [3.02, 0.015]]) {
+      const o = ctx.createOscillator(); o.type = "sine"; o.frequency.value = f * mult;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(amp, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9 / mult);
+      o.connect(g); g.connect(sfx.master); g.connect(delay);
+      o.start(t); o.stop(t + 1);
+    }
+  });
 };
 
 let started = false;
@@ -859,7 +904,7 @@ function tick() {
   P.pos.z += Math.cos(P.yaw) * P.vel * dt;
   collide(P.pos);
   // kamera sekin pingvin orqasiga buriladi (orqaga yurganda emas)
-  if (P.vel > 0.2 && inp.y > -0.3) camYaw = angleLerp(camYaw, P.yaw, 1 - Math.exp(-1.6 * dt));
+  if (P.vel > 0.2 && inp.y > -0.3 && performance.now() / 1000 - view.lastTouch > 1.2) camYaw = angleLerp(camYaw, P.yaw, 1 - Math.exp(-1.6 * dt));
 
   // --- pingvin animatsiyasi (lapanglab yurish)
   const moving = P.vel / 2.1;
@@ -889,13 +934,35 @@ function tick() {
   }
 
   // --- kamera
-  const dist = 3.6, hgt = 2.35;
-  camTarget.set(P.pos.x - Math.sin(camYaw) * dist, hgt, P.pos.z - Math.cos(camYaw) * dist);
+  const dist = view.dist;
+  let hDist = dist * Math.cos(view.pitch);
+  // kamera devor yoki baland narsa ichiga kirib ketmasin — kerak bo'lsa yaqinlashadi
+  {
+    const dx = -Math.sin(camYaw), dz = -Math.cos(camYaw), m = 0.3;
+    if (dx < -1e-4) hDist = Math.min(hDist, (P.pos.x - (-HALF + m)) / -dx);
+    if (dx > 1e-4) hDist = Math.min(hDist, (HALF - m - P.pos.x) / dx);
+    if (dz < -1e-4) hDist = Math.min(hDist, (P.pos.z - (END_Z + m)) / -dz);
+    if (dz > 1e-4) hDist = Math.min(hDist, (BACK_Z - m - P.pos.z) / dz);
+    for (const c of colliders) {
+      if (!c.tall) continue;
+      const ox = c.x - P.pos.x, oz = c.z - P.pos.z;
+      const tProj = ox * dx + oz * dz;
+      if (tProj <= 0) continue;
+      const perp2 = ox * ox + oz * oz - tProj * tProj, rr = (c.r + 0.25) ** 2;
+      if (perp2 < rr) hDist = Math.min(hDist, tProj - Math.sqrt(rr - perp2));
+    }
+    hDist = Math.max(hDist, 0.6);
+  }
+  const hgt = THREE.MathUtils.clamp(0.9 + dist * Math.sin(view.pitch), 0.35, ROOM_H - 0.2);
+  camTarget.set(P.pos.x - Math.sin(camYaw) * hDist, hgt, P.pos.z - Math.cos(camYaw) * hDist);
   camTarget.x = THREE.MathUtils.clamp(camTarget.x, -HALF + 0.25, HALF - 0.25);
   camTarget.z = THREE.MathUtils.clamp(camTarget.z, END_Z + 0.3, BACK_Z - 0.25);
-  camera.position.lerp(camTarget, 1 - Math.exp(-4 * dt));
-  lookTarget.set(P.pos.x + Math.sin(camYaw) * 2.6, 1.35, P.pos.z + Math.cos(camYaw) * 2.6);
-  curLook.lerp(lookTarget, 1 - Math.exp(-5 * dt));
+  const touching = performance.now() / 1000 - view.lastTouch < 0.3;
+  camera.position.lerp(camTarget, 1 - Math.exp(-(touching ? 12 : 4) * dt));
+  // yaqinlashganda pingvinning o'ziga, uzoqda esa oldinga qaraydi
+  const ahead = THREE.MathUtils.clamp((dist - 1.6) * 1.2, 0, 2.6);
+  lookTarget.set(P.pos.x + Math.sin(camYaw) * ahead, THREE.MathUtils.lerp(0.95, 1.35, ahead / 2.6), P.pos.z + Math.cos(camYaw) * ahead);
+  curLook.lerp(lookTarget, 1 - Math.exp(-(touching ? 12 : 5) * dt));
   camera.lookAt(curLook);
 
   // --- yaqin rasm -> yozuv
@@ -906,13 +973,13 @@ function tick() {
   }
   if (best !== activeFrame) {
     activeFrame = best;
-    if (best) { P.hopT = 0.9; sfx.laugh(); } // xursand bo'lib kuladi va sakraydi
+    if (best) { P.hopT = 0.9; sfx.fly(); } // xursand bo'lib qanot qoqib sakraydi
   }
 
   // --- yakuniy xabar
   if (started && !finalShown && P.pos.z < END_Z + 3.2) {
     finalShown = finalOpen = true;
-    P.hopT = 0.9; sfx.laugh(true);
+    P.hopT = 0.9; sfx.fly(true);
     setTimeout(() => $("final").classList.remove("hidden"), 700);
   }
   if (finalShown && !finalOpen && P.pos.z > END_Z + 6) finalShown = false;
