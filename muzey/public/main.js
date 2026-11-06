@@ -215,7 +215,7 @@ function makeFrame(i, pos, rotY, maxH) {
   frames.push(f);
   setFrameTexture(f, placeholderTex(i));
   const src = CFG.photos[i]?.src;
-  if (src) loader.load(src, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; setFrameTexture(f, t); }, undefined, () => {});
+  if (src && !new URLSearchParams(location.search).has("g")) loader.load(src, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; setFrameTexture(f, t); }, undefined, () => {});
   return f;
 }
 
@@ -727,25 +727,93 @@ $("btnStart").onclick = () => {
   initSound();
 };
 
-$("btnPhotos").onclick = () => $("fileInput").click();
-$("fileInput").onchange = (e) => {
-  const files = [...e.target.files].filter((f) => f.type.startsWith("image/"));
-  files.slice(0, frames.length).forEach((file, i) => {
-    const order = frameOrder[i];
-    loader.load(URL.createObjectURL(file), (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; setFrameTexture(frames[order], t); });
-  });
-  if (files.length) toast("Rasmlar faqat shu qurilmada ko'rinadi. Doimiy qilish uchun ularni photos/ papkaga qo'ying.");
-  e.target.value = "";
-};
-// tanlangan rasmlar tartibi: kirishdan oxirigacha
-const frameOrder = frames.map((_, i) => i);
+// ---------- Rasmlar: tanlash, saqlash va havola orqali ulashish ----------
+// Tanlangan rasmlar Netlify'ga yuklanadi va ?g=<id> havolasi olinadi.
+// Shu havolani ochgan har kim xuddi shu rasmlarni ko'radi.
+const pending = []; // saqlanmagan rasmlar (Blob), tartib bo'yicha
+let galleryId = new URLSearchParams(location.search).get("g");
 
-$("btnShare").onclick = async () => {
+function applyTexture(i, url) {
+  loader.load(url, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; setFrameTexture(frames[i], t); });
+}
+
+// rasmni kichraytirish (tez yuklanishi uchun): uzun tomoni 1600px, JPEG
+async function shrink(file, max = 1600) {
+  const img = await new Promise((res, rej) => {
+    const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(file);
+  });
+  const k = Math.min(1, max / Math.max(img.width, img.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  URL.revokeObjectURL(img.src);
+  return new Promise((res) => c.toBlob(res, "image/jpeg", 0.85));
+}
+
+$("btnPhotos").onclick = () => $("fileInput").click();
+$("fileInput").onchange = async (e) => {
+  const files = [...e.target.files].filter((f) => f.type.startsWith("image/")).slice(0, frames.length);
+  e.target.value = "";
+  if (!files.length) return;
+  if (files.length < frames.length) toast(`${files.length} ta rasm tanlandi. Muzeyda ${frames.length} ta ramka bor.`);
+  pending.length = 0;
+  for (let i = 0; i < files.length; i++) {
+    const blob = await shrink(files[i]).catch(() => null);
+    if (!blob) continue;
+    pending.push(blob);
+    applyTexture(pending.length - 1, URL.createObjectURL(blob));
+  }
+  if (pending.length) { $("btnSave").classList.remove("hidden"); toast("Rasmlar qo'yildi. Boshqalar ham ko'rishi uchun 💾 Saqlash ni bosing."); }
+};
+
+$("btnSave").onclick = async () => {
+  const btn = $("btnSave");
+  if (!pending.length || btn.disabled) return;
+  btn.disabled = true;
+  try {
+    const keys = [];
+    for (let i = 0; i < pending.length; i++) {
+      btn.textContent = `⏳ ${i + 1}/${pending.length}`;
+      const r = await fetch("/api/photo", { method: "POST", headers: { "content-type": "image/jpeg" }, body: pending[i] });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.status);
+      keys.push((await r.json()).key);
+    }
+    const r = await fetch("/api/gallery", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ photos: keys }) });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.status);
+    galleryId = (await r.json()).id;
+    const url = new URL(location.href); url.searchParams.set("g", galleryId);
+    history.replaceState(null, "", url);
+    pending.length = 0;
+    btn.classList.add("hidden");
+    toast("Saqlandi ✅ Endi 🔗 tugmasi bilan havolani yuboring.");
+    shareLink();
+  } catch (err) {
+    toast("Saqlab bo'lmadi: " + err.message + ". Sayt Netlify'ga GitHub orqali ulanganini tekshiring.");
+  } finally {
+    btn.disabled = false; btn.textContent = "💾 Saqlash";
+  }
+};
+
+async function loadGallery(id) {
+  try {
+    const r = await fetch(`/api/gallery/${encodeURIComponent(id)}`);
+    if (!r.ok) throw new Error();
+    const { photos } = await r.json();
+    photos.slice(0, frames.length).forEach((key, i) => applyTexture(i, `/api/photo/${key}`));
+  } catch { toast("Bu havoladagi rasmlar topilmadi"); }
+}
+if (galleryId) loadGallery(galleryId);
+
+async function shareLink() {
   const url = location.href;
   try {
     if (navigator.share) await navigator.share({ title: CFG.title, url });
     else { await navigator.clipboard.writeText(url); toast("Havola nusxalandi ✅"); }
   } catch { /* bekor qilindi */ }
+}
+$("btnShare").onclick = () => {
+  if (pending.length) { toast("Avval 💾 Saqlash ni bosing, aks holda rasmlar boshqalarga ko'rinmaydi."); return; }
+  shareLink();
 };
 
 let finalShown = false, finalOpen = false;

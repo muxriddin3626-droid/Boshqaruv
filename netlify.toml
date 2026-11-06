@@ -1,4 +1,9 @@
-# Netlify: "muzey" saytini chiqaradi (build kerak emas)
+# Netlify: "muzey" papkasidagi sayt (sozlamalar muzey/netlify.toml da)
 [build]
-  publish = "muzey"
-  command = ""
+  base = "muzey"
+  publish = "public"
+  command = "npm install"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"

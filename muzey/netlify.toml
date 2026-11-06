@@ -1,0 +1,8 @@
+# Netlify: sayt "public" papkasida, rasmlarni saqlovchi funksiya "netlify/functions" da
+[build]
+  publish = "public"
+  command = "npm install"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"

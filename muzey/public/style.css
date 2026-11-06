@@ -27,6 +27,14 @@ html, body {
   color: #fff; font-size: 20px; cursor: pointer;
 }
 .icon-btn:active { transform: scale(.93); }
+.save-btn {
+  height: 44px; padding: 0 16px; border-radius: 22px; border: 0; cursor: pointer;
+  color: #fff; font-size: 15px; font-weight: 700;
+  background: linear-gradient(180deg, #e0303a, #b0141f); box-shadow: 0 4px 14px rgba(176,20,31,.45);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.save-btn:disabled { animation: none; opacity: .8; }
+@keyframes pulse { 50% { transform: scale(1.06); } }
 
 .joystick {
   position: fixed; left: calc(20px + env(safe-area-inset-left)); bottom: calc(24px + env(safe-area-inset-bottom));

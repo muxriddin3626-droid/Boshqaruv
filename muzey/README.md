@@ -2,30 +2,21 @@
 
 Telefon va kompyuterda ochiladigan kichik 3D saytcha-o'yin. Iliq yoritilgan xonada
 pingvinni yurgizasiz: devorlarda rasmlaringiz, atrofda atirgullar, shamlar va sharlar.
-Pingvin rasmga yaqinlashganda yozuv chiqadi va u xursand bo'lib sakraydi. Xona oxiridagi
-qizil gilamga yetganda yakuniy xabar ochiladi.
 
-## Qanday sozlanadi
-1. Rasmlarni `photos/` papkaga qo'ying (`1.jpg`, `2.jpg`, …).
-2. `config.js` faylida sarlavha, xabarlar va har bir rasm ostidagi yozuvni (`caption`) o'zgartiring.
-   Oxirgi rasm xonaning ro'parasidagi devorga katta qilib osiladi.
-3. Musiqa kerak bo'lsa, `music.mp3` ni shu papkaga qo'yib, `config.js` da `music: "music.mp3"` deb yozing.
+## Rasmlarni qo'yish va ulashish (eng oson yo'l)
+1. Saytni oching, **Kirish** ni bosing.
+2. 📷 tugmasi bilan telefoningizdan rasmlarni tanlang (8 tagacha).
+3. **💾 Saqlash** ni bosing — rasmlar internetga yuklanadi va sizga alohida havola beriladi
+   (`...netlify.app/?g=...`).
+4. Shu havolani yuboring — uni ochgan har kim sizning rasmlaringizni ko'radi.
 
-Rasm topilmasa, uning o'rnida "Rasm N" degan bo'sh ramka chiqadi.
-Saytdagi 📷 tugmasi rasmlarni faqat shu qurilmada vaqtincha almashtiradi (sinab ko'rish uchun).
+> Bu ishlashi uchun sayt Netlify'ga **GitHub orqali** ulangan bo'lishi kerak
+> (Netlify Drop orqali joylansa, rasmlarni saqlash ishlamaydi).
+
+## Tuzilishi
+- `public/` — saytning o'zi (`config.js` da matnlar va musiqa)
+- `netlify/functions/api.mjs` — rasmlarni Netlify Blobs'da saqlaydigan kichik server qismi
 
 ## Boshqaruv
-- Telefon: chap pastdagi joystik.
-- Kompyuter: `W A S D` yoki strelkalar.
-
-## Ishga tushirish
-Brauzerda to'g'ridan-to'g'ri `index.html` ni ochib bo'lmaydi (rasmlar yuklanmaydi), oddiy server kerak:
-
-```bash
-cd muzey
-python3 -m http.server 8000
-# keyin brauzerda: http://localhost:8000
-```
-
-Internetga chiqarish uchun `muzey/` papkasini GitHub Pages, Netlify yoki Vercel'ga joylang.
-Three.js `lib/` ichida, shuning uchun hech qanday CDN kerak emas.
+- Telefon: chap pastdagi joystik; bir barmoq bilan surish — kamerani burish, ikki barmoq — yaqinlashtirish.
+- Kompyuter: `W A S D` / strelkalar, sichqoncha bilan surish, g'ildirak bilan zoom.
