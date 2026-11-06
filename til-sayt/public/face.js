@@ -57,13 +57,29 @@ window.Face = (() => {
     );
   }
 
+  let uid = 0;
+
   function svg(mood) {
+    // Har yuzchaga alohida gradient nomi: yashirin ekrandagi yuzcha ko'rinadiganiga xalaqit bermasin.
+    const gid = `tuFace${++uid}`;
     const color = COLORS[mood] || COLORS.calm;
     const eyes = EYES[mood] || EYES.calm;
+    // Hajm: yuz yumshoq gradient bilan, ustida yaltiroq, ostida ichki soya.
     return `<svg viewBox="0 0 240 150" aria-hidden="true" style="--mood:${color}">
+      <defs>
+        <radialGradient id="${gid}" cx="38%" cy="28%" r="80%">
+          <stop offset="0" style="stop-color:#ffffff"/>
+          <stop offset="0.55" style="stop-color:var(--face)"/>
+          <stop offset="1" style="stop-color:#e6d6bd"/>
+        </radialGradient>
+      </defs>
       ${mood === 'angry' ? flames() : ''}
-      <rect class="body" x="22" y="36" width="196" height="100" rx="50" fill="var(--face)" stroke="${color}" stroke-width="10"/>
-      <g fill="var(--ink)">${eyes(L, true)}${eyes(R, false)}${MOUTHS[mood] || MOUTHS.calm}</g>
+      <rect x="22" y="44" width="196" height="100" rx="50" fill="${color}" opacity="0.55"/>
+      <rect class="body" x="22" y="36" width="196" height="100" rx="50" fill="url(#${gid})" stroke="${color}" stroke-width="10"/>
+      <ellipse cx="78" cy="56" rx="34" ry="9" fill="#fff" opacity="0.75" transform="rotate(-8 78 56)"/>
+      <g class="eyes" fill="var(--ink)">${eyes(L, true)}${eyes(R, false)}${MOUTHS[mood] || MOUTHS.calm}</g>
+      <circle cx="58" cy="104" r="9" fill="${color}" opacity="0.22"/>
+      <circle cx="182" cy="104" r="9" fill="${color}" opacity="0.22"/>
     </svg>`;
   }
 

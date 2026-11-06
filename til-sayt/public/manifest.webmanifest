@@ -4,8 +4,8 @@
   "description": "Rus, nemis va koreys tilini jonli suhbat orqali o'rganing",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f7f7f5",
-  "theme_color": "#f7f7f5",
+  "background_color": "#f4ede2",
+  "theme_color": "#f4ede2",
   "icons": [
     {
       "src": "icon-192.png",
