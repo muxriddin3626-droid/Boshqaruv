@@ -1,7 +1,7 @@
 // Oflayn ishlash: sayt fayllari telefonda saqlanadi, internet bo'lmasa ham ochiladi.
 // Takrorlash, daftar, kurs xaritasi va natijalar internetsiz ishlaydi; ustoz bilan
 // suhbat, o'yin va imtihonlar uchun internet kerak.
-const CACHE = 'til-ustoz-v10';
+const CACHE = 'til-ustoz-v12';
 const FILES = [
   '/',
   '/index.html',
@@ -18,6 +18,8 @@ const FILES = [
   '/themes.js',
   '/plans.js',
   '/vocab.js',
+  '/study.js',
+  '/plan.js',
   '/exam.js',
   '/cert.js',
   '/account-ui.js',
@@ -78,5 +80,34 @@ self.addEventListener('fetch', (event) => {
       .catch(() =>
         caches.match(req).then((hit) => hit || (req.mode === 'navigate' ? caches.match('/index.html') : Response.error()))
       )
+  );
+});
+
+// ---------- Bildirishnomalar ----------
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {}
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Til Ustoz', {
+      body: data.body || 'Bugungi darsni boshlaymizmi?',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: 'til-ustoz-reminder',
+      data: { url: data.url || '/' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const open = list.find((c) => new URL(c.url).origin === self.location.origin);
+      return open ? open.focus() : self.clients.openWindow(url);
+    })
   );
 });

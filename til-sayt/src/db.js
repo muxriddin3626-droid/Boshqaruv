@@ -58,6 +58,17 @@ const ready = (async () => {
         created_at INTEGER NOT NULL,
         PRIMARY KEY (a, b)
       )`,
+      `CREATE TABLE IF NOT EXISTS push_subs (
+        endpoint TEXT PRIMARY KEY,
+        sub TEXT NOT NULL,
+        user_id TEXT,
+        lang TEXT NOT NULL,
+        time TEXT NOT NULL,
+        tz INTEGER NOT NULL,
+        active_day TEXT NOT NULL DEFAULT '',
+        sent_day TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL
+      )`,
       `CREATE TABLE IF NOT EXISTS passwords (
         user_id TEXT PRIMARY KEY,
         hash TEXT NOT NULL,
@@ -414,7 +425,60 @@ async function setPassword(userId, hash) {
   });
 }
 
+// ---------- Bildirishnoma obunalari ----------
+
+const rowToPush = (x) =>
+  x && {
+    endpoint: String(x.endpoint),
+    sub: JSON.parse(String(x.sub)),
+    userId: x.user_id == null ? null : String(x.user_id),
+    lang: String(x.lang),
+    time: String(x.time),
+    tz: Number(x.tz),
+    activeDay: String(x.active_day),
+    sentDay: String(x.sent_day),
+  };
+
+async function savePushSub({ endpoint, sub, userId, lang, time, tz, activeDay }) {
+  await client.execute({
+    sql: `INSERT INTO push_subs (endpoint, sub, user_id, lang, time, tz, active_day, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(endpoint) DO UPDATE SET sub = excluded.sub, user_id = COALESCE(excluded.user_id, push_subs.user_id),
+            lang = excluded.lang, time = excluded.time, tz = excluded.tz, active_day = excluded.active_day`,
+    args: [endpoint, JSON.stringify(sub), userId || null, lang, time, tz, activeDay || '', Date.now()],
+  });
+}
+
+async function getPushSub(endpoint) {
+  const r = await client.execute({ sql: 'SELECT * FROM push_subs WHERE endpoint = ?', args: [endpoint] });
+  return rowToPush(r.rows[0]);
+}
+
+async function listPushSubs(limit = 20000) {
+  const r = await client.execute({ sql: 'SELECT * FROM push_subs LIMIT ?', args: [limit] });
+  return r.rows.map(rowToPush);
+}
+
+async function updatePushSub(endpoint, { activeDay, sentDay }) {
+  if (activeDay != null) await client.execute({ sql: 'UPDATE push_subs SET active_day = ? WHERE endpoint = ?', args: [activeDay, endpoint] });
+  if (sentDay != null) await client.execute({ sql: 'UPDATE push_subs SET sent_day = ? WHERE endpoint = ?', args: [sentDay, endpoint] });
+}
+
+async function deletePushSub(endpoint) {
+  await client.execute({ sql: 'DELETE FROM push_subs WHERE endpoint = ?', args: [endpoint] });
+}
+
+async function countPushSubs() {
+  const r = await client.execute('SELECT COUNT(*) AS n FROM push_subs');
+  return Number(r.rows[0].n);
+}
+
 module.exports = {
+  savePushSub,
+  getPushSub,
+  listPushSubs,
+  updatePushSub,
+  deletePushSub,
+  countPushSubs,
   getPassword,
   setPassword,
   getSettings,

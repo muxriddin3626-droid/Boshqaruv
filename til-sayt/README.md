@@ -44,6 +44,24 @@ kasbiy kurs). Anketani sozlamalardan qayta to'ldirish mumkin (`public/survey.js`
 
 ### Tez o'rganish uchun
 
+- 🎯 **Bugungi dars** — menyuning tepasida bitta tugma: har kuni 15-25 daqiqalik
+  tayyor reja (daraja testi — bir marta, takrorlash, 10 ta yangi so'z, qoida yoki
+  test o'yini, ustoz bilan suhbat; koreys tilida avval Hangul bosqichlari). Har qadam
+  bajarilganda pastda «✅ Keyingisi: ...» paneli chiqadi; hammasi bajarilsa +30 XP
+  (`public/plan.js`).
+- 📊 **Daraja aniqlash testi** — 16 savol (A1→B2), qiyinlashganda o'zi to'xtaydi;
+  natijaga ko'ra kursning mos bosqichi ochiladi va dars darajasi sozlanadi
+  (kurs xaritasida «Darajamni aniqlash», `/api/placement`).
+- 📘 **Grammatika kartochkalari** — har kurs bosqichida birinchi qadam: qoida sodda
+  o'zbekcha tilda, o'zbek tiliga qiyoslab, ovozli misollar, jadval, eslab qolish
+  maslahati va 6 ta mashq. Bir marta tayyorlanib telefonda saqlanadi
+  (`public/study.js`, `/api/grammar`).
+- 🔔 **Bildirishnomalar** — «⏰ Eslatma»da vaqt tanlanadi; o'sha vaqtda, agar o'sha
+  kuni hali dars qilinmagan bo'lsa, telefonga bildirishnoma keladi (Web Push,
+  `src/push.js`). Android/kompyuterda Chrome'da ishlaydi; iPhone'da — sayt bosh ekranga
+  qo'shilib, ilova sifatida ochilganda (iOS 16.4+). Kalitlar (VAPID) birinchi ishga
+  tushganda o'zi yaratilib bazada saqlanadi.
+
 - 📚 **Lug'at** — 26 mavzu (ovqat, ish, qurilish, zavod, xavfsizlik, kasalxona,
   hujjatlar...), har birida 20 talik so'z to'plamlari (misol gaplar bilan, cheksiz —
   har safar yangi so'zlar). Yodlash: 5 tadan tanishtirish → so'z→tarjima va

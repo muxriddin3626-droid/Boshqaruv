@@ -53,6 +53,7 @@ window.Practice = (() => {
     // Yutuq nishonlarini tekshiramiz (statistika yangilangandan keyin).
     setTimeout(() => window.Social && window.Social.check(), 400);
     if (amount <= 0) return;
+    window.dispatchEvent(new CustomEvent('tu:xp', { detail: { amount } }));
     const r = Learn.addXp(amount);
     if (r.reachedNow) {
       const d = Learn.daily();
@@ -158,7 +159,8 @@ window.Practice = (() => {
     s.addEventListener('click', () => {
       const unit = s.dataset.unit;
       const step = s.dataset.step;
-      if (step === 'lesson') App.startLesson({ unit });
+      if (step === 'grammar') window.Study.openGrammar(unit);
+      else if (step === 'lesson') App.startLesson({ unit });
       else if (step === 'words') window.Games.start('match', { unit });
       else if (step === 'speak') window.Games.start('speak', { unit });
       else window.Games.start('quiz', { unit, exam: true });
@@ -166,6 +168,7 @@ window.Practice = (() => {
   });
 
   $('courseCard').addEventListener('click', openCourse);
+  $('placementBtn').addEventListener('click', () => window.Study.openPlacement());
 
   // ---------- Aqlli takrorlash ----------
 
@@ -250,6 +253,7 @@ window.Practice = (() => {
 
   function finishReview() {
     Learn.bumpStat('reviews');
+    window.dispatchEvent(new CustomEvent('tu:done', { detail: { kind: 'review' } }));
     const total = reviewed - Object.keys(requeued).length;
     awardXp(2 + known, 'Takrorlash');
     const stats = Learn.deckStats(App.lang());
@@ -504,8 +508,125 @@ window.Practice = (() => {
 
   const dialog = $('reminderDialog');
   $('reminderBtn').addEventListener('click', () => {
+    renderPush();
     if (dialog.showModal) dialog.showModal();
     else dialog.setAttribute('open', '');
+  });
+
+  // ---------- Bildirishnomalar (Web Push) ----------
+  // Obuna shu qurilmaga tegishli, shuning uchun sinxronlanmaydigan kalitda saqlanadi.
+  const PUSH_KEY = 'tilustoz-push';
+  const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const standalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+  function pushState() {
+    try {
+      return JSON.parse(localStorage.getItem(PUSH_KEY)) || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function savePushState(v) {
+    try {
+      if (v) localStorage.setItem(PUSH_KEY, JSON.stringify(v));
+      else localStorage.removeItem(PUSH_KEY);
+    } catch {}
+  }
+
+  function renderPush() {
+    const st = pushState();
+    if (st && st.time) $('reminderTime').value = st.time;
+    const on = Boolean(st && st.endpoint);
+    $('pushState').hidden = !on;
+    $('pushState').textContent = on ? `✅ Yoqilgan: har kuni ${st.time} da (agar o'sha kuni dars qilmagan bo'lsangiz)` : '';
+    $('pushOn').textContent = on ? '💾 Vaqtni saqlash' : '🔔 Bildirishnomani yoqish';
+    $('pushTest').hidden = !on;
+    $('pushOff').hidden = !on;
+    let hint = '';
+    if (!pushSupported()) {
+      hint = isIos
+        ? "iPhone'da bildirishnoma uchun avval saytni «Ulashish → Bosh ekranga qo'shish» orqali ilova qilib o'rnating va o'sha ilovadan oching."
+        : "Bu brauzer bildirishnomalarni qo'llamaydi — Chrome'dan foydalaning yoki taqvimga qo'shing.";
+      $('pushOn').disabled = true;
+    } else if (Notification.permission === 'denied') {
+      hint = "Bildirishnomalar brauzer sozlamalarida taqiqlangan. Sayt sozlamalaridan ruxsat bering.";
+    } else if (isIos && !standalone()) {
+      hint = "iPhone'da: saytni bosh ekranga qo'shib, ilovadan oching.";
+    }
+    $('pushHint').textContent = hint;
+    $('pushHint').hidden = !hint;
+  }
+
+  function keyBytes(base64) {
+    const pad = '='.repeat((4 - (base64.length % 4)) % 4);
+    const raw = atob((base64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+  }
+
+  async function enablePush() {
+    const time = $('reminderTime').value || '20:00';
+    try {
+      if ((await Notification.requestPermission()) !== 'granted') {
+        toast("Ruxsat berilmadi — bildirishnoma kelmaydi.", 3500);
+        return renderPush();
+      }
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        const { publicKey } = await (await fetch('/api/push/key')).json();
+        sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) });
+      }
+      const today = new Date().toLocaleDateString('sv-SE');
+      const active = (Learn.daily().today || 0) > 0 ? today : '';
+      await App.postJson('/api/push/subscribe', {
+        subscription: sub.toJSON(),
+        time,
+        tz: -new Date().getTimezoneOffset(),
+        lang: App.lang(),
+        activeDay: active,
+      });
+      savePushState({ endpoint: sub.endpoint, time, ping: active });
+      toast(`🔔 Yoqildi! Har kuni ${time} da eslatamiz.`, 3500);
+    } catch (err) {
+      toast(`Yoqib bo'lmadi: ${err.message}`, 4000);
+    }
+    renderPush();
+  }
+
+  $('pushOn').addEventListener('click', enablePush);
+
+  $('pushTest').addEventListener('click', async () => {
+    const st = pushState();
+    try {
+      await App.postJson('/api/push/test', { endpoint: st.endpoint });
+      toast('📨 Yuborildi — bir necha soniyada keladi.');
+    } catch (err) {
+      toast(err.message);
+    }
+  });
+
+  $('pushOff').addEventListener('click', async () => {
+    const st = pushState();
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) await sub.unsubscribe();
+      if (st) await App.postJson('/api/push/unsubscribe', { endpoint: st.endpoint });
+    } catch {}
+    savePushState(null);
+    toast("🔕 Bildirishnomalar o'chirildi.");
+    renderPush();
+  });
+
+  // Bugun mashq qilindi — serverga aytamiz, shunda bugun eslatma kelmaydi.
+  window.addEventListener('tu:xp', () => {
+    const st = pushState();
+    const today = new Date().toLocaleDateString('sv-SE');
+    if (!st || !st.endpoint || st.ping === today) return;
+    savePushState({ ...st, ping: today });
+    App.postJson('/api/push/active', { endpoint: st.endpoint, day: today }).catch(() => {});
   });
 
   $('reminderSave').addEventListener('click', () => {

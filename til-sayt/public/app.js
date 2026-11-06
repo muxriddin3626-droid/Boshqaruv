@@ -34,6 +34,8 @@
     badges: $('badgesScreen'),
     hangul: $('hangulScreen'),
     vocab: $('vocabScreen'),
+    study: $('studyScreen'),
+    plan: $('planScreen'),
     rating: $('ratingScreen'),
     profList: $('profListScreen'),
     prof: $('profScreen'),
@@ -160,6 +162,7 @@
     window.Practice.renderMenu();
     window.Hangul.renderMenu(lang);
     window.Vocab.renderCard();
+    window.Plan.renderCard();
     show('menu');
   }
 
@@ -589,6 +592,7 @@
       window.Roles.markDone(lessonOpts.scenario, 'role');
     }
     if (lessonOpts.prof && userTurns >= 3) window.Roles.markDone(lessonOpts.prof, 'lesson');
+    if (userTurns >= 2) window.dispatchEvent(new CustomEvent('tu:done', { detail: { kind: 'lesson', unit: lessonOpts.unit || null } }));
     if (userTurns > 0) {
       // Har gap uchun XP; kurs darsi kamida 3 ta gap bo'lsa bajarilgan hisoblanadi.
       Learn.bumpStat('lessons');

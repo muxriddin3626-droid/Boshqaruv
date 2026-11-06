@@ -639,7 +639,121 @@ ${exclude.join(', ')}` : '',
     .join('\n\n');
 }
 
+// ---------- Grammatika kartochkasi (kurs bosqichi qoidasi) ----------
+
+const EXERCISE = {
+  type: 'object',
+  properties: {
+    question: { type: 'string' },
+    correct: { type: 'string' },
+    wrong: { type: 'array', items: { type: 'string' } },
+    explanation: { type: 'string' },
+  },
+  required: ['question', 'correct', 'wrong', 'explanation'],
+  additionalProperties: false,
+};
+
+const GRAMMAR_SCHEMA = {
+  type: 'object',
+  properties: {
+    title: { type: 'string' },
+    intro: { type: 'string' },
+    sections: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          heading: { type: 'string' },
+          text: { type: 'string' },
+          examples: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: { text: { type: 'string' }, uz: { type: 'string' } },
+              required: ['text', 'uz'],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ['heading', 'text', 'examples'],
+        additionalProperties: false,
+      },
+    },
+    table: {
+      type: 'object',
+      properties: {
+        headers: { type: 'array', items: { type: 'string' } },
+        rows: { type: 'array', items: { type: 'array', items: { type: 'string' } } },
+      },
+      required: ['headers', 'rows'],
+      additionalProperties: false,
+    },
+    tip: { type: 'string' },
+    exercises: { type: 'array', items: EXERCISE },
+  },
+  required: ['title', 'intro', 'sections', 'table', 'tip', 'exercises'],
+  additionalProperties: false,
+};
+
+function grammarPrompt(lang, unit) {
+  return [
+    `Sen tajribali ${LANGUAGES[lang]} o'qituvchisisan. O'zbek tilida so'zlashuvchi o'quvchiga grammatika qoidasini juda sodda, qiziqarli va aniq tushuntirasan.`,
+    LANG_NOTES[lang] || '',
+    `Kurs bosqichi: "${unit.title}" (${unit.level}). Mavzu: ${unit.topic}. Shu bosqichning grammatikasi: ${unit.grammar[lang]}.`,
+    [
+      "Grammatika kartochkasini tuz (barcha tushuntirishlar o'zbek tilida, lotin yozuvida):",
+      "- title — qoidaning qisqa nomi (o'zbekcha).",
+      "- intro — 1-2 gap: bu qoida nima uchun kerak, hayotdagi misol bilan.",
+      "- sections — 2-4 ta bo'lim. heading — qisqa sarlavha; text — 2-4 gaplik sodda tushuntirish (o'zbek tiliga qiyoslab, «o'zbekchada ham shunday: ...»); examples — 2-3 ta misol: text — o'rganilayotgan tilda, uz — tarjimasi.",
+      "- table — agar qoidani jadval bilan ko'rsatish qulay bo'lsa (masalan, tuslanish, kelishik qo'shimchalari, artikllar): headers va rows (har qator headers soniga teng kataklar). Kerak bo'lmasa — headers va rows bo'sh ro'yxat.",
+      "- tip — eslab qolish uchun bitta oson maslahat yoki xalq usuli.",
+      "- exercises — aynan 6 ta mashq, osondan qiyinga: question — bo'sh joyli (___) gap yoki savol (o'rganilayotgan tilda, kerak bo'lsa qavsda o'zbekcha izoh), correct — to'g'ri javob, wrong — 3 ta noto'g'ri, lekin ishonarli variant, explanation — nega to'g'ri, o'zbekcha bitta gap.",
+      "Faqat shu bosqich darajasidagi so'zlarni ishlat. Ilmiy atamalarni kam ishlat, ishlatsang — o'zbekcha izohla.",
+    ].join('\n'),
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+// ---------- Daraja aniqlash testi ----------
+
+const PLACEMENT_LEVELS = ['A1', 'A2', 'B1', 'B2'];
+
+const PLACEMENT_SCHEMA = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { ...EXERCISE.properties, level: { type: 'string', enum: PLACEMENT_LEVELS } },
+        required: [...EXERCISE.required, 'level'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['items'],
+  additionalProperties: false,
+};
+
+function placementPrompt(lang) {
+  return [
+    `Sen ${LANGUAGES[lang]} bo'yicha xalqaro darajalarni (CEFR) yaxshi biladigan imtihon tuzuvchisisan.`,
+    LANG_NOTES[lang] || '',
+    "O'zbek tilida so'zlashuvchi o'quvchining darajasini aniqlash uchun 16 ta savoldan iborat test tuz: A1 — 4 ta, A2 — 4 ta, B1 — 4 ta, B2 — 4 ta, shu tartibda (osondan qiyinga).",
+    "Har savol: lug'at yoki grammatika (bo'sh joyli ___ gap, to'g'ri shaklni yoki so'zni tanlash) yoki qisqa gapning ma'nosini tushunish. question — o'rganilayotgan tilda (A1 savollarida kerak bo'lsa qavsda o'zbekcha izoh), correct — to'g'ri javob, wrong — 3 ta ishonarli noto'g'ri variant, explanation — o'zbekcha bitta gap, level — savolning darajasi.",
+    "Har bir savolning faqat bitta to'g'ri javobi bo'lsin. Savollar har xil mavzu va grammatikani qamrasin (fe'l zamonlari, kelishiklar yoki artikllar, predloglar, bog'lovchilar, kundalik lug'at). Har safar yangi savollar o'yla.",
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+}
+
 module.exports = {
+  GRAMMAR_SCHEMA,
+  grammarPrompt,
+  PLACEMENT_SCHEMA,
+  PLACEMENT_LEVELS,
+  placementPrompt,
   THEMES,
   VOCAB_SCHEMA,
   vocabPrompt,

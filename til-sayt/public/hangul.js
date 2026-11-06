@@ -582,6 +582,7 @@ window.Hangul = (() => {
         const data = window.App.loadStored(PROGRESS_KEY) || {};
         window.App.store(PROGRESS_KEY, { ...data, done: { ...(data.done || {}), [lesson.id]: Math.max(quiz.correct, progress()[lesson.id] || 0) } });
         window.Practice.awardXp(firstTime ? 15 + quiz.correct : quiz.correct, 'Hangul');
+        window.dispatchEvent(new CustomEvent('tu:done', { detail: { kind: 'hangul', lesson: lesson.id } }));
         const next = LESSONS[quiz.i + 1];
         box.appendChild(
           el('p', 'hint-left', next ? `Bosqich o'tildi! Keyingisi: ${next.icon} ${next.title}` : "Tabriklaymiz! Siz Hangulni o'rgandingiz — endi ustoz bilan darsda o'qib ko'ring!")
@@ -637,5 +638,16 @@ window.Hangul = (() => {
   });
   applySetting();
 
-  return { translit, reading, open, renderMenu };
+  // Bugungi dars rejasi uchun: o'tilmagan birinchi bosqich (hammasi o'tilgan bo'lsa — null).
+  function nextLesson() {
+    const i = LESSONS.findIndex((l) => !isDone(l.id));
+    return i < 0 ? null : { index: i, title: LESSONS[i].title };
+  }
+
+  function openLesson(i) {
+    window.App.show('hangul');
+    renderLesson(i);
+  }
+
+  return { translit, reading, open, renderMenu, nextLesson, openLesson };
 })();

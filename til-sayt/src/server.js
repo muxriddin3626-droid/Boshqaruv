@@ -5,6 +5,7 @@ const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
 const account = require('./account');
 const admin = require('./admin');
+const push = require('./push');
 const auth = require('./auth');
 const {
   TUTOR_PROMPT,
@@ -28,6 +29,11 @@ const {
   THEMES,
   VOCAB_SCHEMA,
   vocabPrompt,
+  GRAMMAR_SCHEMA,
+  grammarPrompt,
+  PLACEMENT_SCHEMA,
+  PLACEMENT_LEVELS,
+  placementPrompt,
   gamePrompt,
   sessionPrompt,
 } = require('./prompt');
@@ -553,6 +559,105 @@ async function handleVocab(req, res) {
   }
 }
 
+// ---------- Grammatika kartochkasi va daraja testi ----------
+
+function cleanExercise(x) {
+  const correct = str(x && x.correct, 160);
+  return { question: str(x && x.question, 400), correct, wrong: correct ? cleanWrong(x.wrong, correct) : [], explanation: str(x && x.explanation, 400) };
+}
+
+const goodExercise = (q) => q.question && q.correct && q.wrong.length >= 2;
+
+async function handleGrammar(req, res) {
+  if (rateLimited('chat', clientIp(req))) {
+    sendJson(res, 429, { error: "So'rovlar juda ko'p. Bir daqiqadan keyin yana urinib ko'ring." });
+    return;
+  }
+  const body = await readJson(req, res);
+  if (!body) return;
+  const unit = typeof body.unit === 'string' && COURSE.byId(body.unit);
+  if (!Object.hasOwn(LANGUAGES, body.lang) || !unit) {
+    sendJson(res, 400, { error: "Noto'g'ri so'rov." });
+    return;
+  }
+  const q = await account.quota(req, 'practice');
+  if (!q.ok) {
+    account.sendLimit(res, q);
+    return;
+  }
+  try {
+    const raw = await askJson({
+      system: grammarPrompt(body.lang, unit),
+      messages: [{ role: 'user', content: 'Grammatika kartochkasini tayyorla.' }],
+      schema: GRAMMAR_SCHEMA,
+      fast: true,
+    });
+    const card = raw && {
+      title: str(raw.title, 120),
+      intro: str(raw.intro, 600),
+      sections: (raw.sections || []).slice(0, 5).map((s) => ({
+        heading: str(s && s.heading, 120),
+        text: str(s && s.text, 1200),
+        examples: ((s && s.examples) || []).slice(0, 4).map((e) => ({ text: str(e && e.text, 200), uz: str(e && e.uz, 200) })).filter((e) => e.text),
+      })).filter((s) => s.text),
+      table: {
+        headers: ((raw.table && raw.table.headers) || []).slice(0, 6).map((h) => str(h, 60)),
+        rows: ((raw.table && raw.table.rows) || []).slice(0, 12).map((r) => (Array.isArray(r) ? r.slice(0, 6).map((c) => str(c, 80)) : [])),
+      },
+      tip: str(raw.tip, 400),
+      exercises: (raw.exercises || []).map(cleanExercise).filter(goodExercise).slice(0, 8),
+    };
+    if (!card || !card.sections.length || card.exercises.length < 3) {
+      sendJson(res, 502, { error: "Qoidani tayyorlab bo'lmadi, qayta urinib ko'ring." });
+      return;
+    }
+    await q.commit();
+    sendJson(res, 200, card);
+  } catch (err) {
+    sendClaudeError(res, err);
+  }
+}
+
+async function handlePlacement(req, res) {
+  if (rateLimited('chat', clientIp(req))) {
+    sendJson(res, 429, { error: "So'rovlar juda ko'p. Bir daqiqadan keyin yana urinib ko'ring." });
+    return;
+  }
+  const body = await readJson(req, res);
+  if (!body) return;
+  if (!Object.hasOwn(LANGUAGES, body.lang)) {
+    sendJson(res, 400, { error: "Noto'g'ri so'rov." });
+    return;
+  }
+  const q = await account.quota(req, 'practice');
+  if (!q.ok) {
+    account.sendLimit(res, q);
+    return;
+  }
+  try {
+    const raw = await askJson({
+      system: placementPrompt(body.lang),
+      messages: [{ role: 'user', content: 'Daraja testini tayyorla.' }],
+      schema: PLACEMENT_SCHEMA,
+      fast: true,
+    });
+    const items = ((raw && raw.items) || [])
+      .map((x) => ({ ...cleanExercise(x), level: PLACEMENT_LEVELS.includes(x && x.level) ? x.level : null }))
+      .filter((x) => x.level && goodExercise(x))
+      .sort((a, b) => PLACEMENT_LEVELS.indexOf(a.level) - PLACEMENT_LEVELS.indexOf(b.level))
+      .slice(0, 20);
+    const perLevel = PLACEMENT_LEVELS.map((l) => items.filter((x) => x.level === l).length);
+    if (perLevel.some((n) => n < 2)) {
+      sendJson(res, 502, { error: "Testni tayyorlab bo'lmadi, qayta urinib ko'ring." });
+      return;
+    }
+    await q.commit();
+    sendJson(res, 200, { items });
+  } catch (err) {
+    sendClaudeError(res, err);
+  }
+}
+
 // ---------- Sinov imtihonlari ----------
 
 function findSection(lang, examId, sectionId) {
@@ -743,6 +848,8 @@ const ROUTES = {
   '/api/report': handleReport,
   '/api/game': handleGame,
   '/api/vocab': handleVocab,
+  '/api/grammar': handleGrammar,
+  '/api/placement': handlePlacement,
   '/api/exam/section': handleExamSection,
   '/api/exam/grade': handleExamGrade,
   '/api/tts': handleTts,
@@ -759,8 +866,8 @@ const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
   const route =
     req.method === 'POST'
-      ? ROUTES[url] || account.POST_ROUTES[url] || admin.POST_ROUTES[url]
-      : account.GET_ROUTES[url] || admin.GET_ROUTES[url];
+      ? ROUTES[url] || account.POST_ROUTES[url] || admin.POST_ROUTES[url] || push.POST_ROUTES[url]
+      : account.GET_ROUTES[url] || admin.GET_ROUTES[url] || push.GET_ROUTES[url];
   if (route) {
     runRoute(route, req, res);
     return;

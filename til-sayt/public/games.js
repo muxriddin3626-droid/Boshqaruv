@@ -580,6 +580,7 @@ window.Games = (() => {
     let title;
 
     window.Learn.bumpStat('games');
+    window.dispatchEvent(new CustomEvent('tu:done', { detail: { kind: 'game', type, unit: ctx.unit || null } }));
     window.Practice.awardXp(5 + score * 3, TITLES[type]);
 
     if (ctx.unit) {

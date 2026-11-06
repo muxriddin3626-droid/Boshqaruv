@@ -146,7 +146,7 @@ window.Vocab = (() => {
     body.appendChild(more);
   }
 
-  async function newPack() {
+  async function newPack(after) {
     const lang = App.lang();
     const t = T.byId(themeId);
     const body = $('vocabBody');
@@ -175,7 +175,8 @@ window.Vocab = (() => {
       th.packs.push({ t: Date.now(), learned: false, words: r.words });
       fresh[themeId] = th;
       save(lang, fresh);
-      renderPack(th.packs.length - 1);
+      if (typeof after === 'function') after(th.packs.length - 1);
+      else renderPack(th.packs.length - 1);
     } catch (err) {
       body.textContent = '';
       const box = el('div', 'hg-intro');
@@ -218,9 +219,12 @@ window.Vocab = (() => {
 
   let drill = null;
 
-  function startDrill(i) {
+  // count berilsa — to'plamning navbatdagi shuncha so'zi (Bugungi dars rejasi uchun 10 ta).
+  function startDrill(i, { count } = {}) {
     const pack = load(App.lang())[themeId].packs[i];
-    drill = { i, words: pack.words, chunk: 0, queue: [], correct: 0, asked: 0, wrongs: new Set() };
+    const start = pack.learned ? 0 : pack.done || 0;
+    const words = pack.words.slice(start, count ? start + count : undefined);
+    drill = { i, start, words, fresh: !pack.learned, chunk: 0, queue: [], correct: 0, asked: 0, wrongs: new Set() };
     introChunk();
   }
 
@@ -305,8 +309,9 @@ window.Vocab = (() => {
     const lang = App.lang();
     const data = load(lang);
     const pack = data[themeId].packs[drill.i];
-    const firstTime = !pack.learned;
-    pack.learned = true;
+    const firstTime = drill.fresh;
+    pack.done = Math.max(pack.done || 0, drill.start + drill.words.length);
+    pack.learned = pack.done >= pack.words.length;
     save(lang, data);
     // Daftarga qo'shamiz: birinchi takrorlash — ertaga.
     for (const w of drill.words) {
@@ -318,6 +323,7 @@ window.Vocab = (() => {
       }
     }
     if (firstTime) addToday(drill.words.length);
+    window.dispatchEvent(new CustomEvent('tu:done', { detail: { kind: 'words', count: drill.words.length } }));
     Learn.bumpStat('vocabWords', firstTime ? drill.words.length : 0);
     window.Practice.awardXp(firstTime ? 20 + drill.words.length : 5, "Lug'at");
     renderCard();
@@ -357,5 +363,31 @@ window.Vocab = (() => {
     else if (confirm("Yodlashni to'xtatasizmi? Natija saqlanmaydi.")) renderTheme();
   });
 
-  return { open, renderCard };
+  // Bugungi dars rejasi: kasb yoki maqsadga mos mavzudan navbatdagi 10 ta so'z.
+  const PROF_THEME = {
+    builder: 'construction', driver: 'city', cook: 'food', seller: 'shop', courier: 'factory',
+    nurse: 'hospital', factory: 'factory', cleaner: 'home', student: 'study',
+  };
+
+  function planWords(count = 10) {
+    const lang = App.lang();
+    const profile = App.profile() || {};
+    const order = [...new Set(['basics', PROF_THEME[profile.prof], 'greet', 'verbs', 'numbers', ...T.THEMES.map((t) => t.id)].filter(Boolean))];
+    const data = load(lang);
+    App.show('vocab');
+    view = 'drill';
+    for (const id of order) {
+      const packs = (data[id] || { packs: [] }).packs;
+      const idx = packs.findIndex((p) => !p.learned);
+      if (idx >= 0) {
+        themeId = id;
+        $('vocabTitle').textContent = `${T.byId(id).icon} ${T.byId(id).title}`;
+        return startDrill(idx, { count });
+      }
+    }
+    themeId = order.find((id) => ((data[id] || { packs: [] }).packs.length < MAX_PACKS)) || 'basics';
+    return newPack((i) => startDrill(i, { count }));
+  }
+
+  return { open, renderCard, planWords };
 })();

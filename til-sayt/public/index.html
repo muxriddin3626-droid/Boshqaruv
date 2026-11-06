@@ -68,6 +68,13 @@
     <h1 id="menuTitle">Anna bilan rus tili</h1>
 
     <div class="announce" id="announceBar" hidden></div>
+    <button type="button" class="plan-card" id="planCard">
+      <span class="act-text">
+        <b id="planTitle">🎯 Bugungi dars</b>
+        <span id="planDesc"></span>
+      </span>
+      <span class="plan-count" id="planCount">0/4</span>
+    </button>
     <button type="button" class="goal-card" id="goalCard" hidden>
       <span class="goal-text">
         <span id="goalHello"></span>
@@ -397,7 +404,8 @@
       <span class="game-title">🗺️ Kurs xaritasi</span>
       <span></span>
     </div>
-    <p class="lead small">Har bosqichda: ovozli dars, so'zlar va imtihon. Imtihondan o'tsangiz, keyingi bosqich ochiladi.</p>
+    <p class="lead small">Har bosqichda: qoida, ovozli dars, so'zlar va imtihon. Imtihondan o'tsangiz, keyingi bosqich ochiladi.</p>
+    <button type="button" class="secondary placement-btn" id="placementBtn">📊 Darajamni aniqlash — mos bosqichdan boshlash</button>
     <ol class="unit-path" id="unitPath"></ol>
   </main>
 
@@ -412,31 +420,38 @@
     <h1 id="unitTitle"></h1>
     <p class="lead small" id="unitGrammar"></p>
     <div class="unit-steps">
+      <button type="button" class="step" data-step="grammar">
+        <span class="step-check" aria-hidden="true"></span>
+        <span class="act-text">
+          <span class="act-title">📘 1. Qoida (grammatika)</span>
+          <span class="act-desc">Sodda tushuntirish, misollar va 6 ta mashq</span>
+        </span>
+      </button>
       <button type="button" class="step" data-step="lesson">
         <span class="step-check" aria-hidden="true"></span>
         <span class="act-text">
-          <span class="act-title">🎙️ 1. Ovozli dars</span>
+          <span class="act-title">🎙️ 2. Ovozli dars</span>
           <span class="act-desc">Ustoz bilan shu mavzuda gaplashing</span>
         </span>
       </button>
       <button type="button" class="step" data-step="words">
         <span class="step-check" aria-hidden="true"></span>
         <span class="act-text">
-          <span class="act-title">🧩 2. Yangi so'zlar</span>
+          <span class="act-title">🧩 3. Yangi so'zlar</span>
           <span class="act-desc">Bosqich so'zlarini juftlab yodlang</span>
         </span>
       </button>
       <button type="button" class="step" data-step="speak">
         <span class="step-check" aria-hidden="true"></span>
         <span class="act-text">
-          <span class="act-title">🗣️ 3. Talaffuz</span>
+          <span class="act-title">🗣️ 4. Talaffuz</span>
           <span class="act-desc">Bosqich iboralarini ovoz chiqarib ayting</span>
         </span>
       </button>
       <button type="button" class="step exam" data-step="exam">
         <span class="step-check" aria-hidden="true"></span>
         <span class="act-text">
-          <span class="act-title">🏁 4. Bosqich imtihoni</span>
+          <span class="act-title">🏁 5. Bosqich imtihoni</span>
           <span class="act-desc" id="examDesc">8 ta savol, o'tish uchun 6 ta to'g'ri</span>
         </span>
       </button>
@@ -619,6 +634,24 @@
   </main>
 
   <!-- 17. Yutuqlar -->
+  <main id="planScreen" class="screen hangul-screen" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="planBack">← Menyu</button>
+      <span class="game-title">🎯 Bugungi dars</span>
+      <span></span>
+    </div>
+    <div class="hangul-body" id="planBody"></div>
+  </main>
+
+  <main id="studyScreen" class="screen hangul-screen" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="studyBack">← Orqaga</button>
+      <span class="game-title" id="studyTitle"></span>
+      <span class="game-score" id="studyScore"></span>
+    </div>
+    <div class="hangul-body" id="studyBody"></div>
+  </main>
+
   <main id="vocabScreen" class="screen hangul-screen" hidden>
     <div class="game-bar">
       <button type="button" class="stop-btn" id="vocabBack">← Menyu</button>
@@ -750,14 +783,26 @@
   <dialog class="sheet" id="reminderDialog">
     <form method="dialog">
       <h2>⏰ Har kuni eslatsin</h2>
-      <p>Telefoningiz taqvimiga har kungi eslatma qo'shiladi. Qaysi vaqtda mashq qilasiz?</p>
+      <p id="pushInfo">Qaysi vaqtda mashq qilasiz? O'sha vaqtda, agar bugun hali dars qilmagan bo'lsangiz, telefoningizga bildirishnoma keladi.</p>
       <input type="time" id="reminderTime" value="20:00">
+      <p class="push-state" id="pushState" hidden></p>
+      <div class="end-actions push-actions">
+        <button type="button" class="primary" id="pushOn">🔔 Bildirishnomani yoqish</button>
+        <button type="button" class="secondary" id="pushTest" hidden>📨 Sinab ko'rish</button>
+        <button type="button" class="secondary" id="pushOff" hidden>🔕 O'chirish</button>
+      </div>
+      <p class="hint-left" id="pushHint"></p>
       <div class="end-actions">
-        <button type="button" class="primary" id="reminderSave">Taqvimga qo'shish</button>
+        <button type="button" class="link-btn" id="reminderSave">📅 Yoki taqvimga qo'shish (.ics)</button>
         <button type="submit" class="secondary">Yopish</button>
       </div>
     </form>
   </dialog>
+
+  <div class="plan-bar" id="planBar" hidden>
+    <span id="planBarText"></span>
+    <button type="button" class="primary" id="planBarGo">Davom →</button>
+  </div>
 
   <div class="toast" id="toast" role="status" hidden></div>
 
@@ -774,6 +819,8 @@
   <script src="hangul.js"></script>
   <script src="themes.js"></script>
   <script src="vocab.js"></script>
+  <script src="study.js"></script>
+  <script src="plan.js"></script>
   <script src="exam.js"></script>
   <script src="cert.js"></script>
   <script src="account-ui.js"></script>

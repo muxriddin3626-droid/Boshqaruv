@@ -1376,3 +1376,58 @@ body.ko-tr-off [data-ko-tr]::after { display: none; }
 .plan-price { font-size: 24px; font-weight: 800; }
 .plan-sub { display: block; font-size: 13px; font-weight: 400; color: var(--muted); }
 .plan-card button { width: 100%; }
+
+/* Grammatika kartochkasi va daraja testi */
+.placement-btn { width: 100%; max-width: 520px; margin-bottom: 12px; }
+.gr-card { width: 100%; padding: 16px; border-radius: 18px; background: linear-gradient(135deg, rgba(91, 141, 239, 0.12), rgba(47, 179, 109, 0.1)); margin-bottom: 12px; }
+.gr-title { font-size: 22px; margin: 0 0 6px; }
+.gr-intro { margin: 0; line-height: 1.5; }
+.gr-section { width: 100%; padding: 14px 16px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+.gr-section h2 { font-size: 17px; margin: 0 0 6px; }
+.gr-section p { margin: 0 0 10px; line-height: 1.55; }
+.gr-example {
+  display: flex; flex-direction: column; gap: 2px; width: 100%; margin-top: 6px; padding: 10px 12px; text-align: left;
+  border: 1px dashed var(--border); border-radius: 12px; background: var(--bg); color: var(--text); font: inherit; cursor: pointer;
+}
+.gr-example b { font-size: 16px; }
+.gr-example span { font-size: 14px; color: var(--muted); }
+.gr-table-wrap { width: 100%; overflow-x: auto; margin-bottom: 10px; }
+.gr-table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--surface); border-radius: 12px; overflow: hidden; }
+.gr-table th, .gr-table td { padding: 8px 10px; border: 1px solid var(--border); text-align: left; }
+.gr-table th { background: var(--bg); }
+.gr-tip { width: 100%; padding: 12px 14px; border-radius: 14px; background: rgba(245, 165, 36, 0.14); margin: 0 0 12px; line-height: 1.5; }
+.study-q { font-size: 20px; line-height: 1.4; margin: 4px 0 14px; }
+.study-after { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.study-expl { margin: 0; padding: 10px 12px; border-radius: 12px; line-height: 1.45; }
+.study-expl.ok { background: rgba(47, 179, 109, 0.12); }
+.study-expl.bad { background: rgba(239, 59, 45, 0.1); }
+.study-loading { text-align: center; }
+
+/* Bugungi dars */
+.plan-card {
+  display: flex; align-items: center; gap: 12px; width: 100%; max-width: 520px; margin: 0 0 12px; padding: 16px 18px; text-align: left;
+  border: none; border-radius: 20px; color: #fff; font: inherit; cursor: pointer;
+  background: linear-gradient(135deg, #5b5bf0, #2fb36d); box-shadow: 0 8px 22px rgba(91, 91, 240, 0.25);
+}
+.plan-card.done { background: linear-gradient(135deg, #2fb36d, #1f8f55); }
+.plan-card .act-text { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.plan-card b { font-size: 18px; }
+.plan-card span { font-size: 13px; opacity: 0.92; }
+.plan-count { font-size: 20px !important; font-weight: 800; opacity: 1 !important; }
+.plan-step.next { border: 2px solid #5b5bf0; }
+.plan-go { width: 100%; margin-top: 4px; }
+.plan-bar {
+  position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50;
+  display: flex; align-items: center; gap: 10px; width: min(520px, calc(100% - 24px)); padding: 10px 10px 10px 14px;
+  border-radius: 16px; background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+.plan-bar span { flex: 1; font-size: 14px; line-height: 1.35; }
+.plan-bar button { white-space: nowrap; }
+.push-state { margin: 0 0 10px !important; padding: 8px 12px; border-radius: 12px; background: rgba(47, 179, 109, 0.12); color: var(--text) !important; font-size: 14px; }
+.push-actions { flex-wrap: wrap; }
+.gr-card, .gr-section, .gr-tip, .study-q, .study-expl { text-align: left; }
+.gr-actions { width: 100%; flex-wrap: wrap; }
+.gr-actions .primary { flex: 1 1 100%; }
+.menu .plan-card, .plan-card { flex-direction: row; justify-content: space-between; text-align: left; }
+.plan-card .act-text { align-items: flex-start; text-align: left; }
+.plan-card .plan-count { flex: none; }
