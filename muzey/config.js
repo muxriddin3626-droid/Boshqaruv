@@ -16,7 +16,7 @@ window.MUZEY_CONFIG = {
   finalMessage: "Har bir rasm — biz birga o'tkazgan bitta baxtli lahza. Bu muzey faqat sen uchun.",
 
   // Fon musiqasi (ixtiyoriy). Masalan: "music.mp3" — faylni muzey/ papkasiga qo'ying.
-  music: "",
+  music: "music.mp3",
 
   // Rasmlar: faylni muzey/photos/ papkasiga qo'yib, shu yerga yozing.
   // caption — pingvin rasmga yaqinlashganda chiqadigan yozuv.

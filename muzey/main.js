@@ -244,7 +244,7 @@ if (CFG.photos.length > sideCount) {
 
 // ---------- Bezaklar ----------
 const colliders = []; // {x,z,r}
-const animated = { candles: [], balloons: [], orbs: [] };
+const animated = { candles: [], balloons: [], orbs: [], bushes: [] };
 
 const geo = {
   bloom: new THREE.SphereGeometry(0.075, 10, 8),
@@ -276,7 +276,8 @@ function roseBush(x, z, scale = 1, white = false) {
     }
   }
   room.add(g);
-  colliders.push({ x, z, r: 0.35 * scale });
+  colliders.push({ x, z, r: 0.28 * scale });
+  animated.bushes.push({ g, x, z, r: 0.35 * scale, tx: 0, tz: 0, vx: 0, vz: 0 });
   return g;
 }
 
@@ -331,8 +332,24 @@ function balloon(x, z, white = false, floatH = null) {
     g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(new THREE.CatmullRomCurve3(pts).getPoints(12)), M.string));
   }
   room.add(g);
-  animated.balloons.push({ g, baseY, seed: Math.random() * 10, floating: !!floatH });
-  if (!floatH) colliders.push({ x, z, r: r + 0.05 });
+  animated.balloons.push({ g, b, r, baseY, seed: Math.random() * 10, floating: !!floatH, vx: 0, vz: 0, ox: 0, oz: 0, ovx: 0, ovz: 0 });
+}
+
+// videodagidek oq/kumush sharlardan ustun (girlyanda)
+function balloonColumn(x, z, h = 3.4) {
+  const mats = [M.balloonW, new THREE.MeshStandardMaterial({ color: 0xd9d4cc, roughness: 0.2, metalness: 0.55 }), M.balloonW];
+  for (let y = 0.2; y < h; y += 0.17) {
+    const k = 3;
+    for (let j = 0; j < k; j++) {
+      const a = y * 5 + j * (Math.PI * 2 / k);
+      const r = 0.16 + Math.random() * 0.05;
+      const m = new THREE.Mesh(geo.orb, mats[(j + Math.floor(y * 6)) % 3]);
+      m.scale.setScalar(r);
+      m.position.set(x + Math.cos(a) * 0.17, y, z + Math.sin(a) * 0.17);
+      room.add(m);
+    }
+  }
+  colliders.push({ x, z, r: 0.38 });
 }
 
 function floorOrb(x, z, r = 0.2) {
@@ -371,6 +388,9 @@ for (let i = 0; i < sideCount; i++) {
 }
 // kirish qismi
 roseBush(-HALF + 0.5, BACK_Z - 1.2, 1.2); roseBush(HALF - 0.5, BACK_Z - 1.2, 1.2);
+balloonColumn(-HALF + 0.45, BACK_Z - 2.6); balloonColumn(HALF - 0.45, END_Z + 4.6);
+for (let k = 0; k < 6; k++) balloon(rnd(-2.6, 2.6), rnd(END_Z + 3, BACK_Z - 2), Math.random() < 0.35);
+for (let k = 0; k < 5; k++) roseBush((Math.random() < 0.5 ? -1 : 1) * (HALF - 0.5), rnd(END_Z + 3, BACK_Z - 3), rnd(0.8, 1.1));
 balloon(HALF - 0.9, START_Z + 0.3); balloon(-HALF + 0.9, START_Z - 0.5, true);
 floorOrb(-HALF + 0.55, START_Z + 1.5, 0.24);
 for (let k = 0; k < 4; k++) hangingOrb(rnd(-2.6, 2.6), rnd(END_Z + 2, BACK_Z - 1), rnd(2.8, 3.6));
@@ -402,6 +422,14 @@ balloon(-3.2, END_Z + 4.3); balloon(3.1, END_Z + 3.9, true);
     petals.setMatrixAt(i, m4);
   }
   room.add(petals);
+  // har bir yaproq holati: pozitsiya, tezlik, burilish
+  const st = [];
+  for (let i = 0; i < count; i++) {
+    petals.getMatrixAt(i, m4); m4.decompose(p, q, s);
+    e.setFromQuaternion(q);
+    st.push({ x: p.x, y: p.y, z: p.z, vx: 0, vy: 0, vz: 0, rx: e.x, rz: e.z, sx: 0, sz: 0, sy: s.y, air: false });
+  }
+  animated.petals = { mesh: petals, st, m4, q, e, s, p };
 }
 
 // havoda suzuvchi uchqunlar
@@ -604,6 +632,17 @@ sfx.step = (side) => {
   og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.06, t + 0.01); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
   o.connect(og).connect(sfx.master); o.start(t); o.stop(t + 0.1);
 };
+// shar urilganda yumshoq "bup"
+sfx.bump = () => {
+  const ctx = sfx.ctx; if (!ctx) return;
+  const t = ctx.currentTime;
+  if (t - (sfx.lastBump || 0) < 0.25) return; sfx.lastBump = t;
+  const o = ctx.createOscillator(); o.type = "sine";
+  o.frequency.setValueAtTime(260, t); o.frequency.exponentialRampToValueAtTime(120, t + 0.12);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+  o.connect(g).connect(sfx.master); o.start(t); o.stop(t + 0.2);
+};
 // kulish: "hi-hi-hi-hi" — ingichka, yoqimli kulgi
 sfx.laugh = (big = false) => {
   const ctx = sfx.ctx; if (!ctx) return;
@@ -675,6 +714,118 @@ function collide(p) {
   for (const c of colliders) {
     const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz), min = c.r + PR;
     if (d < min && d > 1e-4) { p.x = c.x + dx / d * min; p.z = c.z + dz / d * min; }
+  }
+}
+
+// ---------- Pingvin tegsa harakatlanadigan narsalar ----------
+const tmpAxis = new THREE.Vector3(), tmpQ = new THREE.Quaternion();
+function updateProps(dt, t) {
+  const px = P.pos.x, pz = P.pos.z;
+  const pvx = Math.sin(P.yaw) * P.vel, pvz = Math.cos(P.yaw) * P.vel;
+
+  // sharlar
+  const floorB = animated.balloons.filter((b) => !b.floating);
+  for (const b of animated.balloons) {
+    const g = b.g;
+    if (b.floating) {
+      // yaqinidan o'tsa chetga suriladi va prujinadek qaytadi
+      const dx = g.position.x - px, dz = g.position.z - pz, d = Math.hypot(dx, dz);
+      if (d < 1.0 && d > 0.01 && P.vel > 0.2) { b.ovx += dx / d * dt * 3; b.ovz += dz / d * dt * 3; }
+      b.ovx += -b.ox * 6 * dt; b.ovz += -b.oz * 6 * dt;
+      b.ovx *= 1 - 1.5 * dt; b.ovz *= 1 - 1.5 * dt;
+      b.ox += b.ovx * dt; b.oz += b.ovz * dt;
+      g.position.y = b.baseY + Math.sin(t * 0.9 + b.seed) * 0.08;
+      g.rotation.z = Math.sin(t * 0.7 + b.seed) * 0.06 - b.ox * 0.4;
+      g.rotation.x = b.oz * 0.4;
+      b.b.position.set(b.ox, 0, b.oz);
+      continue;
+    }
+    // polda: pingvin itarib yuboradi
+    const dx = g.position.x - px, dz = g.position.z - pz, d = Math.hypot(dx, dz), min = b.r + 0.42;
+    if (d < min && d > 0.001) {
+      const nx = dx / d, nz = dz / d;
+      g.position.x = px + nx * min; g.position.z = pz + nz * min;
+      const push = Math.max(0, pvx * nx + pvz * nz) + 0.4;
+      b.vx += nx * push * 1.4; b.vz += nz * push * 1.4;
+      if (push > 0.8) sfx.bump && sfx.bump();
+    }
+    b.vx *= 1 - 1.2 * dt; b.vz *= 1 - 1.2 * dt;
+    g.position.x += b.vx * dt; g.position.z += b.vz * dt;
+    // devorlarga urilib qaytadi
+    if (g.position.x < -HALF + b.r) { g.position.x = -HALF + b.r; b.vx = Math.abs(b.vx) * 0.7; }
+    if (g.position.x > HALF - b.r) { g.position.x = HALF - b.r; b.vx = -Math.abs(b.vx) * 0.7; }
+    if (g.position.z < END_Z + b.r) { g.position.z = END_Z + b.r; b.vz = Math.abs(b.vz) * 0.7; }
+    if (g.position.z > BACK_Z - b.r) { g.position.z = BACK_Z - b.r; b.vz = -Math.abs(b.vz) * 0.7; }
+    // boshqa narsalarga urilish
+    for (const c of colliders) {
+      const cx = g.position.x - c.x, cz = g.position.z - c.z, cd = Math.hypot(cx, cz), cm = c.r + b.r;
+      if (cd < cm && cd > 0.001) {
+        const nx = cx / cd, nz = cz / cd;
+        g.position.x = c.x + nx * cm; g.position.z = c.z + nz * cm;
+        const vn = b.vx * nx + b.vz * nz;
+        if (vn < 0) { b.vx -= 1.7 * vn * nx; b.vz -= 1.7 * vn * nz; }
+      }
+    }
+    for (const o of floorB) {
+      if (o === b) continue;
+      const cx = g.position.x - o.g.position.x, cz = g.position.z - o.g.position.z, cd = Math.hypot(cx, cz), cm = o.r + b.r;
+      if (cd < cm && cd > 0.001) {
+        const nx = cx / cd, nz = cz / cd, pen = (cm - cd) / 2;
+        g.position.x += nx * pen; g.position.z += nz * pen;
+        o.g.position.x -= nx * pen; o.g.position.z -= nz * pen;
+        const rv = (b.vx - o.vx) * nx + (b.vz - o.vz) * nz;
+        if (rv < 0) { b.vx -= rv * nx; b.vz -= rv * nz; o.vx += rv * nx; o.vz += rv * nz; }
+      }
+    }
+    // dumalash
+    const sp = Math.hypot(b.vx, b.vz);
+    if (sp > 0.01) {
+      tmpAxis.set(b.vz, 0, -b.vx).normalize();
+      tmpQ.setFromAxisAngle(tmpAxis, sp * dt / b.r);
+      b.b.quaternion.premultiply(tmpQ);
+    }
+    g.position.y = b.baseY + Math.abs(Math.sin(t * 6 + b.seed)) * Math.min(sp, 1) * 0.04;
+  }
+
+  // gullar: pingvin tegsa egiladi va tebranib qaytadi
+  for (const k of animated.bushes) {
+    const dx = k.x - px, dz = k.z - pz, d = Math.hypot(dx, dz);
+    let fx = 0, fz = 0;
+    if (d < k.r + 0.75 && d > 0.01) { const f = (1 - d / (k.r + 0.75)) * 0.6; fx = dx / d * f; fz = dz / d * f; }
+    k.vx += ((fx - k.tx) * 40 - k.vx * 5) * dt; k.vz += ((fz - k.tz) * 40 - k.vz * 5) * dt;
+    k.tx += k.vx * dt; k.tz += k.vz * dt;
+    k.g.rotation.z = -k.tx; k.g.rotation.x = k.tz;
+  }
+
+  // yaproqlar: pingvin oyog'i tegsa uchib ketadi
+  const P2 = animated.petals;
+  if (P2) {
+    let dirty = false;
+    for (let qi = 0; qi < P2.st.length; qi++) {
+      const q = P2.st[qi];
+      const dx = q.x - px, dz = q.z - pz, d2 = dx * dx + dz * dz;
+      if (P.vel > 0.25 && d2 < 0.36 && q.y < 0.05) {
+        const d = Math.sqrt(d2) || 0.01;
+        const k = 0.6 + P.vel * 0.6;
+        q.vx = dx / d * k * rnd(0.5, 1.3) + pvx * 0.5; q.vz = dz / d * k * rnd(0.5, 1.3) + pvz * 0.5;
+        q.vy = rnd(0.8, 1.8) * Math.min(P.vel, 1.5); q.sx = rnd(-8, 8); q.sz = rnd(-8, 8); q.air = true;
+      }
+      if (!q.air) continue;
+      dirty = true;
+      q.vy -= 3.2 * dt;                       // yengil tushadi (havo qarshiligi)
+      q.vy = Math.max(q.vy, -0.7);
+      q.vx *= 1 - 1.8 * dt; q.vz *= 1 - 1.8 * dt;
+      q.x += (q.vx + Math.sin(t * 5 + q.sx) * 0.15) * dt; q.y += q.vy * dt; q.z += q.vz * dt;
+      q.rx += q.sx * dt; q.rz += q.sz * dt;
+      q.x = THREE.MathUtils.clamp(q.x, -HALF + 0.05, HALF - 0.05);
+      q.z = THREE.MathUtils.clamp(q.z, END_Z + 0.05, BACK_Z - 0.05);
+      if (q.y <= 0.005) { q.y = 0.004 + Math.random() * 0.004; q.air = false; q.rx = -Math.PI / 2 + rnd(-0.2, 0.2); }
+      P2.e.set(q.rx, 0, q.rz); P2.q.setFromEuler(P2.e);
+      P2.p.set(q.x, q.y, q.z); P2.s.set(1, q.sy, 1);
+      P2.m4.compose(P2.p, P2.q, P2.s);
+      P2.mesh.setMatrixAt(qi, P2.m4);
+    }
+    if (dirty) P2.mesh.instanceMatrix.needsUpdate = true;
   }
 }
 
@@ -772,10 +923,7 @@ function tick() {
     c.flame.scale.set(k, 1.9 * k, k);
     c.glow.material.opacity = 0.65 + (k - 0.85) * 2;
   }
-  for (const b of animated.balloons) {
-    b.g.position.y = b.baseY + (b.floating ? Math.sin(t * 0.9 + b.seed) * 0.08 : 0);
-    b.g.rotation.z = Math.sin(t * 0.7 + b.seed) * 0.06;
-  }
+  updateProps(dt, t);
   for (const o of animated.orbs) o.o.position.y = o.y + Math.sin(t * 0.6 + o.seed) * 0.03;
   const sp = sparkGeo.attributes.position;
   for (let i = 0; i < sparkCount; i++) {
