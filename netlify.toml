@@ -1,0 +1,4 @@
+# Netlify: "muzey" saytini chiqaradi (build kerak emas)
+[build]
+  publish = "muzey"
+  command = ""
