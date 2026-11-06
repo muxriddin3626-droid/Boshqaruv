@@ -436,14 +436,41 @@ function makePenguin() {
   face.scale.set(1.1, 0.85, 0.6); face.position.set(0, 1.16, 0.2);
   body.add(torso, belly, head, face);
 
+  // katta, yaltiroq "multfilm" ko'zlar: qora qorachiq, jigarrang kamalak, ikki yaltiroq nuqta
+  const iris = new THREE.MeshStandardMaterial({ color: 0x5a3214, roughness: 0.15, metalness: 0.1 });
+  const shineM = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const lashM = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.6 });
+  const eyes = [], happyEyes = [];
   for (const s of [-1, 1]) {
-    const e = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 10), eye);
-    e.position.set(s * 0.12, 1.24, 0.38);
-    const shine = new THREE.Mesh(new THREE.SphereGeometry(0.014, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-    shine.position.set(s * 0.12 + 0.015, 1.255, 0.425);
-    const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffa6a6, transparent: true, opacity: 0.6 }));
-    cheek.scale.set(1, 0.6, 0.3); cheek.position.set(s * 0.2, 1.12, 0.33);
-    body.add(e, shine, cheek);
+    const pivot = new THREE.Group();               // ko'z yumish uchun
+    pivot.position.set(s * 0.125, 1.245, 0.355);
+    pivot.rotation.y = s * 0.32;
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.072, 24, 18), eye);
+    ball.scale.set(0.85, 1.12, 0.45);
+    const ir = new THREE.Mesh(new THREE.SphereGeometry(0.05, 24, 18), iris);
+    ir.scale.set(0.85, 1.1, 0.3); ir.position.set(0, -0.012, 0.022);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.032, 18, 14), eye);
+    pupil.scale.set(0.9, 1.1, 0.3); pupil.position.set(0, -0.014, 0.03);
+    const big = new THREE.Mesh(new THREE.SphereGeometry(0.019, 12, 10), shineM);
+    big.scale.set(1, 1.15, 0.4); big.position.set(0.018, 0.03, 0.036);
+    const small = new THREE.Mesh(new THREE.SphereGeometry(0.009, 10, 8), shineM);
+    small.scale.set(1, 1, 0.4); small.position.set(-0.02, -0.038, 0.034);
+    // kiprik
+    const lash = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.006, 6, 20, Math.PI * 0.55), lashM);
+    lash.scale.set(0.9, 1.15, 1); lash.position.set(0, 0.005, 0.012);
+    lash.rotation.z = s > 0 ? -Math.PI * 0.06 : Math.PI * 0.51; // tashqi chetda
+    pivot.add(ball, ir, pupil, big, small, lash);
+    body.add(pivot);
+    eyes.push(pivot);
+    // xursand bo'lganda "^ ^" ko'zlar
+    const happy = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.011, 8, 20, Math.PI), eye);
+    happy.position.set(s * 0.125, 1.225, 0.375); happy.rotation.y = s * 0.32;
+    happy.visible = false;
+    body.add(happy);
+    happyEyes.push(happy);
+    const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 10), new THREE.MeshBasicMaterial({ color: 0xff9aa8, transparent: true, opacity: 0.55 }));
+    cheek.scale.set(1, 0.6, 0.3); cheek.position.set(s * 0.215, 1.135, 0.33); cheek.rotation.y = s * 0.5;
+    body.add(cheek);
   }
   const beak = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.16, 12), orange);
   beak.rotation.x = Math.PI / 2; beak.scale.set(1.3, 1, 0.7); beak.position.set(0, 1.13, 0.43);
@@ -473,7 +500,7 @@ function makePenguin() {
   root.add(shadow);
 
   root.scale.setScalar(0.8);
-  return { root, body, flippers, feet };
+  return { root, body, flippers, feet, eyes, happyEyes };
 }
 
 const peng = makePenguin();
@@ -538,10 +565,72 @@ $("finalMessage").textContent = CFG.finalMessage;
 $("loading").textContent = "";
 
 let audio = null;
-if (CFG.music) { audio = new Audio(CFG.music); audio.loop = true; audio.volume = 0.6; } else $("btnMusic").classList.add("hidden");
+if (CFG.music) { audio = new Audio(CFG.music); audio.loop = true; audio.volume = 0.6; }
+let muted = false;
 $("btnMusic").onclick = () => {
-  if (!audio) return;
-  if (audio.paused) { audio.play().catch(() => {}); $("btnMusic").textContent = "🔊"; } else { audio.pause(); $("btnMusic").textContent = "🔇"; }
+  muted = !muted;
+  $("btnMusic").textContent = muted ? "🔇" : "🔊";
+  if (sfx.master) sfx.master.gain.value = muted ? 0 : 0.9;
+  if (audio) { if (muted) audio.pause(); else audio.play().catch(() => {}); }
+};
+
+// ---------- Ovozlar (fayl kerak emas — brauzerning o'zida yasaladi) ----------
+const sfx = { ctx: null, master: null, noise: null, lastLaugh: 0 };
+function initSound() {
+  if (sfx.ctx) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  const ctx = sfx.ctx = new AC();
+  sfx.master = ctx.createGain(); sfx.master.gain.value = muted ? 0 : 0.9;
+  sfx.master.connect(ctx.destination);
+  const len = ctx.sampleRate * 0.2;
+  sfx.noise = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = sfx.noise.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+}
+// qadam: yumshoq "tap" + o'yinchoqning kichik g'ichirlashi
+sfx.step = (side) => {
+  const ctx = sfx.ctx; if (!ctx) return;
+  const t = ctx.currentTime;
+  const src = ctx.createBufferSource(); src.buffer = sfx.noise;
+  const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 650 + Math.random() * 150;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+  src.connect(lp).connect(g).connect(sfx.master); src.start(t); src.stop(t + 0.12);
+  const o = ctx.createOscillator(); o.type = "sine";
+  const f0 = (side > 0 ? 1250 : 1120) + Math.random() * 120;
+  o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * 0.62, t + 0.07);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.06, t + 0.01); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+  o.connect(og).connect(sfx.master); o.start(t); o.stop(t + 0.1);
+};
+// kulish: "hi-hi-hi-hi" — ingichka, yoqimli kulgi
+sfx.laugh = (big = false) => {
+  const ctx = sfx.ctx; if (!ctx) return;
+  const now = ctx.currentTime;
+  if (now - sfx.lastLaugh < 1.2) return;
+  sfx.lastLaugh = now;
+  const n = big ? 6 : 4 + Math.floor(Math.random() * 2);
+  const base = 620 + Math.random() * 80;
+  for (let i = 0; i < n; i++) {
+    const t = now + 0.05 + i * 0.13;
+    const f = base * (1 + 0.18 * Math.sin(i * 1.3)) * (1 - i * 0.03);
+    const o = ctx.createOscillator(); o.type = "triangle";
+    o.frequency.setValueAtTime(f * 1.25, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.04); o.frequency.exponentialRampToValueAtTime(f * 0.8, t + 0.1);
+    const vib = ctx.createOscillator(); vib.frequency.value = 28;
+    const vg = ctx.createGain(); vg.gain.value = f * 0.04; vib.connect(vg).connect(o.frequency);
+    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1800; bp.Q.value = 0.8;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.32, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+    // nafas ("h" tovushi)
+    const h = ctx.createBufferSource(); h.buffer = sfx.noise;
+    const hf = ctx.createBiquadFilter(); hf.type = "highpass"; hf.frequency.value = 2500;
+    const hg = ctx.createGain();
+    hg.gain.setValueAtTime(0.0001, t - 0.02); hg.gain.exponentialRampToValueAtTime(0.06, t); hg.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    h.connect(hf).connect(hg).connect(sfx.master); h.start(t - 0.02); h.stop(t + 0.06);
+    o.connect(bp).connect(g).connect(sfx.master);
+    o.start(t); vib.start(t); o.stop(t + 0.13); vib.stop(t + 0.13);
+  }
 };
 
 let started = false;
@@ -549,10 +638,9 @@ $("btnStart").onclick = () => {
   $("intro").classList.add("hidden");
   $("topbar").classList.remove("hidden");
   $("joystick").classList.remove("hidden");
-  $("hint").classList.remove("hidden");
   started = true;
   if (audio) audio.play().catch(() => {});
-  if (CFG.welcome) setTimeout(() => showCaption(CFG.welcome, 3500), 600);
+  initSound();
 };
 
 $("btnPhotos").onclick = () => $("fileInput").click();
@@ -624,8 +712,16 @@ function tick() {
 
   // --- pingvin animatsiyasi (lapanglab yurish)
   const moving = P.vel / 2.1;
+  const prevSw = Math.sin(P.phase);
   P.phase += dt * (3 + 9 * moving);
   const sw = Math.sin(P.phase);
+  if (moving > 0.3 && Math.sign(sw) !== Math.sign(prevSw)) sfx.step(Math.sign(sw));
+  // ko'z: vaqti-vaqti bilan pirpiratadi, kulganda "^ ^"
+  const happy = P.hopT > 0;
+  const blinkPhase = (t % 3.7) / 3.7;
+  const blink = blinkPhase > 0.96 ? 0.12 : 1;
+  for (const e of peng.eyes) { e.visible = !happy; e.scale.y = blink; }
+  for (const h of peng.happyEyes) h.visible = happy;
   if (P.hopT > 0) { P.hopT -= dt; P.hop = Math.max(0, Math.sin((1 - P.hopT / 0.9) * Math.PI * 2)) * 0.25; } else P.hop = 0;
   peng.root.position.set(P.pos.x, P.hop, P.pos.z);
   peng.root.rotation.y = P.yaw;
@@ -659,14 +755,13 @@ function tick() {
   }
   if (best !== activeFrame) {
     activeFrame = best;
-    if (best && best.caption) P.hopT = 0.9; // xursand sakrash
+    if (best) { P.hopT = 0.9; sfx.laugh(); } // xursand bo'lib kuladi va sakraydi
   }
-  if (performance.now() > captionUntil) showCaption(activeFrame ? activeFrame.caption : "");
 
   // --- yakuniy xabar
   if (started && !finalShown && P.pos.z < END_Z + 3.2) {
     finalShown = finalOpen = true;
-    P.hopT = 0.9;
+    P.hopT = 0.9; sfx.laugh(true);
     setTimeout(() => $("final").classList.remove("hidden"), 700);
   }
   if (finalShown && !finalOpen && P.pos.z > END_Z + 6) finalShown = false;
