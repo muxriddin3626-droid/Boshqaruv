@@ -58,8 +58,8 @@ class SignalingClient(
 
 /** Oddiy konfiguratsiya - haqiqiy loyihada BuildConfig yoki remote config orqali olinadi. */
 object Config {
-    const val API_BASE_URL = "https://your-backend.example.com"
-    const val WS_BASE_URL = "wss://your-backend.example.com"
+    const val API_BASE_URL = "https://remote-control-backend-yox6.onrender.com"
+    const val WS_BASE_URL = "wss://remote-control-backend-yox6.onrender.com"
 
     // WebRTC STUN/TURN. Mobil tarmoqda (NAT orqasida) ulanish uchun TURN shart.
     // ESLATMA: production'da bu ro'yxatni serverning GET /ice-servers endpointidan
