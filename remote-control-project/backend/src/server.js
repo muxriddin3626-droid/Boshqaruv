@@ -32,6 +32,7 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 const { createStore } = require('./store');
+const { mountDownloadRoutes } = require('./download');
 
 const app = express();
 app.use(cors());
@@ -41,6 +42,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 const PORT = process.env.PORT || 8080;
 
 const store = createStore();
+
+// Ommaviy yuklab olish sahifasi (/get) va APK uzatish (/download/*.apk)
+mountDownloadRoutes(app);
 
 // ---------- Runtime (xotira) holati - saqlanmaydi ----------
 const wsByDevice = new Map();   // deviceId -> ws (faol ulanishlar)
