@@ -51,6 +51,17 @@ jobs:
         with:
           gradle-version: '8.7'
 
+      - name: AAPT2 diagnostika (har bir values faylini alohida tekshirish)
+        continue-on-error: true
+        run: |
+          AAPT2="$(find "$ANDROID_HOME/build-tools" -name aapt2 2>/dev/null | sort | tail -1)"
+          echo "aapt2: $AAPT2"
+          mkdir -p /tmp/aout
+          for f in remote-control-project/${{ matrix.app }}/app/src/main/res/values*/*.xml; do
+            echo "===== $f ====="
+            "$AAPT2" compile "$f" -o /tmp/aout 2>&1 || echo ">>> SHU FAYL YIQILDI: $f"
+          done
+
       - name: Debug APK yasash (${{ matrix.app }})
         working-directory: remote-control-project/${{ matrix.app }}
         run: gradle assembleDebug --stacktrace
