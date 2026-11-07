@@ -1,7 +1,7 @@
 // Til Ustoz admin paneli.
 (() => {
   const $ = (id) => document.getElementById(id);
-  const VIEWS = ['login', 'stats', 'users', 'codes', 'settings'];
+  const VIEWS = ['login', 'stats', 'users', 'settings'];
 
   const LABELS = {
     goal: { patent: '🛂 Patent (Rossiyada ish)', eps: '🏭 EPS (Koreyada ish)', work: '💼 Ish', study: "🎓 O'qish", family: '👨‍👩‍👧 Oila, ko\'chish', exam: '📜 Imtihon', travel: '✈️ Sayohat', self: "💡 O'zi uchun" },
@@ -113,7 +113,6 @@
     show(tab);
     if (tab === 'stats') loadStats();
     else if (tab === 'users') loadUsers();
-    else if (tab === 'codes') loadCodes();
     else if (tab === 'settings') loadSettings();
   }
 
@@ -142,7 +141,6 @@
       kpi('Faol', fmtNum(c.activeToday), `bugun · ${fmtNum(c.active7d)} 7 kunda`),
       kpi('⭐ Premium', fmtNum(c.premium), c.users ? `${Math.round((c.premium / c.users) * 100)}% foydalanuvchilar` : ''),
       kpi('👥 Taklif orqali', fmtNum(c.referred), 'ro\'yxatdan o\'tgan'),
-      kpi('🎟️ Kodlar', `${fmtNum(c.codesUsed)} / ${fmtNum(c.codesTotal)}`, 'ishlatilgan / jami'),
       kpi('🔥 Haftalik XP', fmtNum(c.weekXp), 'barcha foydalanuvchilar'),
       kpi('🔐 Kirish usuli', fmtNum(c.users - c.google - c.phone), `Telegram · ${fmtNum(c.google)} Google · ${fmtNum(c.phone)} telefon`)
     );
@@ -428,68 +426,6 @@
       toast(err.message);
     }
   }
-
-  // ---------- Kodlar ----------
-
-  let codes = [];
-
-  async function loadCodes() {
-    try {
-      codes = (await api('/api/admin/codes')).codes;
-    } catch (err) {
-      return toast(err.message);
-    }
-    const body = $('codesBody');
-    body.textContent = '';
-    for (const c of codes) {
-      const tr = el('tr');
-      tr.append(el('td', 'mono', c.code), el('td', '', planName(c.plan)), el('td', 'num', c.days), el('td', '', fmtDate(c.createdAt)));
-      const st = el('td');
-      st.appendChild(
-        el('span', `pill-badge${c.usedBy ? '' : ' free'}`, c.usedBy ? `✅ ${c.usedByName || c.usedBy} · ${fmtDate(c.usedAt)}` : '🆕 Ishlatilmagan')
-      );
-      tr.appendChild(st);
-      body.appendChild(tr);
-    }
-    if (!codes.length) {
-      const tr = el('tr');
-      const td = el('td', 'muted', "Hali kod yo'q.");
-      td.colSpan = 5;
-      tr.appendChild(td);
-      body.appendChild(tr);
-    }
-  }
-
-  async function copyText(text) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  $('codeForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      const r = await api('/api/admin/codes', { count: Number($('codeCount').value), days: Number($('codeDays').value), plan: $('codePlan').value });
-      const box = $('newCodes');
-      box.textContent = '';
-      box.appendChild(el('p', '', `${planName(r.plan)} tarifi, ${r.days} kunlik ${r.codes.length} ta yangi kod:`));
-      box.appendChild(el('pre', 'mono', r.codes.join('\n')));
-      box.appendChild(button('secondary', '📋 Nusxalash', async () => toast((await copyText(r.codes.join('\n'))) ? 'Nusxalandi' : "Nusxalab bo'lmadi")));
-      box.hidden = false;
-      loadCodes();
-    } catch (err) {
-      toast(err.message);
-    }
-  });
-
-  $('copyUnused').addEventListener('click', async () => {
-    const unused = codes.filter((c) => !c.usedBy).map((c) => `${c.code} (${planName(c.plan)}, ${c.days} kun)`);
-    if (!unused.length) return toast("Ishlatilmagan kod yo'q");
-    toast((await copyText(unused.join('\n'))) ? `${unused.length} ta kod nusxalandi` : "Nusxalab bo'lmadi");
-  });
 
   // ---------- Sozlamalar ----------
 

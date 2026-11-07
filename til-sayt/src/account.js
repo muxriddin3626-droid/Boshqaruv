@@ -1,5 +1,5 @@
 // Akkaunt: Telegram, Google yoki telefon raqam orqali kirish, ma'lumotlarni sinxronlash, kunlik limitlar,
-// Premium kodlari, do'stlar va haftalik reyting.
+// obuna, do'stlar va haftalik reyting.
 const db = require('./db');
 const auth = require('./auth');
 
@@ -390,24 +390,6 @@ async function handleRatingVisibility(req, res) {
 
 // ---------- Premium ----------
 
-async function handleRedeem(req, res) {
-  const user = await currentUser(req);
-  if (!user) {
-    sendJson(res, 401, { error: 'Kodni ishlatish uchun avval akkauntga kiring.' });
-    return;
-  }
-  const body = await readJson(req, res);
-  if (!body) return;
-  const code = typeof body.code === 'string' ? body.code.trim().toUpperCase() : '';
-  const r = code && (await db.redeemCode(code, user.id));
-  if (!r) {
-    sendJson(res, 404, { error: "Kod noto'g'ri yoki allaqachon ishlatilgan." });
-    return;
-  }
-  const until = await db.addPremiumDays(user.id, r.days, r.plan);
-  sendJson(res, 200, { ok: true, days: r.days, plan: PLANS.byId(r.plan), premiumUntil: until });
-}
-
 const GET_ROUTES = {
   '/api/me': handleMe,
   '/api/state': handleState,
@@ -423,7 +405,6 @@ const POST_ROUTES = {
   '/api/state': handleState,
   '/api/friends/add': handleAddFriend,
   '/api/rating/visibility': handleRatingVisibility,
-  '/api/premium/redeem': handleRedeem,
 };
 
 module.exports = {

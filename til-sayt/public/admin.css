@@ -29,8 +29,7 @@
 .login-panel { max-width: 420px; margin: 40px auto; }
 .login-panel h1 { font-size: 22px; margin: 0 0 14px; }
 #loginForm { display: flex; gap: 8px; }
-#loginForm input, .search-row input, .code-create input, .settings-form input, .settings-form textarea {
-  flex: 1;
+#loginForm input, .search-row input,   flex: 1;
   min-width: 0;
   padding: 10px 12px;
   border: 1px solid var(--border);
@@ -100,10 +99,6 @@
 .pager { display: flex; justify-content: space-between; }
 .pager button:disabled { opacity: 0.4; }
 
-.code-create { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
-.code-create label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); width: 110px; }
-.new-codes { margin-top: 12px; padding: 12px; border-radius: 12px; background: var(--bg); }
-.new-codes pre { margin: 6px 0 10px; font-size: 15px; }
 
 .settings-form { display: grid; gap: 10px; }
 .settings-form h2 { margin-top: 8px; }
@@ -129,7 +124,6 @@
 .prices-grid { display: grid; grid-template-columns: minmax(110px, auto) repeat(3, minmax(0, 1fr)); gap: 8px; align-items: center; margin-bottom: 8px; }
 .prices-grid b { font-size: 13px; }
 .prices-grid input { width: 100%; min-width: 0; }
-.code-create select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; }
 
 /* ============================================================
    Yangi dizayn (theme.css bilan bir uslubda)
@@ -166,14 +160,12 @@
 
 .login-panel { text-align: center; padding: 28px 22px !important; }
 .login-panel h1 { font-size: 24px; }
-#loginForm input, .search-row input, .code-create input, .code-create select, .settings-form input, .settings-form textarea {
-  border: 2px solid var(--border);
+#loginForm input, .search-row input,   border: 2px solid var(--border);
   border-radius: 14px;
   background: var(--bg);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-#loginForm input:focus, .search-row input:focus, .code-create input:focus, .settings-form input:focus, .settings-form textarea:focus {
-  outline: none;
+#loginForm input:focus, .search-row input:focus,   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
 }
@@ -223,7 +215,6 @@
 .pill-badge.free { background: color-mix(in srgb, var(--leaf) 16%, var(--surface)); border-color: color-mix(in srgb, var(--leaf) 35%, var(--border)); }
 .mono { font-size: 14px; letter-spacing: 0.04em; }
 
-.new-codes { border: 2px dashed color-mix(in srgb, var(--accent) 45%, var(--border)); background: color-mix(in srgb, var(--accent) 5%, var(--surface)); border-radius: 18px; }
 
 .prices-grid input { text-align: right; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; }
 .prices-grid input::-webkit-inner-spin-button, .prices-grid input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }

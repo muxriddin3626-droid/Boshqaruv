@@ -248,9 +248,9 @@ window.AccountUI = (() => {
     }
     renderPlans();
     $('premiumBuy').textContent = config.premiumContact
-      ? `To'lov qilgach, sizga obuna kodi yuboriladi — uni pastga kiriting. Savollar bo'yicha: ${config.premiumContact}`
-      : "Obuna kodi bo'lsa, pastga kiriting.";
-    $('codeForm').hidden = !loginOn();
+      ? `To'lov qilgach, obuna akkauntingizga yoqiladi. Savollar bo'yicha: ${config.premiumContact}`
+      : '';
+    $('premiumBuy').hidden = !config.premiumContact;
   }
 
   // ---------- Tariflar ----------
@@ -264,8 +264,14 @@ window.AccountUI = (() => {
 
   // Sotib olish: sayt egasining Telegram'iga tayyor xabar bilan.
   function buy(plan, per) {
+    // Obuna akkauntga yoqiladi — shuning uchun avval kirish kerak.
+    if (!me.user) {
+      window.Practice.toast("Avval akkauntga kiring — obuna shu akkauntga yoqiladi.", 4000);
+      $('loginPanel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     const price = priceOf(plan.id, per.months);
-    const text = `Salom! Til Ustoz: ${plan.name} tarifi (kuniga ${plan.minutes} daqiqa), ${per.label} — ${window.PLANS.fmt(price)}. ${me.user ? `ID: ${me.user.id}` : ''}`;
+    const text = `Salom! Til Ustoz: ${plan.name} tarifi (kuniga ${plan.minutes} daqiqa), ${per.label} — ${window.PLANS.fmt(price)}. Akkaunt: ${me.user.name} (ID: ${me.user.id})`;
     const c = String(config.premiumContact || '').trim();
     const tg = /^@?([A-Za-z0-9_]{5,32})$/.exec(c) || /t\.me\/([A-Za-z0-9_]{5,32})/.exec(c);
     if (tg) {
@@ -302,7 +308,7 @@ window.AccountUI = (() => {
       const price = priceOf(plan.id, per.months);
       const current = me.premium && me.plan && me.plan.id === plan.id;
       const card = document.createElement('div');
-      card.className = `plan-card${plan.popular ? ' popular' : ''}${current ? ' current' : ''}`;
+      card.className = `tariff-card${plan.popular ? ' popular' : ''}${current ? ' current' : ''}`;
       if (plan.popular) {
         const tag = document.createElement('span');
         tag.className = 'plan-tag';
@@ -372,20 +378,6 @@ window.AccountUI = (() => {
       await App.postJson('/api/rating/visibility', { show: e.target.checked });
     } catch (err) {
       window.Practice.toast(err.message);
-    }
-  });
-
-  $('codeForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const code = $('codeInput').value.trim();
-    if (!code) return;
-    try {
-      const r = await App.postJson('/api/premium/redeem', { code });
-      $('codeInput').value = '';
-      window.Practice.toast(`⭐ ${r.plan ? r.plan.name : 'Obuna'} faollashdi: +${r.days} kun!`, 3500);
-      refresh();
-    } catch (err) {
-      window.Practice.toast(err.message, 3000);
     }
   });
 

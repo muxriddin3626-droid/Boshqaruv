@@ -19,7 +19,6 @@
     <nav class="admin-tabs" id="tabs" hidden>
       <button type="button" class="tab active" data-tab="stats">📊 Statistika</button>
       <button type="button" class="tab" data-tab="users">👥 Foydalanuvchilar</button>
-      <button type="button" class="tab" data-tab="codes">🎟️ Kodlar</button>
       <button type="button" class="tab" data-tab="settings">⚙️ Sozlamalar</button>
     </nav>
     <button type="button" class="link-btn" id="logoutBtn" hidden>Chiqish</button>
@@ -86,34 +85,6 @@
       <button type="button" class="secondary" id="prevPage">← Oldingi</button>
       <button type="button" class="secondary" id="nextPage">Keyingi →</button>
     </div>
-  </main>
-
-  <!-- Kodlar -->
-  <main class="admin-main" id="codesView" hidden>
-    <section class="panel">
-      <h2>Yangi Premium kodlar</h2>
-      <form class="code-create" id="codeForm">
-        <label>Tarif <select id="codePlan"><option value="light">Light (20 daq)</option><option value="standard" selected>Standard (30 daq)</option><option value="pro">Pro (1 soat)</option></select></label>
-        <label>Muddat <select id="codeDays"><option value="30">1 oy</option><option value="90">3 oy</option><option value="365">1 yil</option><option value="7">7 kun (sinov)</option></select></label>
-        <label>Soni <input type="number" id="codeCount" min="1" max="100" value="5"></label>
-        <button type="submit" class="primary">Yaratish</button>
-      </form>
-      <div class="new-codes" id="newCodes" hidden></div>
-    </section>
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Kodlar ro'yxati</h2>
-        <button type="button" class="secondary" id="copyUnused">📋 Ishlatilmaganlarini nusxalash</button>
-      </div>
-      <div class="table-wrap">
-        <table class="admin-table">
-          <thead>
-            <tr><th>Kod</th><th>Tarif</th><th class="num">Kun</th><th>Yaratilgan</th><th>Holati</th></tr>
-          </thead>
-          <tbody id="codesBody"></tbody>
-        </table>
-      </div>
-    </section>
   </main>
 
   <!-- Sozlamalar -->

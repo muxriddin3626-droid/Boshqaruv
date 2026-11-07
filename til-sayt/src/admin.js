@@ -200,27 +200,6 @@ async function handlePremium(req, res) {
   sendJson(res, 200, { ok: true, user: await db.getUser(user.id) });
 }
 
-// ---------- Kodlar ----------
-
-async function handleCodes(req, res) {
-  if (req.method === 'GET') {
-    if (!(await guard(req, res))) return;
-    sendJson(res, 200, { codes: await db.listCodes(200) });
-    return;
-  }
-  const body = await readJson(req, res);
-  if (!body) return;
-  // Eski usul ham ishlaydi: so'rov ichida maxfiy parol (curl orqali).
-  if (!(await isAdmin(req)) && !secretOk(body.secret)) {
-    sendJson(res, 403, { error: "Ruxsat yo'q." });
-    return;
-  }
-  const count = Math.min(Math.max(parseInt(body.count, 10) || 1, 1), 100);
-  const days = Math.min(Math.max(parseInt(body.days, 10) || 30, 1), 3650);
-  const plan = PLANS.byId(body.plan) ? body.plan : PLANS.DEFAULT_PLAN;
-  sendJson(res, 200, { codes: await db.createCodes(count, days, plan), days, plan });
-}
-
 // ---------- Sozlamalar ----------
 
 async function handleSettings(req, res) {
@@ -254,7 +233,6 @@ const GET_ROUTES = {
   '/api/admin/stats': handleStats,
   '/api/admin/users': handleUsers,
   '/api/admin/user': handleUser,
-  '/api/admin/codes': handleCodes,
   '/api/admin/settings': handleSettings,
 };
 
@@ -263,7 +241,6 @@ const POST_ROUTES = {
   '/api/admin/logout': handleLogout,
   '/api/admin/premium': handlePremium,
   '/api/admin/password': handlePassword,
-  '/api/admin/codes': handleCodes,
   '/api/admin/settings': handleSettings,
 };
 

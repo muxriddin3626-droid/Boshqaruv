@@ -485,3 +485,10 @@ input[type="text"], input[type="tel"], input[type="password"], input[type="numbe
 .grade.bad { box-shadow: 0 5px 0 color-mix(in srgb, var(--danger) 70%, #000); }
 .grade.good { box-shadow: 0 5px 0 var(--leaf-deep); }
 .grade:active { transform: translateY(5px); box-shadow: none; }
+
+/* Tarif kartochkalari */
+.tariff-card { border: 2px solid var(--border); border-radius: 22px; background: var(--surface); box-shadow: 0 5px 0 var(--edge), var(--shadow); }
+.tariff-card.popular { border-color: var(--sun); box-shadow: 0 6px 0 var(--sun-deep), 0 18px 30px -14px color-mix(in srgb, var(--sun) 70%, transparent); }
+.tariff-card.current { border-color: var(--leaf); }
+.tariff-card .plan-price { font-family: var(--display); }
+.plan-tag { background: linear-gradient(135deg, var(--sun), var(--accent)); box-shadow: 0 3px 0 var(--sun-deep); }
