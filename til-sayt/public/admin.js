@@ -521,10 +521,10 @@
   function renderPrices(prices) {
     const grid = $('pricesGrid');
     grid.textContent = '';
-    grid.appendChild(el('span', ''));
+    grid.appendChild(el('span', 'price-empty'));
     for (const per of window.PLANS.PERIODS) grid.appendChild(el('b', '', per.label));
     for (const pl of window.PLANS.PLANS) {
-      grid.appendChild(el('b', '', `${pl.name} · ${pl.minutes} daq`));
+      grid.appendChild(el('b', 'price-plan', `${pl.name} · ${pl.minutes} daq`));
       for (const per of window.PLANS.PERIODS) {
         const input = el('input');
         input.type = 'number';
