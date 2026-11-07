@@ -69,6 +69,20 @@ const ready = (async () => {
         sent_day TEXT NOT NULL DEFAULT '',
         created_at INTEGER NOT NULL
       )`,
+      `CREATE TABLE IF NOT EXISTS payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        plan TEXT NOT NULL,
+        months INTEGER NOT NULL,
+        days INTEGER NOT NULL,
+        amount INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        file_mime TEXT NOT NULL,
+        file_data TEXT NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        decided_at INTEGER
+      )`,
       `CREATE TABLE IF NOT EXISTS passwords (
         user_id TEXT PRIMARY KEY,
         hash TEXT NOT NULL,
@@ -80,6 +94,11 @@ const ready = (async () => {
   // Eski bazalarga yangi ustunlar (bor bo'lsa — xato e'tiborsiz qoldiriladi).
   for (const sql of [
     "ALTER TABLE users ADD COLUMN plan TEXT NOT NULL DEFAULT 'standard'",
+    'ALTER TABLE payments ADD COLUMN auto INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE payments ADD COLUMN reviewed INTEGER NOT NULL DEFAULT 0',
+    "ALTER TABLE payments ADD COLUMN check_json TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE payments ADD COLUMN file_hash TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE payments ADD COLUMN txn_id TEXT NOT NULL DEFAULT ''",
   ]) {
     await client.execute(sql).catch(() => {});
   }
@@ -431,7 +450,161 @@ async function countPushSubs() {
   return Number(r.rows[0].n);
 }
 
+// ---------- To'lovlar (karta orqali o'tkazma va chek) ----------
+
+const rowToPayment = (x) =>
+  x && {
+    id: Number(x.id),
+    userId: String(x.user_id),
+    plan: String(x.plan),
+    months: Number(x.months),
+    days: Number(x.days),
+    amount: Number(x.amount),
+    status: String(x.status),
+    fileMime: String(x.file_mime),
+    note: String(x.note || ''),
+    createdAt: Number(x.created_at),
+    decidedAt: x.decided_at == null ? null : Number(x.decided_at),
+    auto: Number(x.auto || 0) === 1,
+    reviewed: Number(x.reviewed || 0) === 1,
+    check: (() => {
+      try {
+        return x.check_json ? JSON.parse(String(x.check_json)) : null;
+      } catch {
+        return null;
+      }
+    })(),
+    userName: x.first_name == null ? '' : [x.first_name, x.last_name].filter(Boolean).join(' '),
+  };
+
+async function createPayment({ userId, plan, months, days, amount, fileMime, fileData }) {
+  const r = await client.execute({
+    sql: `INSERT INTO payments (user_id, plan, months, days, amount, file_mime, file_data, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+    args: [userId, plan, months, days, amount, fileMime, fileData, Date.now()],
+  });
+  return Number(r.rows[0].id);
+}
+
+const PAY_COLS = `p.id, p.user_id, p.plan, p.months, p.days, p.amount, p.status, p.file_mime, p.note, p.created_at, p.decided_at,
+                 p.auto, p.reviewed, p.check_json, u.first_name, u.last_name`;
+
+// Ro'yxat (chek faylisiz). status: pending / approved / rejected / review (avtomatik tasdiqlangan, ko'rilmagan).
+async function listPayments({ status = '', userId = '', limit = 100 } = {}) {
+  const review = status === 'review' ? 1 : 0;
+  const st = review ? '' : status;
+  const r = await client.execute({
+    sql: `SELECT ${PAY_COLS}
+          FROM payments p LEFT JOIN users u ON u.id = p.user_id
+          WHERE (? = '' OR p.status = ?) AND (? = '' OR p.user_id = ?)
+            AND (? = 0 OR (p.status = 'approved' AND p.auto = 1 AND p.reviewed = 0))
+          ORDER BY p.created_at DESC LIMIT ?`,
+    args: [st, st, userId, userId, review, limit],
+  });
+  return r.rows.map(rowToPayment);
+}
+
+async function setPaymentCheck(id, { check, fileHash, txnId }) {
+  await client.execute({
+    sql: 'UPDATE payments SET check_json = ?, file_hash = ?, txn_id = ? WHERE id = ?',
+    args: [JSON.stringify(check || {}), fileHash || '', txnId || '', id],
+  });
+}
+
+// Shu chek (fayl yoki tranzaksiya raqami) oldin ishlatilganmi — rad etilmaganlar orasida.
+async function findDuplicatePayment(id, fileHash, txnId) {
+  const r = await client.execute({
+    sql: `SELECT id FROM payments WHERE id != ? AND status != 'rejected'
+            AND ((? != '' AND file_hash = ?) OR (? != '' AND txn_id = ?)) LIMIT 1`,
+    args: [id, fileHash || '', fileHash || '', txnId || '', txnId || ''],
+  });
+  return r.rows[0] ? Number(r.rows[0].id) : null;
+}
+
+async function autoApprovePayment(id) {
+  const r = await client.execute({
+    sql: "UPDATE payments SET status = 'approved', auto = 1, reviewed = 0, decided_at = ? WHERE id = ? AND status = 'pending' RETURNING id",
+    args: [Date.now(), id],
+  });
+  return r.rows.length > 0;
+}
+
+async function markPaymentReviewed(id) {
+  await client.execute({ sql: 'UPDATE payments SET reviewed = 1 WHERE id = ?', args: [id] });
+}
+
+// Avtomatik tasdiqlangan to'lovni admin bekor qiladi.
+async function revokePayment(id, note) {
+  const r = await client.execute({
+    sql: "UPDATE payments SET status = 'rejected', note = ?, reviewed = 1, decided_at = ? WHERE id = ? AND status = 'approved' RETURNING id",
+    args: [note, Date.now(), id],
+  });
+  return r.rows.length > 0;
+}
+
+async function removePremiumDays(userId, days) {
+  await client.execute({
+    sql: 'UPDATE users SET premium_until = MAX(0, premium_until - ?) WHERE id = ?',
+    args: [days * DAY, userId],
+  });
+}
+
+async function getPaymentFile(id) {
+  const r = await client.execute({ sql: 'SELECT file_mime, file_data FROM payments WHERE id = ?', args: [id] });
+  const x = r.rows[0];
+  return x ? { mime: String(x.file_mime), data: Buffer.from(String(x.file_data), 'base64') } : null;
+}
+
+async function getPayment(id) {
+  const r = await client.execute({
+    sql: `SELECT ${PAY_COLS} FROM payments p LEFT JOIN users u ON u.id = p.user_id WHERE p.id = ?`,
+    args: [id],
+  });
+  return rowToPayment(r.rows[0]);
+}
+
+// Faqat kutilayotgan to'lovni o'zgartiradi (ikki marta tasdiqlanmasligi uchun).
+async function decidePayment(id, status, note = '') {
+  const r = await client.execute({
+    sql: "UPDATE payments SET status = ?, note = ?, reviewed = 1, decided_at = ? WHERE id = ? AND status = 'pending' RETURNING id",
+    args: [status, note, Date.now(), id],
+  });
+  return r.rows.length > 0;
+}
+
+async function countPayments(status, userId = '') {
+  const r = await client.execute({
+    sql: "SELECT COUNT(*) AS n FROM payments WHERE status = ? AND (? = '' OR user_id = ?)",
+    args: [status, userId, userId],
+  });
+  return Number(r.rows[0].n);
+}
+
+async function countPaymentsToReview() {
+  const r = await client.execute("SELECT COUNT(*) AS n FROM payments WHERE status = 'approved' AND auto = 1 AND reviewed = 0");
+  return Number(r.rows[0].n);
+}
+
+async function countPaymentsSince(userId, since) {
+  const r = await client.execute({ sql: 'SELECT COUNT(*) AS n FROM payments WHERE user_id = ? AND created_at >= ?', args: [userId, since] });
+  return Number(r.rows[0].n);
+}
+
 module.exports = {
+  createPayment,
+  listPayments,
+  getPaymentFile,
+  getPayment,
+  decidePayment,
+  countPayments,
+  countPaymentsSince,
+  countPaymentsToReview,
+  setPaymentCheck,
+  findDuplicatePayment,
+  autoApprovePayment,
+  markPaymentReviewed,
+  revokePayment,
+  removePremiumDays,
   savePushSub,
   getPushSub,
   listPushSubs,

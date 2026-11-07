@@ -1,7 +1,7 @@
 // Til Ustoz admin paneli.
 (() => {
   const $ = (id) => document.getElementById(id);
-  const VIEWS = ['login', 'stats', 'users', 'settings'];
+  const VIEWS = ['login', 'stats', 'users', 'payments', 'settings'];
 
   const LABELS = {
     goal: { patent: '🛂 Patent (Rossiyada ish)', eps: '🏭 EPS (Koreyada ish)', work: '💼 Ish', study: "🎓 O'qish", family: '👨‍👩‍👧 Oila, ko\'chish', exam: '📜 Imtihon', travel: '✈️ Sayohat', self: "💡 O'zi uchun" },
@@ -111,8 +111,10 @@
 
   function openTab(tab) {
     show(tab);
+    if (tab !== 'payments') refreshBadge();
     if (tab === 'stats') loadStats();
     else if (tab === 'users') loadUsers();
+    else if (tab === 'payments') loadPayments();
     else if (tab === 'settings') loadSettings();
   }
 
@@ -434,6 +436,146 @@
     }
   }
 
+  // ---------- To'lovlar (chekni tekshirish) ----------
+
+  const PAY_LABEL = { pending: '⏳ Kutilmoqda', approved: '✅ Tasdiqlangan', rejected: '❌ Rad etilgan' };
+  const payLabel = (p) =>
+    p.status === 'approved' && p.auto ? (p.reviewed ? '🤖 Avto-tasdiqlangan · ko\'rildi' : '🤖 Avto-tasdiqlangan · ko\'rib chiqing') : PAY_LABEL[p.status];
+  const fmtMoney = (n) => window.PLANS.fmt(n);
+  let payStatus = 'pending';
+
+  function setBadge(n) {
+    $('payBadge').textContent = n;
+    $('payBadge').hidden = !n;
+  }
+
+  async function refreshBadge() {
+    try {
+      const r = await api('/api/admin/payments?status=pending');
+      setBadge(r.pending + r.review);
+    } catch {}
+  }
+
+  async function loadPayments() {
+    let r;
+    try {
+      r = await api(`/api/admin/payments?status=${payStatus}`);
+    } catch (err) {
+      return toast(err.message);
+    }
+    setBadge(r.pending + r.review);
+    const reviewChip = $('payFilter').querySelector('[data-status="review"]');
+    reviewChip.textContent = `🤖 Avto-tasdiqlangan — ko'rib chiqing${r.review ? ` (${r.review})` : ''}`;
+    $('payNote').textContent = r.payments.length
+      ? payStatus === 'review'
+        ? "Bu cheklar avtomatik tekshirilib, obuna allaqachon yoqilgan. Bank ilovangizda pul tushganini tekshiring: to'g'ri bo'lsa «👍 To'g'ri», soxta bo'lsa «↩️ Bekor qilish» — obuna qaytarib olinadi."
+        : `${r.payments.length} ta to'lov. Chekdagi summa, sana va qabul qiluvchi kartani tekshiring, so'ng tasdiqlang — obuna o'zi yoqiladi.`
+      : payStatus === 'pending'
+        ? "Kutilayotgan to'lov yo'q. Yangi chek kelganda shu yerda chiqadi."
+        : "Bu bo'limda to'lov yo'q.";
+    const list = $('payList');
+    list.textContent = '';
+    for (const p of r.payments) list.appendChild(paymentCard(p));
+  }
+
+  function paymentCard(p) {
+    const card = el('div', `panel pay-item pay-${p.status}`);
+    const fileUrl = `/api/admin/payment-file?id=${p.id}`;
+    if (p.fileMime === 'application/pdf') {
+      const a = el('a', 'pay-pdf', '📄 PDF chekni ochish');
+      a.href = fileUrl;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      card.appendChild(a);
+    } else {
+      const a = el('a', 'pay-img-link');
+      a.href = fileUrl;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      const img = el('img', 'pay-img');
+      img.src = fileUrl;
+      img.alt = `Chek #${p.id}`;
+      img.loading = 'lazy';
+      a.appendChild(img);
+      card.appendChild(a);
+    }
+    const info = el('div', 'pay-info');
+    info.appendChild(el('b', 'pay-amount', fmtMoney(p.amount)));
+    const period = (window.PLANS.PERIODS.find((x) => x.months === p.months) || {}).label || `${p.months} oy`;
+    info.appendChild(el('span', '', `${planName(p.plan)} · ${period} (${p.days} kun)`));
+    const who = el('button', 'link-btn pay-user', `${p.userName || 'Foydalanuvchi'} · ${loginLabel(p.userId)}`);
+    who.type = 'button';
+    who.addEventListener('click', () => openUser(p.userId));
+    info.appendChild(who);
+    info.appendChild(el('span', 'muted', `#${p.id} · ${fmtDate(p.createdAt)} ${new Date(p.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`));
+    info.appendChild(el('span', `pill-badge pay-badge-${p.status}`, payLabel(p) + (p.status === 'rejected' && p.note ? `: ${p.note}` : '')));
+    card.appendChild(info);
+    if (p.check) {
+      const box = el('div', 'pay-check');
+      box.appendChild(el('b', '', `🤖 ${p.check.summary || 'Avtomatik tekshiruv'}`));
+      const ul = el('ul');
+      for (const it of p.check.items || []) ul.appendChild(el('li', it.ok ? 'ok' : 'bad', `${it.ok ? '✓' : '✗'} ${it.text}`));
+      if (p.check.read && p.check.read.txn) ul.appendChild(el('li', 'muted', `Tranzaksiya: ${p.check.read.txn}`));
+      if (p.check.read && p.check.read.notes) ul.appendChild(el('li', 'muted', p.check.read.notes));
+      box.appendChild(ul);
+      card.appendChild(box);
+    }
+    if (p.status === 'approved' && p.auto && !p.reviewed) {
+      const actions = el('div', 'end-actions pay-actions');
+      actions.append(
+        button('primary', "👍 To'g'ri", () => decide(p, 'reviewed')),
+        button('secondary', '↩️ Bekor qilish', () => decide(p, 'revoke'))
+      );
+      card.appendChild(actions);
+    }
+    if (p.status === 'pending') {
+      const actions = el('div', 'end-actions pay-actions');
+      actions.append(
+        button('primary', '✅ Tasdiqlash', () => decide(p, 'approve')),
+        button('secondary', '❌ Rad etish', () => decide(p, 'reject'))
+      );
+      card.appendChild(actions);
+    }
+    return card;
+  }
+
+  async function decide(p, action) {
+    let note = '';
+    if (action === 'approve') {
+      if (!confirm(`${fmtMoney(p.amount)} — ${planName(p.plan)}, ${p.days} kun. Tasdiqlab, obunani yoqasizmi?`)) return;
+    } else if (action === 'reviewed') {
+      // tasdiqlash so'ralmaydi
+    } else if (action === 'revoke') {
+      note = prompt(`Obuna (${p.days} kun) qaytarib olinadi. Sababi (foydalanuvchiga ko'rinadi):`, "Pul kartaga tushmadi");
+      if (note === null) return;
+    } else {
+      note = prompt("Rad etish sababi (foydalanuvchiga ko'rinadi):", "Chekdagi summa mos kelmadi");
+      if (note === null) return;
+    }
+    try {
+      await api('/api/admin/payment', { id: p.id, action, note });
+      toast(
+        { approve: `✅ Tasdiqlandi — ${planName(p.plan)} +${p.days} kun yoqildi`, reviewed: "👍 Ko'rib chiqildi", revoke: '↩️ Bekor qilindi, obuna qaytarib olindi' }[action] ||
+          '❌ Rad etildi'
+      );
+      loadPayments();
+    } catch (err) {
+      toast(err.message);
+      loadPayments();
+    }
+  }
+
+  $('payFilter').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    payStatus = chip.dataset.status;
+    $('payFilter').querySelectorAll('.chip').forEach((c) => c.classList.toggle('selected', c === chip));
+    loadPayments();
+  });
+
+  // Yangi cheklar haqida: har daqiqada nishonchani yangilaymiz.
+  setInterval(() => !$('tabs').hidden && refreshBadge(), 60000);
+
   // ---------- Sozlamalar ----------
 
   const FIELDS = {
@@ -443,6 +585,10 @@
     freeExam: ['setFreeExam', 'int'],
     refBonusDays: ['setRefBonusDays', 'int'],
     premiumContact: ['setPremiumContact', 'str'],
+    cardNumber: ['setCardNumber', 'str'],
+    cardHolder: ['setCardHolder', 'str'],
+    cardBank: ['setCardBank', 'str'],
+    autoApprove: ['setAutoApprove', 'bool'],
     announcement: ['setAnnouncement', 'str'],
   };
 

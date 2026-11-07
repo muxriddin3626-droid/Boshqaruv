@@ -504,3 +504,32 @@ input[type="text"], input[type="tel"], input[type="password"], input[type="numbe
 .memory-del { flex: none; width: 28px; height: 28px; border: none; border-radius: 50%; background: transparent; color: var(--muted); }
 .memory-del:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
 .memory-extra { margin: 0 0 10px; font-size: 14px; color: var(--muted); white-space: pre-line; text-align: left; }
+
+/* Karta orqali to'lov */
+.pay-sheet { width: min(460px, calc(100% - 24px)); max-height: calc(100dvh - 24px); overflow-y: auto; }
+.pay-summary { font-weight: 700; color: var(--text) !important; }
+.pay-card {
+  position: relative; display: flex; flex-direction: column; gap: 6px; margin: 4px 0 14px; padding: 18px 18px 16px;
+  border-radius: 20px; color: #fff; overflow: hidden;
+  background: radial-gradient(140% 120% at 100% 0%, color-mix(in srgb, var(--sun) 70%, transparent), transparent 50%), linear-gradient(135deg, #1f2a44, var(--plum));
+  box-shadow: 0 6px 0 #141b2e, 0 18px 30px -14px rgba(31, 42, 68, 0.7);
+}
+.pay-card::after { content: ''; position: absolute; right: 16px; top: 16px; width: 42px; height: 30px; border-radius: 7px; background: linear-gradient(135deg, #f6d27a, #c9973a); opacity: 0.9; }
+.pay-bank { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.85; }
+.pay-number { padding: 0; border: none; background: none; color: #fff; text-align: left; font: 700 22px/1.2 ui-monospace, 'SF Mono', Menlo, monospace; letter-spacing: 0.08em; }
+.pay-holder { font-size: 14px; font-weight: 600; text-transform: uppercase; opacity: 0.9; }
+.pay-copy-hint { font-size: 11px; opacity: 0.7; }
+.pay-steps { margin: 0 0 12px; padding-left: 20px; text-align: left; font-size: 14px; line-height: 1.5; color: var(--text); }
+.pay-steps li { margin-bottom: 4px; }
+.pay-file {
+  display: block; margin-bottom: 10px; padding: 14px; text-align: center; cursor: pointer;
+  border: 2px dashed color-mix(in srgb, var(--accent) 50%, var(--border)); border-radius: 16px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface)); font-weight: 700;
+}
+.pay-preview { display: block; max-width: 100%; max-height: 220px; margin: 0 auto 10px; border-radius: 12px; border: 2px solid var(--border); }
+.pay-status { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pay-status li { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 14px; border: 2px solid var(--border); text-align: left; font-size: 14px; }
+.pay-status li span { color: var(--muted); font-size: 13px; }
+.pay-status .pay-pending { border-color: color-mix(in srgb, var(--sun) 60%, var(--border)); background: color-mix(in srgb, var(--sun) 10%, var(--surface)); }
+.pay-status .pay-approved { border-color: color-mix(in srgb, var(--leaf) 50%, var(--border)); background: color-mix(in srgb, var(--leaf) 9%, var(--surface)); }
+.pay-status .pay-rejected { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); background: color-mix(in srgb, var(--danger) 7%, var(--surface)); }

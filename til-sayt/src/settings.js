@@ -13,6 +13,10 @@ const DEFAULTS = {
   premiumContact: process.env.PREMIUM_CONTACT || '',
   announcement: '',
   prices: P.DEFAULT_PRICES,
+  cardNumber: process.env.PAYMENT_CARD_NUMBER || '',
+  cardHolder: process.env.PAYMENT_CARD_HOLDER || '',
+  cardBank: process.env.PAYMENT_CARD_BANK || '',
+  autoApprove: process.env.PAYMENT_AUTO_APPROVE !== 'off',
 };
 
 // Narxlar: har tarif uchun { 1: so'm, 3: so'm, 12: so'm }.
@@ -35,6 +39,10 @@ const VALIDATE = {
   premiumContact: (v) => typeof v === 'string' && v.length <= 100,
   announcement: (v) => typeof v === 'string' && v.length <= 300,
   prices: validPrices,
+  cardNumber: (v) => typeof v === 'string' && v.length <= 40,
+  cardHolder: (v) => typeof v === 'string' && v.length <= 80,
+  cardBank: (v) => typeof v === 'string' && v.length <= 80,
+  autoApprove: (v) => typeof v === 'boolean',
 };
 
 let current = { ...DEFAULTS };

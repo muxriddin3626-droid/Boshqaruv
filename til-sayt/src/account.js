@@ -143,6 +143,9 @@ function config() {
     plans: PLANS.PLANS,
     periods: PLANS.PERIODS,
     prices: settings.get().prices,
+    payCard: settings.get().cardNumber
+      ? { number: settings.get().cardNumber, holder: settings.get().cardHolder, bank: settings.get().cardBank }
+      : null,
     refBonusDays: settings.get().refBonusDays,
     announcement: settings.get().announcement,
   };
