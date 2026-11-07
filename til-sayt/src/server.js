@@ -6,6 +6,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const account = require('./account');
 const admin = require('./admin');
 const push = require('./push');
+const payments = require('./payments');
 const auth = require('./auth');
 const {
   TUTOR_PROMPT,
@@ -883,8 +884,8 @@ const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
   const route =
     req.method === 'POST'
-      ? ROUTES[url] || account.POST_ROUTES[url] || admin.POST_ROUTES[url] || push.POST_ROUTES[url]
-      : account.GET_ROUTES[url] || admin.GET_ROUTES[url] || push.GET_ROUTES[url];
+      ? ROUTES[url] || account.POST_ROUTES[url] || admin.POST_ROUTES[url] || push.POST_ROUTES[url] || payments.POST_ROUTES[url]
+      : account.GET_ROUTES[url] || admin.GET_ROUTES[url] || push.GET_ROUTES[url] || payments.GET_ROUTES[url];
   if (route) {
     runRoute(route, req, res);
     return;

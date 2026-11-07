@@ -69,6 +69,20 @@ const ready = (async () => {
         sent_day TEXT NOT NULL DEFAULT '',
         created_at INTEGER NOT NULL
       )`,
+      `CREATE TABLE IF NOT EXISTS payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        plan TEXT NOT NULL,
+        months INTEGER NOT NULL,
+        days INTEGER NOT NULL,
+        amount INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        file_mime TEXT NOT NULL,
+        file_data TEXT NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        decided_at INTEGER
+      )`,
       `CREATE TABLE IF NOT EXISTS passwords (
         user_id TEXT PRIMARY KEY,
         hash TEXT NOT NULL,
@@ -431,7 +445,91 @@ async function countPushSubs() {
   return Number(r.rows[0].n);
 }
 
+// ---------- To'lovlar (karta orqali o'tkazma va chek) ----------
+
+const rowToPayment = (x) =>
+  x && {
+    id: Number(x.id),
+    userId: String(x.user_id),
+    plan: String(x.plan),
+    months: Number(x.months),
+    days: Number(x.days),
+    amount: Number(x.amount),
+    status: String(x.status),
+    fileMime: String(x.file_mime),
+    note: String(x.note || ''),
+    createdAt: Number(x.created_at),
+    decidedAt: x.decided_at == null ? null : Number(x.decided_at),
+    userName: x.first_name == null ? '' : [x.first_name, x.last_name].filter(Boolean).join(' '),
+  };
+
+async function createPayment({ userId, plan, months, days, amount, fileMime, fileData }) {
+  const r = await client.execute({
+    sql: `INSERT INTO payments (user_id, plan, months, days, amount, file_mime, file_data, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+    args: [userId, plan, months, days, amount, fileMime, fileData, Date.now()],
+  });
+  return Number(r.rows[0].id);
+}
+
+// Ro'yxat (chek faylisiz). status yoki userId bo'yicha.
+async function listPayments({ status = '', userId = '', limit = 100 } = {}) {
+  const r = await client.execute({
+    sql: `SELECT p.id, p.user_id, p.plan, p.months, p.days, p.amount, p.status, p.file_mime, p.note, p.created_at, p.decided_at,
+                 u.first_name, u.last_name
+          FROM payments p LEFT JOIN users u ON u.id = p.user_id
+          WHERE (? = '' OR p.status = ?) AND (? = '' OR p.user_id = ?)
+          ORDER BY p.created_at DESC LIMIT ?`,
+    args: [status, status, userId, userId, limit],
+  });
+  return r.rows.map(rowToPayment);
+}
+
+async function getPaymentFile(id) {
+  const r = await client.execute({ sql: 'SELECT file_mime, file_data FROM payments WHERE id = ?', args: [id] });
+  const x = r.rows[0];
+  return x ? { mime: String(x.file_mime), data: Buffer.from(String(x.file_data), 'base64') } : null;
+}
+
+async function getPayment(id) {
+  const r = await client.execute({
+    sql: `SELECT p.id, p.user_id, p.plan, p.months, p.days, p.amount, p.status, p.file_mime, p.note, p.created_at, p.decided_at,
+                 u.first_name, u.last_name FROM payments p LEFT JOIN users u ON u.id = p.user_id WHERE p.id = ?`,
+    args: [id],
+  });
+  return rowToPayment(r.rows[0]);
+}
+
+// Faqat kutilayotgan to'lovni o'zgartiradi (ikki marta tasdiqlanmasligi uchun).
+async function decidePayment(id, status, note = '') {
+  const r = await client.execute({
+    sql: "UPDATE payments SET status = ?, note = ?, decided_at = ? WHERE id = ? AND status = 'pending' RETURNING id",
+    args: [status, note, Date.now(), id],
+  });
+  return r.rows.length > 0;
+}
+
+async function countPayments(status, userId = '') {
+  const r = await client.execute({
+    sql: "SELECT COUNT(*) AS n FROM payments WHERE status = ? AND (? = '' OR user_id = ?)",
+    args: [status, userId, userId],
+  });
+  return Number(r.rows[0].n);
+}
+
+async function countPaymentsSince(userId, since) {
+  const r = await client.execute({ sql: 'SELECT COUNT(*) AS n FROM payments WHERE user_id = ? AND created_at >= ?', args: [userId, since] });
+  return Number(r.rows[0].n);
+}
+
 module.exports = {
+  createPayment,
+  listPayments,
+  getPaymentFile,
+  getPayment,
+  decidePayment,
+  countPayments,
+  countPaymentsSince,
   savePushSub,
   getPushSub,
   listPushSubs,

@@ -627,6 +627,7 @@
         <li>♾️ Cheksiz o'yinlar, lug'at, hikoyalar va imtihon sinovlari</li>
         <li>⏱️ 20 va 30 daqiqalik uzun darslar</li>
       </ul>
+      <ul class="pay-status" id="payStatus" hidden></ul>
       <p class="premium-buy" id="premiumBuy"></p>
     </section>
 
@@ -768,6 +769,34 @@
       <div class="end-actions">
         <button type="button" class="primary" id="limitPremium">⭐ Tariflar</button>
         <button type="submit" class="secondary">Keyinroq</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="sheet pay-sheet" id="payDialog">
+    <form id="payForm" novalidate>
+      <h2>💳 To'lov</h2>
+      <p class="pay-summary" id="paySummary"></p>
+      <div class="pay-card">
+        <span class="pay-bank" id="payBank"></span>
+        <button type="button" class="pay-number" id="payNumber" title="Nusxalash"></button>
+        <span class="pay-holder" id="payHolder"></span>
+        <span class="pay-copy-hint">Raqamni bosing — nusxalanadi</span>
+      </div>
+      <ol class="pay-steps">
+        <li>Shu kartaga <b id="payAmount"></b> o'tkazing (Click, Payme yoki bank ilovasi orqali).</li>
+        <li>To'lov chekining rasmini (skrinshot) yoki PDF faylini yuklang.</li>
+        <li>Chek tekshirilgach, obuna akkauntingizga o'zi yoqiladi.</li>
+      </ol>
+      <label class="pay-file" id="payFileLabel">
+        <input type="file" id="payFile" accept="image/*,application/pdf" hidden>
+        <span id="payFileText">📎 Chekni tanlash (rasm yoki PDF)</span>
+      </label>
+      <img class="pay-preview" id="payPreview" alt="" hidden>
+      <p class="form-error" id="payError" role="alert" hidden></p>
+      <div class="end-actions">
+        <button type="submit" class="primary" id="paySubmit" disabled>Chekni yuborish</button>
+        <button type="button" class="secondary" id="payCancel">Bekor qilish</button>
       </div>
     </form>
   </dialog>

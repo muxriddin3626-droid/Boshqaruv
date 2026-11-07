@@ -328,11 +328,18 @@ sinovlari cheksiz; farqi — kunlik ovozli dars daqiqalari. Daqiqalar serverda h
 to'xtaydi va «ertaga davom eting yoki kattaroq tarifga o'ting» oynasi chiqadi.
 Bepul rejada: kuniga 2 ta 10 daqiqalik dars (sozlanadi).
 
-Sotish: foydalanuvchi akkauntga kirib, akkaunt sahifasida tarif va muddatni tanlab
-«Tanlash»ni bosadi — `PREMIUM_CONTACT` (Telegram @username) ga tayyor xabar bilan o'tadi
-(xabarda uning ismi va ID'si bor). To'lovni olgach: admin panel → Foydalanuvchilar →
-uni ID, ism yoki telefon bo'yicha toping → tarifni tanlab «+1 oy / +3 oy / +1 yil» bosing.
-Obuna darhol yoqiladi. Payme/Click bilan avtomatik to'lov uchun merchant shartnomasi kerak.
+**Karta orqali to'lov (chek bilan):** admin panel → Sozlamalar → «To'lov kartasi»ga karta
+raqami, egasi va bankni yozing. Foydalanuvchi akkauntga kirib, tarif va muddatni tanlaydi →
+karta raqami va aniq summa chiqadi (raqamni bosib nusxalaydi) → pulni o'tkazib, chek
+rasmini (skrinshot) yoki PDF ni yuklaydi. Chek admin panel → «💳 To'lovlar»ga tushadi
+(tabda yangi cheklar soni ko'rinadi): chekni ko'rib, «✅ Tasdiqlash» bosilsa obuna o'zi
+yoqiladi; «❌ Rad etish» — sabab yoziladi va foydalanuvchiga ko'rinadi. Foydalanuvchi o'z
+to'lovlari holatini (tekshirilmoqda / tasdiqlandi / rad etildi) akkaunt sahifasida ko'radi.
+Fayl turi mazmunidan tekshiriladi (JPG, PNG, WEBP, PDF; 4 MB gacha), rasmlar yuklashdan oldin
+kichraytiriladi; chekni faqat admin ko'ra oladi. Bir vaqtda 3 tagacha kutilayotgan chek.
+
+Karta raqami yozilmagan bo'lsa — eski usul: «Tanlash» `PREMIUM_CONTACT` Telegram'iga tayyor
+xabar bilan o'tadi, obunani admin foydalanuvchi oynasidan qo'lda yoqadi.
 
 ## Xarajat
 

@@ -248,4 +248,4 @@ const POST_ROUTES = {
   '/api/admin/settings': handleSettings,
 };
 
-module.exports = { GET_ROUTES, POST_ROUTES };
+module.exports = { GET_ROUTES, POST_ROUTES, guard };

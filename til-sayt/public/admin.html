@@ -19,6 +19,7 @@
     <nav class="admin-tabs" id="tabs" hidden>
       <button type="button" class="tab active" data-tab="stats">📊 Statistika</button>
       <button type="button" class="tab" data-tab="users">👥 Foydalanuvchilar</button>
+      <button type="button" class="tab" data-tab="payments">💳 To'lovlar <span class="tab-badge" id="payBadge" hidden>0</span></button>
       <button type="button" class="tab" data-tab="settings">⚙️ Sozlamalar</button>
     </nav>
     <button type="button" class="link-btn" id="logoutBtn" hidden>Chiqish</button>
@@ -60,6 +61,17 @@
   </main>
 
   <!-- Foydalanuvchilar -->
+  <main class="admin-main" id="paymentsView" hidden>
+    <div class="chips pay-filter" id="payFilter">
+      <button type="button" class="chip selected" data-status="pending">⏳ Kutilmoqda</button>
+      <button type="button" class="chip" data-status="approved">✅ Tasdiqlangan</button>
+      <button type="button" class="chip" data-status="rejected">❌ Rad etilgan</button>
+      <button type="button" class="chip" data-status="">Hammasi</button>
+    </div>
+    <p class="hint-left" id="payNote"></p>
+    <div class="pay-grid" id="payList"></div>
+  </main>
+
   <main class="admin-main" id="usersView" hidden>
     <form class="search-row" id="searchForm">
       <input type="search" id="searchInput" placeholder="Ism, ID, telefon yoki taklif kodi bo'yicha qidirish">
@@ -100,6 +112,14 @@
 
       <h2>Tarif narxlari (so'm)</h2>
       <div class="prices-grid" id="pricesGrid"></div>
+
+      <h2>💳 To'lov kartasi</h2>
+      <p class="hint-left">Foydalanuvchi shu kartaga pul o'tkazib, chekni yuklaydi. Karta raqami bo'sh bo'lsa — eski usul (Telegram orqali yozish) ishlaydi.</p>
+      <div class="field-row">
+        <label>Karta raqami <input type="text" id="setCardNumber" maxlength="40" placeholder="8600 1234 5678 9012" inputmode="numeric"></label>
+        <label>Karta egasi <input type="text" id="setCardHolder" maxlength="80" placeholder="ISM FAMILIYA"></label>
+        <label>Bank / to'lov tizimi <input type="text" id="setCardBank" maxlength="80" placeholder="Uzcard · Kapitalbank"></label>
+      </div>
 
       <h2>Sotish va takliflar</h2>
       <div class="field-row">

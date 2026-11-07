@@ -247,10 +247,13 @@ window.AccountUI = (() => {
       }
     }
     renderPlans();
-    $('premiumBuy').textContent = config.premiumContact
-      ? `To'lov qilgach, obuna akkauntingizga yoqiladi. Savollar bo'yicha: ${config.premiumContact}`
-      : '';
-    $('premiumBuy').hidden = !config.premiumContact;
+    const help = config.premiumContact ? ` Savollar bo'yicha: ${config.premiumContact}` : '';
+    $('premiumBuy').textContent = config.payCard
+      ? `Tarifni tanlang → kartaga o'tkazing → chekni yuklang. Tekshirilgach, obuna o'zi yoqiladi.${help}`
+      : config.premiumContact
+        ? `To'lov qilgach, obuna akkauntingizga yoqiladi.${help}`
+        : '';
+    $('premiumBuy').hidden = !$('premiumBuy').textContent;
   }
 
   // ---------- Tariflar ----------
@@ -271,6 +274,7 @@ window.AccountUI = (() => {
       return;
     }
     const price = priceOf(plan.id, per.months);
+    if (config.payCard) return openPay(plan, per, price);
     const text = `Salom! Til Ustoz: ${plan.name} tarifi (kuniga ${plan.minutes} daqiqa), ${per.label} — ${window.PLANS.fmt(price)}. Akkaunt: ${me.user.name} (ID: ${me.user.id})`;
     const c = String(config.premiumContact || '').trim();
     const tg = /^@?([A-Za-z0-9_]{5,32})$/.exec(c) || /t\.me\/([A-Za-z0-9_]{5,32})/.exec(c);
@@ -281,6 +285,136 @@ window.AccountUI = (() => {
     } else {
       window.Practice.toast("Sayt egasi hali to'lov kontaktini sozlamagan.", 4000);
     }
+  }
+
+  // ---------- Karta orqali to'lov va chek ----------
+
+  const PAY_STATUS = { pending: '⏳ Tekshirilmoqda', approved: '✅ Tasdiqlandi', rejected: '❌ Rad etildi' };
+  let pay = null; // { plan, per, price, file }
+
+  function payError(text) {
+    $('payError').textContent = text || '';
+    $('payError').hidden = !text;
+  }
+
+  function openPay(plan, per, price) {
+    pay = { plan, per, price, file: null };
+    const c = config.payCard;
+    $('paySummary').textContent = `${plan.name} · ${plan.title} — kuniga ${plan.minutes >= 60 ? `${plan.minutes / 60} soat` : `${plan.minutes} daqiqa`}, ${per.label}`;
+    $('payAmount').textContent = window.PLANS.fmt(price);
+    $('payBank').textContent = c.bank || 'Karta';
+    $('payNumber').textContent = String(c.number).replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ');
+    $('payHolder').textContent = c.holder || '';
+    $('payFile').value = '';
+    $('payFileText').textContent = '📎 Chekni tanlash (rasm yoki PDF)';
+    $('payPreview').hidden = true;
+    $('paySubmit').disabled = true;
+    payError('');
+    const d = $('payDialog');
+    if (d.showModal && !d.open) d.showModal();
+  }
+
+  // Katta rasmni yuborishdan oldin kichraytiramiz (chek o'qilishi uchun 1800px yetarli).
+  function compressImage(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const scale = Math.min(1, 1800 / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => reject(new Error("Rasmni o'qib bo'lmadi."));
+      img.src = url;
+    });
+  }
+
+  const readAsDataUrl = (file) =>
+    new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(new Error("Faylni o'qib bo'lmadi."));
+      r.readAsDataURL(file);
+    });
+
+  $('payFile').addEventListener('change', async () => {
+    const file = $('payFile').files[0];
+    payError('');
+    if (!file || !pay) return;
+    try {
+      if (file.type === 'application/pdf') {
+        if (file.size > 4 * 1024 * 1024) throw new Error('PDF juda katta (4 MB gacha).');
+        pay.file = await readAsDataUrl(file);
+        $('payPreview').hidden = true;
+        $('payFileText').textContent = `📄 ${file.name}`;
+      } else if (file.type.startsWith('image/')) {
+        pay.file = await compressImage(file);
+        $('payPreview').src = pay.file;
+        $('payPreview').hidden = false;
+        $('payFileText').textContent = '🔄 Boshqa rasm tanlash';
+      } else {
+        throw new Error('Faqat rasm yoki PDF yuklang.');
+      }
+      $('paySubmit').disabled = false;
+    } catch (err) {
+      pay.file = null;
+      $('paySubmit').disabled = true;
+      payError(err.message);
+    }
+  });
+
+  $('payNumber').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(String(config.payCard.number).replace(/\D/g, ''));
+      window.Practice.toast('📋 Karta raqami nusxalandi');
+    } catch {}
+  });
+
+  $('payCancel').addEventListener('click', () => $('payDialog').close());
+
+  $('payForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!pay || !pay.file) return;
+    const btn = $('paySubmit');
+    btn.disabled = true;
+    btn.textContent = '⏳ Yuborilmoqda...';
+    try {
+      await App.postJson('/api/payments', { plan: pay.plan.id, months: pay.per.months, file: pay.file });
+      $('payDialog').close();
+      window.Practice.toast("✅ Chek yuborildi! Tekshirilgach, obuna o'zi yoqiladi.", 4500);
+      loadPayments();
+    } catch (err) {
+      payError(err.message);
+      btn.disabled = false;
+    } finally {
+      btn.textContent = 'Chekni yuborish';
+    }
+  });
+
+  async function loadPayments() {
+    const box = $('payStatus');
+    let list = [];
+    try {
+      if (me.user) list = (await (await fetch('/api/payments/mine')).json()).payments || [];
+    } catch {}
+    box.textContent = '';
+    for (const p of list.slice(0, 3)) {
+      const li = document.createElement('li');
+      li.className = `pay-${p.status}`;
+      const head = document.createElement('b');
+      head.textContent = PAY_STATUS[p.status] || p.status;
+      const info = document.createElement('span');
+      const plan = p.plan ? p.plan.name : '';
+      const period = (window.PLANS.PERIODS.find((x) => x.months === p.months) || {}).label || '';
+      info.textContent = `${plan}, ${period} · ${window.PLANS.fmt(p.amount)} · ${fmtDate(p.createdAt)}${p.status === 'rejected' && p.note ? ` — ${p.note}` : ''}`;
+      li.append(head, info);
+      box.appendChild(li);
+    }
+    box.hidden = !list.length;
   }
 
   function renderPlans() {
@@ -386,7 +520,7 @@ window.AccountUI = (() => {
   });
 
   function open() {
-    refresh();
+    refresh().then(loadPayments);
     renderMemory();
     App.show('account');
   }
