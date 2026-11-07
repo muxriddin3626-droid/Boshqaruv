@@ -1,0 +1,22 @@
+# Render Blueprint — repo ILDIZIDA bo'lishi shart (Render shu yerdan o'qiydi).
+# Masofadan boshqarish backendini (signaling server) bepul ishga tushiradi.
+#
+# Deploy: render.com -> New -> Blueprint -> shu reponi tanlang -> Apply.
+#
+# Eslatma: PORT ataylab yozilmagan — Render uni o'zi beradi va server
+# process.env.PORT'ni o'qiydi. DATABASE_URL yo'q, shuning uchun server
+# xotira (in-memory) rejimida ishlaydi — sinash uchun yetarli (qayta ishga
+# tushganda ma'lumot o'chadi; doimiy saqlash kerak bo'lsa Postgres qo'shamiz).
+services:
+  - type: web
+    name: remote-control-backend
+    runtime: node
+    plan: free
+    rootDir: remote-control-project/backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: STUN_URL
+        value: stun:stun.l.google.com:19302
