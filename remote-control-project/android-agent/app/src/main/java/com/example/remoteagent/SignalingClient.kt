@@ -92,3 +92,13 @@ object AuthStore {
     var token: String? = null
     var deviceId: String? = null
 }
+
+/**
+ * Faol SignalingClient'ga umumiy kirish nuqtasi. MainActivity bitta WS ulanishini
+ * yaratadi va bu yerga qo'yadi; ScreenCaptureService offer/ICE yuborish uchun shuni
+ * ishlatadi (ikkita alohida WS ulanish yaratmaslik uchun).
+ */
+object SignalingHub {
+    @Volatile
+    var client: SignalingClient? = null
+}

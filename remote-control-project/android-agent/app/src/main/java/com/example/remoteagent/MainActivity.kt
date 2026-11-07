@@ -68,6 +68,9 @@ class MainActivity : AppCompatActivity() {
             },
             onMessage = { json -> routeIncomingMessage(json) }
         )
+        // MUHIM: serverga ulanamiz - aks holda pairing so'rovi hech qachon kelmaydi.
+        SignalingHub.client = signalingClient
+        signalingClient.connect()
     }
 
     /**
@@ -79,9 +82,19 @@ class MainActivity : AppCompatActivity() {
      * Accessibility xizmati yoqilganligi ham tekshiriladi.
      */
     private fun routeIncomingMessage(json: org.json.JSONObject) {
-        if (json.optString("type") == "input-command") {
-            val payload = json.optJSONObject("payload") ?: return
-            RemoteInputAccessibilityService.instance?.handleCommand(payload)
+        when (json.optString("type")) {
+            "input-command" -> {
+                val payload = json.optJSONObject("payload") ?: return
+                RemoteInputAccessibilityService.instance?.handleCommand(payload)
+            }
+            // Controller WebRTC "answer" va ICE'ni ekran uzatuvchi service'ga beramiz
+            "answer" -> {
+                val sdp = json.optString("sdp")
+                if (sdp.isNotEmpty()) ScreenCaptureService.instance?.onRemoteAnswer(sdp)
+            }
+            "ice-candidate" -> {
+                ScreenCaptureService.instance?.onRemoteIce(json)
+            }
         }
     }
 

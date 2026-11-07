@@ -58,15 +58,15 @@ class MainActivity : AppCompatActivity() {
                     if (approved) {
                         Toast.makeText(this, "Ruxsat berildi, ulanmoqda...", Toast.LENGTH_SHORT).show()
                         statusDot.setBackgroundResource(R.drawable.dot_live)
-                        statusLabel.text = "Ulangan"
-                        initPeerConnectionAndCreateOffer()
+                        statusLabel.text = "Ulangan (video kutilmoqda...)"
+                        initPeerConnection()
                     } else {
                         statusLabel.text = "Rad etildi"
                         Toast.makeText(this, "Boshqa tomon ulanishni rad etdi", Toast.LENGTH_LONG).show()
                     }
                 }
             },
-            onRemoteSdp = { sdpJson -> handleRemoteAnswer(sdpJson) },
+            onRemoteSdp = { sdpJson -> handleRemoteOffer(sdpJson) },
             onRemoteIceCandidate = { candidateJson -> handleRemoteIceCandidate(candidateJson) }
         )
         signalingClient.connect()
@@ -189,7 +189,8 @@ class MainActivity : AppCompatActivity() {
         signalingClient.sendInputCommand(sid, JSONObject().apply { put("action", action) })
     }
 
-    private fun initPeerConnectionAndCreateOffer() {
+    /** PeerConnection'ni tayyorlaydi (faqat qabul qiluvchi). Offer kelishini kutadi. */
+    private fun initPeerConnection() {
         PeerConnectionFactory.initialize(
             PeerConnectionFactory.InitializationOptions.builder(applicationContext).createInitializationOptions()
         )
@@ -201,41 +202,53 @@ class MainActivity : AppCompatActivity() {
             .createPeerConnectionFactory()
 
         val rtcConfig = PeerConnection.RTCConfiguration(Config.iceServers())
+        rtcConfig.sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : PeerConnection.Observer {
             override fun onIceCandidate(candidate: IceCandidate) {
                 val sid = sessionId ?: return
                 signalingClient.sendIceCandidate(sid, candidate)
             }
-            override fun onAddStream(stream: MediaStream) {
-                runOnUiThread {
-                    stream.videoTracks.firstOrNull()?.addSink(remoteScreenView)
+            // Agent video track'ini qabul qilib, ekranга chizamiz (Unified Plan)
+            override fun onAddTrack(receiver: RtpReceiver?, streams: Array<out MediaStream>?) {
+                val track = receiver?.track()
+                if (track is VideoTrack) {
+                    runOnUiThread { track.addSink(remoteScreenView) }
                 }
+            }
+            override fun onAddStream(stream: MediaStream) {
+                runOnUiThread { stream.videoTracks.firstOrNull()?.addSink(remoteScreenView) }
             }
             override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
             override fun onSignalingChange(newState: PeerConnection.SignalingState?) {}
-            override fun onIceConnectionChange(newState: PeerConnection.IceConnectionState?) {}
+            override fun onIceConnectionChange(newState: PeerConnection.IceConnectionState?) {
+                if (newState == PeerConnection.IceConnectionState.CONNECTED) {
+                    runOnUiThread { statusLabel.text = "Jonli efir" }
+                }
+            }
             override fun onIceConnectionReceivingChange(receiving: Boolean) {}
             override fun onIceGatheringChange(newState: PeerConnection.IceGatheringState?) {}
             override fun onRemoveStream(stream: MediaStream?) {}
             override fun onDataChannel(channel: DataChannel?) {}
             override fun onRenegotiationNeeded() {}
-            override fun onAddTrack(receiver: RtpReceiver?, streams: Array<out MediaStream>?) {}
         })
-        // Agent video yuboradi, Controller faqat qabul qiladi (recvonly)
-        peerConnection?.addTransceiver(
-            MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO,
-            RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY)
-        )
     }
 
-    private fun handleRemoteAnswer(sdpJson: JSONObject) {
-        val sdp = SessionDescription(SessionDescription.Type.ANSWER, sdpJson.getString("sdp"))
-        peerConnection?.setRemoteDescription(object : SdpObserver {
-            override fun onSetSuccess() {}
-            override fun onCreateSuccess(p0: SessionDescription?) {}
-            override fun onCreateFailure(p0: String?) {}
-            override fun onSetFailure(p0: String?) {}
-        }, sdp)
+    /** Agent'dan kelgan "offer" - setRemoteDescription -> createAnswer -> yuborish. */
+    private fun handleRemoteOffer(sdpJson: JSONObject) {
+        val pc = peerConnection ?: return
+        val sid = sessionId ?: return
+        val offer = SessionDescription(SessionDescription.Type.OFFER, sdpJson.getString("sdp"))
+        pc.setRemoteDescription(object : SimpleSdpObserver() {
+            override fun onSetSuccess() {
+                pc.createAnswer(object : SimpleSdpObserver() {
+                    override fun onCreateSuccess(p0: SessionDescription?) {
+                        val desc = p0 ?: return
+                        pc.setLocalDescription(SimpleSdpObserver(), desc)
+                        signalingClient.sendAnswer(sid, desc.description)
+                    }
+                }, MediaConstraints())
+            }
+        }, offer)
     }
 
     private fun handleRemoteIceCandidate(json: JSONObject) {
@@ -253,4 +266,12 @@ class MainActivity : AppCompatActivity() {
         remoteScreenView.release()
         signalingClient.close()
     }
+}
+
+/** Barcha metodlari bo'sh standart SdpObserver - faqat kerakligini qayta yozamiz. */
+open class SimpleSdpObserver : SdpObserver {
+    override fun onCreateSuccess(p0: SessionDescription?) {}
+    override fun onSetSuccess() {}
+    override fun onCreateFailure(p0: String?) {}
+    override fun onSetFailure(p0: String?) {}
 }

@@ -23,7 +23,8 @@ class SignalingClient(
                 val json = JSONObject(text)
                 when (json.optString("type")) {
                     "pairing-result" -> onPairingResult(json.optBoolean("approved", false))
-                    "answer" -> onRemoteSdp(json)
+                    // Agent "offer" tomoni; controller javob (answer) qaytaradi
+                    "offer" -> onRemoteSdp(json)
                     "ice-candidate" -> onRemoteIceCandidate(json)
                 }
             }
@@ -37,6 +38,16 @@ class SignalingClient(
             put("candidate", candidate.sdp)
             put("sdpMid", candidate.sdpMid)
             put("sdpMLineIndex", candidate.sdpMLineIndex)
+        }
+        ws?.send(msg.toString())
+    }
+
+    /** Agent "offer"iga javoban "answer" yuboradi. */
+    fun sendAnswer(sessionId: String, sdp: String) {
+        val msg = JSONObject().apply {
+            put("type", "answer")
+            put("sessionId", sessionId)
+            put("sdp", sdp)
         }
         ws?.send(msg.toString())
     }
