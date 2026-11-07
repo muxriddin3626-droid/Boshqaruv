@@ -1,6 +1,8 @@
 package com.example.remoteagent
 
 import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.IOException
 
@@ -37,7 +39,3 @@ object ApiClient {
         })
     }
 }
-
-// Kotlin OkHttp extension'lari uchun kerakli import'lar (ba'zi versiyalarda kerak bo'ladi)
-private fun String.toMediaType() = okhttp3.MediaType.parse(this)!!
-private fun String.toRequestBody(mediaType: okhttp3.MediaType) = RequestBody.create(mediaType, this)

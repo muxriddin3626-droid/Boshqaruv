@@ -1,12 +1,14 @@
 package com.example.remotecontroller
 
 import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.IOException
 
 object AuthApi {
     private val client = OkHttpClient()
-    private val JSON = MediaType.parse("application/json; charset=utf-8")!!
+    private val JSON = "application/json; charset=utf-8".toMediaType()
 
     fun register(email: String, password: String, callback: (token: String?, error: String?) -> Unit) =
         authCall("/auth/register", email, password, callback)
@@ -22,7 +24,7 @@ object AuthApi {
 
         val request = Request.Builder()
             .url("${Config.API_BASE_URL}$path")
-            .post(RequestBody.create(JSON, body))
+            .post(body.toRequestBody(JSON))
             .build()
 
         client.newCall(request).enqueue(object : Callback {
@@ -51,7 +53,7 @@ object AuthApi {
         val request = Request.Builder()
             .url("${Config.API_BASE_URL}/devices/register")
             .addHeader("Authorization", "Bearer ${AuthStore.token}")
-            .post(RequestBody.create(JSON, body))
+            .post(body.toRequestBody(JSON))
             .build()
 
         client.newCall(request).enqueue(object : Callback {

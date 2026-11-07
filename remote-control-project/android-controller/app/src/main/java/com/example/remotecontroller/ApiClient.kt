@@ -1,12 +1,14 @@
 package com.example.remotecontroller
 
 import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.IOException
 
 object ApiClient {
     private val client = OkHttpClient()
-    private val JSON = MediaType.parse("application/json; charset=utf-8")!!
+    private val JSON = "application/json; charset=utf-8".toMediaType()
 
     fun claimPairingCode(code: String, callback: (sessionId: String?, error: String?) -> Unit) {
         val body = JSONObject().apply {
@@ -17,7 +19,7 @@ object ApiClient {
         val request = Request.Builder()
             .url("${Config.API_BASE_URL}/pair/claim")
             .addHeader("Authorization", "Bearer ${AuthStore.token}")
-            .post(RequestBody.create(JSON, body))
+            .post(body.toRequestBody(JSON))
             .build()
 
         client.newCall(request).enqueue(object : Callback {
