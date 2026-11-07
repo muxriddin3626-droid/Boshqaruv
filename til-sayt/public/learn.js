@@ -137,10 +137,55 @@ window.Learn = (() => {
   const mistakes = (lang) => read(notesKey(lang), []);
 
   // Ovozli dars hisobotini saqlaydi: so'zlar daftarga, xatolar xatolar daftariga.
+  // ---------- O'quvchi haqidagi xotira (barcha tillar uchun umumiy) ----------
+
+  const LEARNER_KEY = 'tu-learner';
+  const MAX_FACTS = 20;
+  // pinned — o'quvchi o'zi qo'shganlari (hisobot ularni o'chira olmaydi), auto — darslardan.
+  const loadLearner = () => {
+    const d = read(LEARNER_KEY, {});
+    return { pinned: d.pinned || [], auto: d.auto || d.facts || [] };
+  };
+  const key = (f) => String(f).trim().toLowerCase();
+
+  function uniq(list, skip = new Set()) {
+    const seen = new Set(skip);
+    return (list || [])
+      .map((f) => String(f || '').trim().slice(0, 160))
+      .filter((f) => f && !seen.has(key(f)) && seen.add(key(f)));
+  }
+
+  function saveLearner(pinned, auto) {
+    const p = uniq(pinned).slice(0, MAX_FACTS);
+    const a = uniq(auto, new Set(p.map(key))).slice(0, Math.max(0, MAX_FACTS + 5 - p.length));
+    write(LEARNER_KEY, { pinned: p, auto: a, updated: Date.now() });
+  }
+
+  const facts = () => {
+    const d = loadLearner();
+    return [...d.pinned, ...d.auto];
+  };
+
+  // Hisobotdan kelgan yangilangan ro'yxat — faqat avtomatik qismini almashtiradi.
+  const setFacts = (list) => saveLearner(loadLearner().pinned, list);
+  const addFact = (text) => {
+    const d = loadLearner();
+    saveLearner([String(text || '').trim(), ...d.pinned], d.auto);
+  };
+  const removeFact = (i) => {
+    const d = loadLearner();
+    const target = key(facts()[i] || '');
+    saveLearner(d.pinned.filter((f) => key(f) !== target), d.auto.filter((f) => key(f) !== target));
+  };
+
   function recordReport(lang, report) {
     for (const w of report.words || []) addWord(lang, w.word, w.translation);
     addMistakes(lang, report.mistakes);
+    // Hisobot yangilangan to'liq ro'yxatni qaytaradi; bo'sh kelsa — eskisi qoladi.
+    if (Array.isArray(report.facts) && report.facts.length) setFacts(report.facts);
     const mem = read(memoryKey(lang), { lessons: 0 });
+    if (Array.isArray(report.topics) && report.topics.length) mem.topics = [...report.topics, ...(mem.topics || [])].slice(0, 10);
+    if (Array.isArray(report.weak)) mem.weak = report.weak.slice(0, 3);
     mem.lessons = (mem.lessons || 0) + 1;
     mem.lastSummary = report.summary || '';
     mem.lastLevel = report.level || '';
@@ -164,6 +209,9 @@ window.Learn = (() => {
         .slice(0, 6)
         .map((m) => (m.wrong ? `${m.wrong} → ${m.correct}` : m.correct)),
       words: weak,
+      facts: facts(),
+      topics: mem.topics || [],
+      weak: mem.weak || [],
     };
   }
 
@@ -319,6 +367,10 @@ window.Learn = (() => {
     addMistakes,
     mistakes,
     recordReport,
+    facts,
+    setFacts,
+    addFact,
+    removeFact,
     memory,
     addXp,
     setGoal,

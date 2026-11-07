@@ -29,8 +29,7 @@
 .login-panel { max-width: 420px; margin: 40px auto; }
 .login-panel h1 { font-size: 22px; margin: 0 0 14px; }
 #loginForm { display: flex; gap: 8px; }
-#loginForm input, .search-row input, .code-create input, .settings-form input, .settings-form textarea {
-  flex: 1;
+#loginForm input, .search-row input,   flex: 1;
   min-width: 0;
   padding: 10px 12px;
   border: 1px solid var(--border);
@@ -100,10 +99,6 @@
 .pager { display: flex; justify-content: space-between; }
 .pager button:disabled { opacity: 0.4; }
 
-.code-create { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
-.code-create label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); width: 110px; }
-.new-codes { margin-top: 12px; padding: 12px; border-radius: 12px; background: var(--bg); }
-.new-codes pre { margin: 6px 0 10px; font-size: 15px; }
 
 .settings-form { display: grid; gap: 10px; }
 .settings-form h2 { margin-top: 8px; }
@@ -129,4 +124,113 @@
 .prices-grid { display: grid; grid-template-columns: minmax(110px, auto) repeat(3, minmax(0, 1fr)); gap: 8px; align-items: center; margin-bottom: 8px; }
 .prices-grid b { font-size: 13px; }
 .prices-grid input { width: 100%; min-width: 0; }
-.code-create select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; }
+
+/* ============================================================
+   Yangi dizayn (theme.css bilan bir uslubda)
+   ============================================================ */
+
+.admin-top {
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 2px solid var(--border);
+}
+.admin-tag {
+  margin-left: -8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-tabs { gap: 6px; padding: 4px; border: 2px solid var(--border); border-radius: 18px; background: var(--surface); flex: none; }
+.tab { padding: 8px 14px; border-radius: 13px; font-weight: 700; transition: background 0.2s, color 0.2s, transform 0.12s; }
+.tab:hover { color: var(--text); }
+.tab.active { background: var(--text); color: var(--bg); box-shadow: 0 3px 0 color-mix(in srgb, var(--text) 55%, #000); }
+.admin-top .link-btn { margin-left: auto; }
+
+.admin-main { gap: 16px; padding: 20px 16px 40px; }
+.admin-main .panel { padding: 18px; border-radius: 22px; }
+.admin-main h2 { font-family: var(--display); font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+
+.login-panel { text-align: center; padding: 28px 22px !important; }
+.login-panel h1 { font-size: 24px; }
+#loginForm input, .search-row input,   border: 2px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#loginForm input:focus, .search-row input:focus,   outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* Ko'rsatkichlar — rangli 3D plitkalar */
+.kpis { gap: 12px; }
+.kpi {
+  position: relative;
+  overflow: hidden;
+  padding: 16px;
+  border: 2px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 5px 0 var(--edge), var(--shadow);
+}
+.kpi::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 5px;
+  background: var(--k, var(--accent));
+}
+.kpi:nth-child(6n + 1) { --k: var(--accent); }
+.kpi:nth-child(6n + 2) { --k: var(--teal); }
+.kpi:nth-child(6n + 3) { --k: var(--sun); }
+.kpi:nth-child(6n + 4) { --k: var(--plum); }
+.kpi:nth-child(6n + 5) { --k: var(--leaf); }
+.kpi:nth-child(6n + 6) { --k: #e0679b; }
+.kpi-label { font-weight: 600; }
+.kpi-value { font-family: var(--display); font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+.kpis.small .kpi-value { font-size: 20px; }
+
+/* Grafik va taqsimotlar */
+.chart .bar { fill: var(--accent); }
+.chart .grid { stroke: var(--border); stroke-dasharray: 3 4; }
+.chart-tip { background: var(--text); color: var(--bg); border-radius: 10px; font-weight: 700; }
+.dist-bar { height: 12px; border-radius: 999px; background: color-mix(in srgb, var(--text) 7%, transparent); }
+.dist-fill { border-radius: 999px; background: linear-gradient(90deg, var(--teal), var(--leaf)); }
+
+/* Jadvallar */
+.table-wrap { border: 2px solid var(--border); border-radius: 20px; box-shadow: 0 5px 0 var(--edge); }
+.admin-table th { background: var(--surface-2); color: var(--muted); }
+.admin-table tr.clickable { transition: background 0.15s; }
+.admin-table tr.clickable:hover { background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.pill-badge { padding: 3px 10px; font-weight: 600; border: 1px solid var(--border); }
+.pill-badge.pro { background: color-mix(in srgb, var(--sun) 28%, var(--surface)); border-color: color-mix(in srgb, var(--sun) 50%, var(--border)); }
+.pill-badge.free { background: color-mix(in srgb, var(--leaf) 16%, var(--surface)); border-color: color-mix(in srgb, var(--leaf) 35%, var(--border)); }
+.mono { font-size: 14px; letter-spacing: 0.04em; }
+
+
+.prices-grid input { text-align: right; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; }
+.prices-grid input::-webkit-inner-spin-button, .prices-grid input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.settings-form label.toggle { align-items: center; gap: 10px; }
+.settings-form label.toggle input { flex: none; accent-color: var(--accent); width: 20px; height: 20px; }
+
+.user-sheet { padding: 22px; }
+.user-sheet h2 { font-family: var(--display); }
+.user-lang, .user-premium { border-top: 2px dashed var(--border); }
+.new-password { color: var(--accent); }
+
+@media (max-width: 640px) {
+  .admin-tabs { width: 100%; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .admin-tag { margin-left: -10px; margin-right: auto; }
+  .prices-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .prices-grid .price-empty { display: none; }
+  .prices-grid .price-plan { grid-column: 1 / -1; margin-top: 6px; }
+  .prices-grid input { padding: 9px 8px !important; font-size: 14px; }
+}

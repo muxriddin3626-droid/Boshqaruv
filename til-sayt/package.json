@@ -5,8 +5,7 @@
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node src/server.js",
-    "codes": "node src/make-codes.js"
+    "start": "node src/server.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",

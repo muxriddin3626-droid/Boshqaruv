@@ -248,9 +248,9 @@ window.AccountUI = (() => {
     }
     renderPlans();
     $('premiumBuy').textContent = config.premiumContact
-      ? `To'lov qilgach, sizga obuna kodi yuboriladi — uni pastga kiriting. Savollar bo'yicha: ${config.premiumContact}`
-      : "Obuna kodi bo'lsa, pastga kiriting.";
-    $('codeForm').hidden = !loginOn();
+      ? `To'lov qilgach, obuna akkauntingizga yoqiladi. Savollar bo'yicha: ${config.premiumContact}`
+      : '';
+    $('premiumBuy').hidden = !config.premiumContact;
   }
 
   // ---------- Tariflar ----------
@@ -264,8 +264,14 @@ window.AccountUI = (() => {
 
   // Sotib olish: sayt egasining Telegram'iga tayyor xabar bilan.
   function buy(plan, per) {
+    // Obuna akkauntga yoqiladi — shuning uchun avval kirish kerak.
+    if (!me.user) {
+      window.Practice.toast("Avval akkauntga kiring — obuna shu akkauntga yoqiladi.", 4000);
+      $('loginPanel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     const price = priceOf(plan.id, per.months);
-    const text = `Salom! Til Ustoz: ${plan.name} tarifi (kuniga ${plan.minutes} daqiqa), ${per.label} — ${window.PLANS.fmt(price)}. ${me.user ? `ID: ${me.user.id}` : ''}`;
+    const text = `Salom! Til Ustoz: ${plan.name} tarifi (kuniga ${plan.minutes} daqiqa), ${per.label} — ${window.PLANS.fmt(price)}. Akkaunt: ${me.user.name} (ID: ${me.user.id})`;
     const c = String(config.premiumContact || '').trim();
     const tg = /^@?([A-Za-z0-9_]{5,32})$/.exec(c) || /t\.me\/([A-Za-z0-9_]{5,32})/.exec(c);
     if (tg) {
@@ -302,7 +308,7 @@ window.AccountUI = (() => {
       const price = priceOf(plan.id, per.months);
       const current = me.premium && me.plan && me.plan.id === plan.id;
       const card = document.createElement('div');
-      card.className = `plan-card${plan.popular ? ' popular' : ''}${current ? ' current' : ''}`;
+      card.className = `tariff-card${plan.popular ? ' popular' : ''}${current ? ' current' : ''}`;
       if (plan.popular) {
         const tag = document.createElement('span');
         tag.className = 'plan-tag';
@@ -333,8 +339,55 @@ window.AccountUI = (() => {
     }
   }
 
+  // ---------- Ustoz xotirasi ----------
+
+  function renderMemory() {
+    const list = $('memoryList');
+    list.textContent = '';
+    const facts = window.Learn.facts();
+    facts.forEach((f, i) => {
+      const li = document.createElement('li');
+      const text = document.createElement('span');
+      text.textContent = f;
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'memory-del';
+      del.setAttribute('aria-label', "O'chirish");
+      del.textContent = '✕';
+      del.addEventListener('click', () => {
+        window.Learn.removeFact(i);
+        renderMemory();
+      });
+      li.append(text, del);
+      list.appendChild(li);
+    });
+    if (!facts.length) {
+      const li = document.createElement('li');
+      li.className = 'memory-empty';
+      li.textContent = "Hozircha hech narsa yo'q. Ustoz bilan gaplashing — o'zingiz haqingizda gapirsangiz, u eslab qoladi.";
+      list.appendChild(li);
+    }
+    const mem = window.Learn.memory(App.lang() || 'ru');
+    const extra = [];
+    if (mem.weak && mem.weak.length) extra.push(`📌 Ustoz e'tibor beradigan joylar: ${mem.weak.join(', ')}`);
+    if (mem.topics && mem.topics.length) extra.push(`💬 Oxirgi mavzular: ${mem.topics.slice(0, 4).join('; ')}`);
+    $('memoryExtra').textContent = extra.join('\n');
+    $('memoryExtra').hidden = !extra.length;
+  }
+
+  $('memoryForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = $('memoryInput').value.trim();
+    if (!text) return;
+    window.Learn.addFact(text);
+    $('memoryInput').value = '';
+    renderMemory();
+    window.Practice.toast('🧠 Ustoz buni eslab qoldi');
+  });
+
   function open() {
     refresh();
+    renderMemory();
     App.show('account');
   }
 
@@ -372,20 +425,6 @@ window.AccountUI = (() => {
       await App.postJson('/api/rating/visibility', { show: e.target.checked });
     } catch (err) {
       window.Practice.toast(err.message);
-    }
-  });
-
-  $('codeForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const code = $('codeInput').value.trim();
-    if (!code) return;
-    try {
-      const r = await App.postJson('/api/premium/redeem', { code });
-      $('codeInput').value = '';
-      window.Practice.toast(`⭐ ${r.plan ? r.plan.name : 'Obuna'} faollashdi: +${r.days} kun!`, 3500);
-      refresh();
-    } catch (err) {
-      window.Practice.toast(err.message, 3000);
     }
   });
 

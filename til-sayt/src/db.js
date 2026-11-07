@@ -1,5 +1,5 @@
 // Ma'lumotlar bazasi: foydalanuvchilar, ularning o'rganish ma'lumotlari, kunlik limitlar,
-// Premium kodlari va do'stlar. Lokal faylga (test uchun) yoki Turso'ga ulanadi.
+// obunalar va do'stlar. Lokal faylga (test uchun) yoki Turso'ga ulanadi.
 const path = require('path');
 const { createClient } = require('@libsql/client');
 
@@ -80,7 +80,6 @@ const ready = (async () => {
   // Eski bazalarga yangi ustunlar (bor bo'lsa — xato e'tiborsiz qoldiriladi).
   for (const sql of [
     "ALTER TABLE users ADD COLUMN plan TEXT NOT NULL DEFAULT 'standard'",
-    "ALTER TABLE codes ADD COLUMN plan TEXT NOT NULL DEFAULT 'standard'",
   ]) {
     await client.execute(sql).catch(() => {});
   }
@@ -259,27 +258,6 @@ async function cleanupUsage(beforeDay) {
   await client.execute({ sql: 'DELETE FROM usage WHERE day < ?', args: [beforeDay] });
 }
 
-// ---------- Premium kodlari ----------
-
-async function createCodes(count, days, plan = 'standard') {
-  const codes = [];
-  for (let i = 0; i < count; i++) {
-    const code = `TU-${randomCode(4)}-${randomCode(4)}`;
-    await client.execute({ sql: 'INSERT INTO codes (code, days, created_at, plan) VALUES (?, ?, ?, ?)', args: [code, days, Date.now(), plan] });
-    codes.push(code);
-  }
-  return codes;
-}
-
-// Kodni ishlatadi. Muvaffaqiyatli bo'lsa { days, plan }, aks holda null qaytaradi.
-async function redeemCode(code, userId) {
-  const r = await client.execute({
-    sql: 'UPDATE codes SET used_by = ?, used_at = ? WHERE code = ? AND used_by IS NULL RETURNING days, plan',
-    args: [userId, Date.now(), code],
-  });
-  return r.rows[0] ? { days: Number(r.rows[0].days), plan: String(r.rows[0].plan || 'standard') } : null;
-}
-
 // ---------- Sozlamalar (admin panelidan o'zgartiriladi) ----------
 
 async function getSettings() {
@@ -322,8 +300,6 @@ async function adminCounts({ dayStart, weekStart }) {
     active7d: await q('SELECT COUNT(*) FROM user_state WHERE updated_at >= ?', [now - 7 * DAY]),
     premium: await q('SELECT COUNT(*) FROM users WHERE premium_until > ?', [now]),
     referred: await q('SELECT COUNT(*) FROM users WHERE referred_by IS NOT NULL'),
-    codesTotal: await q('SELECT COUNT(*) FROM codes'),
-    codesUsed: await q('SELECT COUNT(*) FROM codes WHERE used_by IS NOT NULL'),
     weekXp: await q('SELECT COALESCE(SUM(xp), 0) FROM weekly_xp WHERE week = ?', [weekStart]),
     // Kirish usullari: id "g:" — Google, "p:" — telefon, qolganlari — Telegram.
     google: await q("SELECT COUNT(*) FROM users WHERE id LIKE 'g:%'"),
@@ -391,23 +367,6 @@ async function listUsers({ q = '', offset = 0, limit = 30, week }) {
 
 async function setPremiumUntil(userId, until) {
   await client.execute({ sql: 'UPDATE users SET premium_until = ? WHERE id = ?', args: [until, userId] });
-}
-
-async function listCodes(limit = 100) {
-  const r = await client.execute({
-    sql: `SELECT c.*, u.first_name, u.last_name FROM codes c LEFT JOIN users u ON u.id = c.used_by
-          ORDER BY c.created_at DESC LIMIT ?`,
-    args: [limit],
-  });
-  return r.rows.map((x) => ({
-    code: String(x.code),
-    days: Number(x.days),
-    plan: String(x.plan || 'standard'),
-    createdAt: Number(x.created_at),
-    usedBy: x.used_by == null ? null : String(x.used_by),
-    usedByName: x.used_by == null ? '' : [x.first_name, x.last_name].filter(Boolean).join(' '),
-    usedAt: x.used_at == null ? null : Number(x.used_at),
-  }));
 }
 
 // ---------- Telefon raqam bilan kirish: parollar ----------
@@ -489,7 +448,6 @@ module.exports = {
   allStates,
   listUsers,
   setPremiumUntil,
-  listCodes,
   ready,
   getUser,
   getUserByRef,
@@ -506,6 +464,4 @@ module.exports = {
   getUsage,
   incrementUsage,
   cleanupUsage,
-  createCodes,
-  redeemCode,
 };

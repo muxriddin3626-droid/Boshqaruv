@@ -342,6 +342,10 @@ async function handleReport(req, res) {
   const scenarioNote =
     (scenario ? `\nBu rolli vaziyat edi: "${scenario.title}". Ustoz rolni o'ynadi: ${scenario.role}. O'quvchining maqsadi: ${scenario.goal}.` : '') +
     (reportSettings.topic === 'vocab' ? "\nBu LUG'AT DARSI edi: words ro'yxatiga darsda o'rgatilgan barcha yangi so'zlarni yoz (40 tagacha)." : '');
+  const known = strList(body.facts, 25, 160);
+  const factsNote = known.length
+    ? `\n\nO'quvchi haqida avval ma'lum bo'lganlar (facts ro'yxatida saqla):\n${known.map((f) => `- ${f}`).join('\n')}`
+    : "\n\nO'quvchi haqida avval hech narsa ma'lum emas.";
   const transcript = history
     .map((m) => (m.role === 'user' ? `O'quvchi: ${m.content}` : `Ustoz: ${assistantText(m.content)}`))
     .join('\n');
@@ -352,7 +356,7 @@ async function handleReport(req, res) {
       messages: [
         {
           role: 'user',
-          content: `O'rganilayotgan til: ${LANGUAGES[lang]}.${scenarioNote}\n\nDars yozuvi:\n<transcript>\n${transcript}\n</transcript>`,
+          content: `O'rganilayotgan til: ${LANGUAGES[lang]}.${scenarioNote}${factsNote}\n\nDars yozuvi:\n<transcript>\n${transcript}\n</transcript>`,
         },
       ],
       schema: REPORT_SCHEMA,
@@ -362,6 +366,9 @@ async function handleReport(req, res) {
       sendJson(res, 502, { error: 'Hisobot tayyorlab bo\'lmadi.' });
       return;
     }
+    report.facts = strList(report.facts, 20, 160);
+    report.topics = strList(report.topics, 3, 80);
+    report.weak = strList(report.weak, 3, 80);
     sendJson(res, 200, report);
   } catch (err) {
     sendClaudeError(res, err);
@@ -458,10 +465,20 @@ function cleanProfile(raw) {
   };
 }
 
+const strList = (v, n, max) => (Array.isArray(v) ? v.map((x) => str(x, max)).filter(Boolean).slice(0, n) : []);
+
 function cleanMemory(raw) {
   const m = raw || {};
   const lessons = Number.isInteger(m.lessons) && m.lessons > 0 ? Math.min(m.lessons, 10000) : 0;
-  return { lessons, summary: str(m.summary, 400), level: str(m.level, 10), ...cleanFocus(m) };
+  return {
+    lessons,
+    summary: str(m.summary, 400),
+    level: str(m.level, 10),
+    facts: strList(m.facts, 25, 160),
+    topics: strList(m.topics, 10, 80),
+    weak: strList(m.weak, 5, 80),
+    ...cleanFocus(m),
+  };
 }
 
 function cleanFocus(raw) {

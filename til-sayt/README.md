@@ -44,6 +44,14 @@ kasbiy kurs). Anketani sozlamalardan qayta to'ldirish mumkin (`public/survey.js`
 
 ### Tez o'rganish uchun
 
+- 🧠 **Ustoz o'quvchini eslab qoladi** — har darsdan keyin o'quvchi o'zi haqida aytganlari
+  (ishi, oilasi, shahri, rejalari, qiziqishlari, yaqin voqealar, istaklari) xotiraga
+  yoziladi; keyingi darslarda ustoz misollarni uning hayotidan oladi, oldingi gaplarining
+  davomini so'raydi, gaplashilgan mavzularni qaytarmaydi va qiyin joylarini mashq qildiradi.
+  Akkaunt sahifasida «Ustoz siz haqingizda» — ko'rish, o'chirish, o'zi qo'shish (qo'lda
+  qo'shilganlar o'chmaydi). Kirgan foydalanuvchilarda bazaga sinxronlanadi; admin panelda
+  ham ko'rinadi. Parol, karta, hujjat raqami va manzil yozilmaydi.
+
 - 🎯 **Bugungi dars** — menyuning tepasida bitta tugma: har kuni 15-25 daqiqalik
   tayyor reja (daraja testi — bir marta, takrorlash, 10 ta yangi so'z, qoida yoki
   test o'yini, ustoz bilan suhbat; koreys tilida avval Hangul bosqichlari). Har qadam
@@ -142,10 +150,10 @@ Goethe-Institut (Toshkentda bor), shuningdek telc, ÖSD, TestDaF; rus tili — �
 - 🔐 **Telegram, Google yoki telefon raqam + parol orqali kirish** — parolsiz. Natijalar (so'zlar, streak, kurs,
   sertifikatlar, sozlamalar) bazaga sinxronlanadi va istalgan qurilmada ochiladi.
   Kirmasdan ham ishlatish mumkin — unda natijalar faqat shu brauzerda qoladi.
-- ⭐ **Kunlik bepul limit va Premium** — bepul: kuniga 2 ta ovozli dars, 6 ta
+- ⭐ **Kunlik bepul limit va obuna** — bepul: kuniga 2 ta ovozli dars, 6 ta
   o'yin/hikoya, 10 ta imtihon bo'limi (sozlanadi). Takrorlash va daftar doim
-  cheksiz. Premium — cheksiz. Premium **aktivatsiya kodlari** orqali beriladi:
-  foydalanuvchi sizga to'laydi (Payme, Click yoki karta), siz unga kod berasiz.
+  cheksiz. Obuna (Light/Standard/Pro) — foydalanuvchi sizga to'laydi, siz admin
+  panelida uning akkauntiga obunani yoqasiz (pastda «Obuna tariflari»).
 - 👥 **Do'stlar va reyting** — har foydalanuvchining taklif havolasi bor; do'st
   shu havola orqali kirsa, ikkalasi do'st bo'ladi va 3 kun Premium oladi.
   Haftalik XP reytingi: do'stlar orasida va umumiy (dushanba kuni yangilanadi).
@@ -291,14 +299,12 @@ Kirish ikki usulda:
 Bo'limlar:
 
 - 📊 **Statistika** — foydalanuvchilar, bugun/7 kunda yangilar va faollar, Premium,
-  taklif orqali kelganlar, kodlar, haftalik XP, oxirgi 14 kundagi ro'yxatdan
+  taklif orqali kelganlar, haftalik XP, oxirgi 14 kundagi ro'yxatdan
   o'tishlar grafigi, kirish usullari (Telegram/Google/telefon), bugungi darslar/o'yinlar/imtihonlar soni (mehmonlar bilan),
   anketa natijalari (maqsad, kasb, daraja, yosh, qiziqishlar).
 - 👥 **Foydalanuvchilar** — qidiruv (ism, ID, telefon, taklif kodi), oxirgi faollik,
   haftalik XP, kim nechta odam taklif qilgani; bosilsa — anketa, so'zlar, kurs,
   sertifikatlar, **Premium berish / olib qo'yish** va telefon akkauntlari uchun **yangi parol berish**.
-- 🎟️ **Kodlar** — Premium kodlar yaratish, ro'yxat (kim, qachon ishlatgan),
-  ishlatilmaganlarini bir bosishda nusxalash.
 - ⚙️ **Sozlamalar** — bepul limitlar (yoki butunlay o'chirish), narx, bog'lanish,
   taklif bonusi va **saytdagi e'lon** (menyuning tepasida hamma ko'radi). Serverni
   qayta ishga tushirmasdan darhol kuchga kiradi; `.env` dagi qiymatlar standart
@@ -307,7 +313,7 @@ Bo'limlar:
 Eslatma: anketa va o'rganish statistikasi faqat akkauntga kirgan
 foydalanuvchilar bo'yicha (kirmaganlarning ma'lumoti faqat ularning telefonida).
 
-## Obuna tariflari va kodlar
+## Obuna tariflari
 
 | Tarif | Kunlik ovozli dars | 1 oy | 3 oy | 1 yil |
 |---|---|---|---|---|
@@ -322,12 +328,11 @@ sinovlari cheksiz; farqi — kunlik ovozli dars daqiqalari. Daqiqalar serverda h
 to'xtaydi va «ertaga davom eting yoki kattaroq tarifga o'ting» oynasi chiqadi.
 Bepul rejada: kuniga 2 ta 10 daqiqalik dars (sozlanadi).
 
-Sotish: foydalanuvchi akkaunt sahifasida tarif va muddatni tanlab «Tanlash»ni bosadi —
-`PREMIUM_CONTACT` (Telegram @username) ga tayyor xabar bilan o'tadi. To'lovni olgach,
-admin panel → Kodlar: tarif va muddatni tanlab kod yaratasiz va unga yuborasiz (yoki
-foydalanuvchi oynasida tarifni tanlab, «+1 oy / +3 oy / +1 yil» bosasiz).
-Terminaldan: `npm run codes -- 10 30 standard` (soni, kun, tarif: light/standard/pro).
-Payme/Click bilan avtomatik to'lov uchun merchant shartnomasi kerak — keyin ulash mumkin.
+Sotish: foydalanuvchi akkauntga kirib, akkaunt sahifasida tarif va muddatni tanlab
+«Tanlash»ni bosadi — `PREMIUM_CONTACT` (Telegram @username) ga tayyor xabar bilan o'tadi
+(xabarda uning ismi va ID'si bor). To'lovni olgach: admin panel → Foydalanuvchilar →
+uni ID, ism yoki telefon bo'yicha toping → tarifni tanlab «+1 oy / +3 oy / +1 yil» bosing.
+Obuna darhol yoqiladi. Payme/Click bilan avtomatik to'lov uchun merchant shartnomasi kerak.
 
 ## Xarajat
 

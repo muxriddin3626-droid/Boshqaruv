@@ -110,10 +110,23 @@ function roleplayLines(scenario) {
 }
 
 function memoryLines(memory) {
+  const facts = (memory && memory.facts) || [];
+  const factLines = facts.length
+    ? [
+        "O'QUVCHI HAQIDA BILGANLARING (oldingi darslardan va o'zi aytganlaridan):\n" + facts.map((f) => `- ${f}`).join('\n'),
+        "Bulardan tabiiy foydalan — xuddi uni yaxshi taniydigan ustozdek: misol va savollarni uning hayotidan ol (ishi, oilasi, rejalari), oldin aytganlarining davomini so'ra («O'tgan safar ... degandingiz, qalay bo'ldi?»). Bir darsda hammasini emas, 1-2 tasini eslat. Agar o'quvchi yangi narsa aytsa, qiziqib so'ra.",
+      ]
+    : [];
   if (!memory || (!memory.lessons && !memory.mistakes.length && !memory.words.length)) {
-    return ["Bu o'quvchi bilan birinchi darsing."];
+    return ["Bu o'quvchi bilan birinchi ovozli darsing.", ...factLines];
   }
-  const lines = [`Bu o'quvchi bilan oldin ${memory.lessons} ta ovozli dars o'tgansan — sen uni eslaysan.`];
+  const lines = [`Bu o'quvchi bilan oldin ${memory.lessons} ta ovozli dars o'tgansan — sen uni eslaysan.`, ...factLines];
+  if (memory.topics && memory.topics.length) {
+    lines.push(`Oldingi darslarda gaplashilgan mavzular: ${memory.topics.join('; ')}. Bir xil mavzuni qaytarma — yangi tomonini och yoki davom ettir.`);
+  }
+  if (memory.weak && memory.weak.length) {
+    lines.push(`Unga qiyin bo'layotgan joylar: ${memory.weak.join(', ')}. Darsda shularni tabiiy mashq qildir — o'sha shakl kerak bo'ladigan savollar ber.`);
+  }
   if (memory.summary) lines.push(`O'tgan darsdan xulosa: ${memory.summary}`);
   if (memory.level) lines.push(`O'tgan safar taxminiy darajasi: ${memory.level}.`);
   if (memory.mistakes.length) {
@@ -226,7 +239,10 @@ O'ZBEK TILIDA (lotin yozuvida) qisqa hisobot tayyorla:
 - mistakes: o'quvchining eng muhim xatolari, ko'pi bilan 6 ta. wrong — o'quvchi aytgan variant, correct — to'g'ri variant, explanation — o'zbekcha bir gaplik izoh. Xato bo'lmasa, bo'sh ro'yxat.
 - words: darsda uchragan, o'quvchiga foydali yangi so'z yoki iboralar, ko'pi bilan 8 ta (agar bu lug'at darsi bo'lsa — darsda o'rgatilgan BARCHA yangi so'zlar, 40 tagacha), o'zbekcha tarjimasi bilan.
 - tip: keyingi dars uchun bitta aniq maslahat.
-- score: dars natijasi 0 dan 100 gacha butun son (topshiriq yoki maqsadga erishish, til sifati, ravonlik). Rolli vaziyat bo'lsa, asosan o'quvchi maqsadga qanchalik erishgani va qanchalik tushunarli gapirganiga qarab bahola.`;
+- score: dars natijasi 0 dan 100 gacha butun son (topshiriq yoki maqsadga erishish, til sifati, ravonlik). Rolli vaziyat bo'lsa, asosan o'quvchi maqsadga qanchalik erishgani va qanchalik tushunarli gapirganiga qarab bahola.
+- facts: O'QUVCHI HAQIDAGI XOTIRA — yangilangan to'liq ro'yxat. Senga avval ma'lum bo'lganlar beriladi: ularni saqla (o'chirma), darsda o'quvchi o'zi aytgan yangi foydali ma'lumotlarni qo'sh, o'zgarganini (masalan, boshqa shaharga ko'chgan) yangisi bilan almashtir. Nimalar: oila, ish va kasb, yashash joyi, rejalari va maqsadlari, qiziqishlari, yaqinlashayotgan voqealar (imtihon, safar, to'y), o'qishdagi istaklari (masalan, «sekinroq gapirishni so'radi»). Har biri qisqa gap, uchinchi shaxsda, o'zbekcha: «Moskvada qurilishda ishlaydi», «Qizining ismi Madina». Faqat o'quvchi o'zi aytganini yoz, taxmin qilma. Parol, karta, hujjat raqami, aniq manzil va telefon raqamini HECH QACHON yozma. Ko'pi bilan 20 ta.
+- topics: shu darsda gaplashilgan mavzular, 1-3 ta qisqa ibora (masalan «ishdagi kun», «bozorda xarid»).
+- weak: o'quvchiga qiyin bo'layotgan grammatika yoki ko'nikmalar, 0-3 ta qisqa ibora (masalan «o'tgan zamon», «kelishiklar», «sonlarni tushunish»).`;
 
 const REPORT_SCHEMA = {
   type: 'object',
@@ -260,8 +276,11 @@ const REPORT_SCHEMA = {
     },
     tip: { type: 'string' },
     score: { type: 'integer' },
+    facts: { type: 'array', items: { type: 'string' } },
+    topics: { type: 'array', items: { type: 'string' } },
+    weak: { type: 'array', items: { type: 'string' } },
   },
-  required: ['summary', 'level', 'mistakes', 'words', 'tip', 'score'],
+  required: ['summary', 'level', 'mistakes', 'words', 'tip', 'score', 'facts', 'topics', 'weak'],
   additionalProperties: false,
 };
 

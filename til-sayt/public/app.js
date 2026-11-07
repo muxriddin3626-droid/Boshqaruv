@@ -614,7 +614,7 @@
     $('reportLoading').textContent = `${TUTORS[lang].name} hisobot tayyorlayapti...`;
     $('reportBody').hidden = true;
     try {
-      const r = await postJson('/api/report', { lang, settings: { ...settings, ...lessonOpts }, messages });
+      const r = await postJson('/api/report', { lang, settings: { ...settings, ...lessonOpts }, messages, facts: Learn.facts() });
       if (token !== reportToken) return;
       renderReport(r);
       Learn.recordReport(lang, r);
