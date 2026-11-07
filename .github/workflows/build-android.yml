@@ -52,15 +52,28 @@ jobs:
           gradle-version: '8.7'
 
       - name: AAPT2 diagnostika (har bir values faylini alohida tekshirish)
-        continue-on-error: true
         run: |
+          set -e
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          [ -z "$SDKMANAGER" ] && [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ] && SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" "build-tools;34.0.0" >/dev/null 2>&1 || true
           AAPT2="$(find "$ANDROID_HOME/build-tools" -name aapt2 2>/dev/null | sort | tail -1)"
-          echo "aapt2: $AAPT2"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "aapt2 = ${AAPT2:-TOPILMADI}"
+          [ -z "$AAPT2" ] && { echo "aapt2 topilmadi, diagnostika o'tkazib yuborildi"; exit 0; }
           mkdir -p /tmp/aout
+          fail=""
           for f in remote-control-project/${{ matrix.app }}/app/src/main/res/values*/*.xml; do
             echo "===== $f ====="
-            "$AAPT2" compile "$f" -o /tmp/aout 2>&1 || echo ">>> SHU FAYL YIQILDI: $f"
+            if "$AAPT2" compile "$f" -o /tmp/aout 2>&1; then
+              echo "   OK"
+            else
+              echo ">>> SHU FAYL YIQILDI: $f"
+              fail="$f"
+            fi
           done
+          if [ -n "$fail" ]; then echo "AYBDOR FAYL(LAR) YUQORIDA"; exit 1; fi
+          echo "Barcha values fayllar alohida OK — muammo merge bosqichida"
 
       - name: Debug APK yasash (${{ matrix.app }})
         working-directory: remote-control-project/${{ matrix.app }}
