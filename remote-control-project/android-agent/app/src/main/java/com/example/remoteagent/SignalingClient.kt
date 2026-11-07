@@ -66,24 +66,24 @@ object Config {
     // olish tavsiya etiladi (TURN paroli kodda saqlanmasligi uchun). Bu yerda
     // soddalashtirilgan statik fallback berilgan.
     const val STUN_URL = "stun:stun.l.google.com:19302"
-    const val TURN_URL = ""        // masalan "turn:turn.example.com:3478"
-    const val TURN_USERNAME = ""
-    const val TURN_PASSWORD = ""
 
-    /** RTCConfiguration uchun ICE server ro'yxati (STUN + agar sozlangan bo'lsa TURN). */
+    // TURN - mobil tarmoqda (NAT ortida) ulanish uchun MAJBURIY. Bu yerda bepul
+    // ochiq relay (Metered Open Relay) ishlatilgan - ro'yxatdan o'tish shart emas.
+    // Ishonchliroq/tezroq kerak bo'lsa, o'z Metered yoki Twilio TURN ma'lumotlaringizni qo'ying.
+    private const val TURN_USER = "openrelayproject"
+    private const val TURN_PASS = "openrelayproject"
+
+    /** ICE serverlar: STUN + TURN (bir nechta port/transport - maksimal ulanish ehtimoli). */
     fun iceServers(): List<org.webrtc.PeerConnection.IceServer> {
-        val list = mutableListOf(
-            org.webrtc.PeerConnection.IceServer.builder(STUN_URL).createIceServer()
+        fun turn(url: String) = org.webrtc.PeerConnection.IceServer.builder(url)
+            .setUsername(TURN_USER).setPassword(TURN_PASS).createIceServer()
+        return listOf(
+            org.webrtc.PeerConnection.IceServer.builder(STUN_URL).createIceServer(),
+            org.webrtc.PeerConnection.IceServer.builder("stun:openrelay.metered.ca:80").createIceServer(),
+            turn("turn:openrelay.metered.ca:80"),
+            turn("turn:openrelay.metered.ca:443"),
+            turn("turn:openrelay.metered.ca:443?transport=tcp")
         )
-        if (TURN_URL.isNotEmpty()) {
-            list.add(
-                org.webrtc.PeerConnection.IceServer.builder(TURN_URL)
-                    .setUsername(TURN_USERNAME)
-                    .setPassword(TURN_PASSWORD)
-                    .createIceServer()
-            )
-        }
-        return list
     }
 }
 
