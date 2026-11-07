@@ -1,0 +1,57 @@
+name: Android APK yig'ish
+
+# main yoki ccr-* branchga push qilinganda yoki qo'lda ishga tushirilganda.
+# Ikkala ilova (agent va controller) uchun debug APK yasaydi va artifact
+# sifatida yuklaydi.
+on:
+  push:
+    branches: [ main, 'ccr-**' ]
+    paths:
+      - 'remote-control-project/android-agent/**'
+      - 'remote-control-project/android-controller/**'
+      - '.github/workflows/build-android.yml'
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: android-agent
+            artifact: remote-agent-debug-apk
+          - app: android-controller
+            artifact: remote-controller-debug-apk
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 17 o'rnatish
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Android SDK o'rnatish
+        uses: android-actions/setup-android@v3
+
+      - name: SDK komponentlari (platform 34, build-tools)
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Gradle o'rnatish
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
+      - name: Debug APK yasash (${{ matrix.app }})
+        working-directory: remote-control-project/${{ matrix.app }}
+        run: gradle assembleDebug --stacktrace
+
+      - name: APK'ni yuklash
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: remote-control-project/${{ matrix.app }}/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
