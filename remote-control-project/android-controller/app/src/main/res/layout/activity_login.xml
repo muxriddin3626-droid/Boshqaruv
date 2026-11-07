@@ -12,7 +12,15 @@
         android:text="Remote Controller - Kirish"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:layout_marginBottom="24dp" />
+        android:layout_marginBottom="8dp" />
+
+    <!-- Qaysi serverga ulanishini ko'rsatadi (eski/yangi APK'ni ajratish uchun) -->
+    <TextView
+        android:id="@+id/serverText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="11sp"
+        android:layout_marginBottom="20dp" />
 
     <EditText
         android:id="@+id/emailInput"

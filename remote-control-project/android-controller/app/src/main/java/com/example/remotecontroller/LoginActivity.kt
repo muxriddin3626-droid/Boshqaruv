@@ -21,6 +21,8 @@ class LoginActivity : AppCompatActivity() {
         emailInput = findViewById(R.id.emailInput)
         passwordInput = findViewById(R.id.passwordInput)
         statusText = findViewById(R.id.statusText)
+        findViewById<TextView>(R.id.serverText).text =
+            "Server: " + Config.API_BASE_URL.removePrefix("https://").removePrefix("http://")
         val loginBtn = findViewById<Button>(R.id.loginBtn)
         val registerBtn = findViewById<Button>(R.id.registerBtn)
 

@@ -26,6 +26,9 @@ class LoginActivity : AppCompatActivity() {
         emailInput = findViewById(R.id.emailInput)
         passwordInput = findViewById(R.id.passwordInput)
         statusText = findViewById(R.id.statusText)
+        // Qaysi serverga ulanishini ko'rsatamiz - yangi/eski APK'ni ajratish uchun
+        findViewById<TextView>(R.id.serverText).text =
+            "Server: " + Config.API_BASE_URL.removePrefix("https://").removePrefix("http://")
         val loginBtn = findViewById<Button>(R.id.loginBtn)
         val registerBtn = findViewById<Button>(R.id.registerBtn)
 
