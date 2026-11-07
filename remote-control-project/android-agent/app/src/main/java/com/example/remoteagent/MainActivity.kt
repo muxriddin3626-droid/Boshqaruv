@@ -66,8 +66,23 @@ class MainActivity : AppCompatActivity() {
             onPairingRequest = { sessionId, controllerName ->
                 runOnUiThread { showApprovalDialog(sessionId, controllerName) }
             },
-            onMessage = { /* offer/answer/ice - ScreenCaptureService ichida boshqariladi */ }
+            onMessage = { json -> routeIncomingMessage(json) }
         )
+    }
+
+    /**
+     * Serverdan kelgan xabarlarni turiga qarab yo'naltiradi.
+     *  - "input-command" -> Accessibility xizmatiga (tegish/matn/navigatsiya)
+     *  - offer/answer/ice-candidate -> ScreenCaptureService ichida boshqariladi
+     *
+     * Buyruq faqat seans TASDIQLANGAN bo'lsagina serverdan o'tadi; bu yerda
+     * Accessibility xizmati yoqilganligi ham tekshiriladi.
+     */
+    private fun routeIncomingMessage(json: org.json.JSONObject) {
+        if (json.optString("type") == "input-command") {
+            val payload = json.optJSONObject("payload") ?: return
+            RemoteInputAccessibilityService.instance?.handleCommand(payload)
+        }
     }
 
     private fun requestPairingCode() {

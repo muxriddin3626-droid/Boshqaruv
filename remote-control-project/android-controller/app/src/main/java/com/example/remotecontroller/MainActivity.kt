@@ -33,6 +33,11 @@ class MainActivity : AppCompatActivity() {
     private var sessionId: String? = null
     private lateinit var codeInput: EditText
 
+    // Tap/swipe ajratish uchun ACTION_DOWN holati (normalizatsiya qilingan)
+    private var downX = 0f
+    private var downY = 0f
+    private var downTime = 0L
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -79,16 +84,39 @@ class MainActivity : AppCompatActivity() {
         // kodni avtomatik o'qib, ulanishga urinamiz
         handleIncomingLink(intent)
 
-        // Tegishlarni normalizatsiya qilingan koordinata sifatida yuborish
+        // Tegish va surishni normalizatsiya qilingan (0..1) koordinata sifatida yuborish.
+        // ACTION_DOWN nuqtasi bilan ACTION_UP nuqtasi orasidagi masofa kichik bo'lsa -
+        // bu "tap", katta bo'lsa - "swipe".
         remoteScreenView.setOnTouchListener { view, event ->
-            val nx = event.x / view.width.toFloat()
-            val ny = event.y / view.height.toFloat()
+            val nx = (event.x / view.width.toFloat()).coerceIn(0f, 1f)
+            val ny = (event.y / view.height.toFloat()).coerceIn(0f, 1f)
             when (event.action) {
-                MotionEvent.ACTION_DOWN -> sendTap(nx, ny)
-                // ACTION_MOVE va ACTION_UP orqali swipe/drag ham qo'shish mumkin
+                MotionEvent.ACTION_DOWN -> {
+                    downX = nx; downY = ny; downTime = System.currentTimeMillis()
+                }
+                MotionEvent.ACTION_UP -> {
+                    val dx = nx - downX; val dy = ny - downY
+                    val moved = kotlin.math.hypot(dx.toDouble(), dy.toDouble())
+                    if (moved < 0.02) {
+                        sendTap(nx, ny)
+                    } else {
+                        val dur = (System.currentTimeMillis() - downTime).coerceIn(50, 2000)
+                        sendSwipe(downX, downY, nx, ny, dur)
+                    }
+                }
             }
             true
         }
+
+        findViewById<Button>(R.id.sendTextBtn).setOnClickListener {
+            val field = findViewById<EditText>(R.id.remoteTextInput)
+            val text = field.text.toString()
+            sendText(text)
+            field.text?.clear()
+        }
+        findViewById<Button>(R.id.btnBack).setOnClickListener { sendNav("back") }
+        findViewById<Button>(R.id.btnHome).setOnClickListener { sendNav("home") }
+        findViewById<Button>(R.id.btnRecents).setOnClickListener { sendNav("recents") }
     }
 
     /** Havoladagi kodni ajratib olish va ulanishga urinish (masalan remoteagent://pair/123456). */
@@ -131,6 +159,34 @@ class MainActivity : AppCompatActivity() {
             put("y", ny)
         }
         signalingClient.sendInputCommand(sid, payload)
+    }
+
+    private fun sendSwipe(x1: Float, y1: Float, x2: Float, y2: Float, durationMs: Long) {
+        val sid = sessionId ?: return
+        val payload = JSONObject().apply {
+            put("action", "swipe")
+            put("x1", x1); put("y1", y1)
+            put("x2", x2); put("y2", y2)
+            put("durationMs", durationMs)
+        }
+        signalingClient.sendInputCommand(sid, payload)
+    }
+
+    /** Masofaviy matn: Agent'dagi fokusdagi tahrir maydoniga yoziladi. */
+    private fun sendText(text: String) {
+        val sid = sessionId ?: return
+        if (text.isEmpty()) return
+        val payload = JSONObject().apply {
+            put("action", "text")
+            put("text", text)
+        }
+        signalingClient.sendInputCommand(sid, payload)
+    }
+
+    /** Navigatsiya: "back" | "home" | "recents". */
+    private fun sendNav(action: String) {
+        val sid = sessionId ?: return
+        signalingClient.sendInputCommand(sid, JSONObject().apply { put("action", action) })
     }
 
     private fun initPeerConnectionAndCreateOffer() {

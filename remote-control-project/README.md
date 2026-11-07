@@ -39,7 +39,15 @@ xizmatidan (masalan Twilio, Xirsys) foydalanishingiz mumkin.
 2. Controller telefonda: kodni kiriting → "Ulanish"
 3. Agent telefonda tasdiqlash oynasi chiqadi → "Ruxsat berish"
 4. Tizim MediaProjection ruxsatini so'raydi → tasdiqlang
-5. Controller ekranida Agent'ning ekrani ko'rinadi, teginishlar uzatiladi
+5. Controller ekranida Agent'ning ekrani ko'rinadi. Boshqaruv:
+   - **tegish** (qisqa bosish), **surish/swipe** (bosib torting)
+   - **masofaviy klaviatura** — pastdagi maydonga yozib "Yozish" → matn Agent'dagi
+     fokusdagi tahrir maydoniga kiritiladi
+   - **navigatsiya** — Orqaga / Bosh / Oxirgilar tugmalari
+
+> Koordinatalar normalizatsiya qilingan (0.0–1.0) holda yuboriladi va Agent
+> tomonda uning haqiqiy ekran o'lchamiga ko'paytiriladi — shuning uchun ikki
+> telefon o'lchami har xil bo'lsa ham tegish to'g'ri joyga tushadi.
 
 ## Qolgan ishlar (production darajasiga yetkazish uchun)
 
@@ -49,7 +57,7 @@ xizmatidan (masalan Twilio, Xirsys) foydalanishingiz mumkin.
 - **Ma'lumotlar bazasi** — hozir backend xotirada (server qayta ishga tushsa hammasi o'chadi); Postgres/Redis kerak
 - **HTTPS/WSS** — hozirgi kod oddiy http; deploy qilishda TLS sertifikat (masalan Let's Encrypt) shart
 - **Video sifat/bitrate boshqaruvi**, ekran aylanishi (orientation) hisobga olish
-- **Matn kiritish** (klaviatura) — AccessibilityNodeInfo orqali qo'shish kerak
+- **Matn kiritish** (klaviatura) — ✅ qo'shildi (ACTION_SET_TEXT orqali, fokusdagi maydonga)
 - **Session tarixi/audit log** — kim qachon kimga ulanganini yozib borish
 
 ## Muhim eslatma
