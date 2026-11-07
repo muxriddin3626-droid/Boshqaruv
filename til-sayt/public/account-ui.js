@@ -339,8 +339,55 @@ window.AccountUI = (() => {
     }
   }
 
+  // ---------- Ustoz xotirasi ----------
+
+  function renderMemory() {
+    const list = $('memoryList');
+    list.textContent = '';
+    const facts = window.Learn.facts();
+    facts.forEach((f, i) => {
+      const li = document.createElement('li');
+      const text = document.createElement('span');
+      text.textContent = f;
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'memory-del';
+      del.setAttribute('aria-label', "O'chirish");
+      del.textContent = '✕';
+      del.addEventListener('click', () => {
+        window.Learn.removeFact(i);
+        renderMemory();
+      });
+      li.append(text, del);
+      list.appendChild(li);
+    });
+    if (!facts.length) {
+      const li = document.createElement('li');
+      li.className = 'memory-empty';
+      li.textContent = "Hozircha hech narsa yo'q. Ustoz bilan gaplashing — o'zingiz haqingizda gapirsangiz, u eslab qoladi.";
+      list.appendChild(li);
+    }
+    const mem = window.Learn.memory(App.lang() || 'ru');
+    const extra = [];
+    if (mem.weak && mem.weak.length) extra.push(`📌 Ustoz e'tibor beradigan joylar: ${mem.weak.join(', ')}`);
+    if (mem.topics && mem.topics.length) extra.push(`💬 Oxirgi mavzular: ${mem.topics.slice(0, 4).join('; ')}`);
+    $('memoryExtra').textContent = extra.join('\n');
+    $('memoryExtra').hidden = !extra.length;
+  }
+
+  $('memoryForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = $('memoryInput').value.trim();
+    if (!text) return;
+    window.Learn.addFact(text);
+    $('memoryInput').value = '';
+    renderMemory();
+    window.Practice.toast('🧠 Ustoz buni eslab qoldi');
+  });
+
   function open() {
     refresh();
+    renderMemory();
     App.show('account');
   }
 

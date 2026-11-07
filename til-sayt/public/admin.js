@@ -351,6 +351,13 @@
     );
     box.appendChild(facts);
 
+    if (d.memory && d.memory.length) {
+      const mem = el('div', 'user-lang');
+      mem.appendChild(el('h3', '', '🧠 Ustoz u haqida biladi'));
+      d.memory.forEach((f) => mem.appendChild(el('p', '', `• ${f}`)));
+      box.appendChild(mem);
+    }
+
     for (const lang of ['ru', 'de', 'ko']) {
       const l = d.langs[lang];
       if (!l.profile && !l.words && !l.lessons) continue;

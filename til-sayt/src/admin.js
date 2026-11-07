@@ -174,6 +174,10 @@ async function handleUser(req, res) {
     stats: v('tu-stats') || {},
     totalXp,
     badges: Object.keys(v('tu-badges') || {}).length,
+    memory: (() => {
+      const l = v('tu-learner') || {};
+      return [...(l.pinned || []), ...(l.auto || l.facts || [])].slice(0, 25);
+    })(),
     langs,
   });
 }

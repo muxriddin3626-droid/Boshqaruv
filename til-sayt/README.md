@@ -44,6 +44,14 @@ kasbiy kurs). Anketani sozlamalardan qayta to'ldirish mumkin (`public/survey.js`
 
 ### Tez o'rganish uchun
 
+- 🧠 **Ustoz o'quvchini eslab qoladi** — har darsdan keyin o'quvchi o'zi haqida aytganlari
+  (ishi, oilasi, shahri, rejalari, qiziqishlari, yaqin voqealar, istaklari) xotiraga
+  yoziladi; keyingi darslarda ustoz misollarni uning hayotidan oladi, oldingi gaplarining
+  davomini so'raydi, gaplashilgan mavzularni qaytarmaydi va qiyin joylarini mashq qildiradi.
+  Akkaunt sahifasida «Ustoz siz haqingizda» — ko'rish, o'chirish, o'zi qo'shish (qo'lda
+  qo'shilganlar o'chmaydi). Kirgan foydalanuvchilarda bazaga sinxronlanadi; admin panelda
+  ham ko'rinadi. Parol, karta, hujjat raqami va manzil yozilmaydi.
+
 - 🎯 **Bugungi dars** — menyuning tepasida bitta tugma: har kuni 15-25 daqiqalik
   tayyor reja (daraja testi — bir marta, takrorlash, 10 ta yangi so'z, qoida yoki
   test o'yini, ustoz bilan suhbat; koreys tilida avval Hangul bosqichlari). Har qadam
