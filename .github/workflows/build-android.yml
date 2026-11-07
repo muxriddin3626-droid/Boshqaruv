@@ -77,7 +77,16 @@ jobs:
 
       - name: Debug APK yasash (${{ matrix.app }})
         working-directory: remote-control-project/${{ matrix.app }}
-        run: gradle assembleDebug --stacktrace
+        run: |
+          set -o pipefail
+          gradle assembleDebug 2>&1 | tee /tmp/build.log; code=${PIPESTATUS[0]}
+          if [ "$code" != "0" ]; then
+            echo ""
+            echo "================ KOTLIN / KOMPILYATSIYA XATOLARI ================"
+            grep -nE "^e: |: error:|^w: .*error" /tmp/build.log || echo "(e:/error satri topilmadi)"
+            echo "================================================================"
+          fi
+          exit $code
 
       - name: APK'ni yuklash
         uses: actions/upload-artifact@v4
