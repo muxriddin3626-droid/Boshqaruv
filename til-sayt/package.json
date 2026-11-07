@@ -1,0 +1,17 @@
+{
+  "name": "til-sayt",
+  "version": "1.0.0",
+  "description": "Rus va nemis tilini jonli muloqot orqali o'rgatuvchi veb-sayt",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "codes": "node src/make-codes.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
+    "@libsql/client": "^0.17.4",
+    "dotenv": "^16.4.5",
+    "web-push": "^3.6.7"
+  }
+}

@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4ede2">
+  <meta name="description" content="Rus, nemis va koreys tilini ovozli suhbat orqali o'rganing. Xatolaringiz o'zbek tilida tushuntiriladi.">
+  <title>Til Ustoz</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+  <div class="offline-banner" id="offlineBanner" hidden>📴 Internet yo'q — takrorlash, daftar va natijalar ishlaydi</div>
+  <header class="topbar">
+    <span class="brand">tilustoz</span>
+    <button type="button" class="icon-btn" id="themeBtn" aria-label="Rangni almashtirish">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.8"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></g></svg>
+    </button>
+    <span></span>
+  </header>
+
+  <!-- 1. Til tanlash -->
+  <main id="startScreen" class="screen start">
+    <div class="face-slot" data-face="calm" data-state="idle"></div>
+    <h1>Ustoz bilan gaplashib o'rganing</h1>
+    <p class="lead">10 daqiqalik ovozli dars. Ustoz siz bilan tanlagan tilingizda gaplashadi, xatolaringizni esa <strong>o'zbek tilida</strong> tushuntiradi.</p>
+    <div class="lang-cards">
+      <button type="button" class="lang-card" data-lang="ru">
+        <span class="flag">🇷🇺</span>
+        <span class="lang-name">Rus tili</span>
+        <span class="lang-native">Русский</span>
+        <span class="lang-tutor">Ustoz: Anna</span>
+      </button>
+      <button type="button" class="lang-card" data-lang="de">
+        <span class="flag">🇩🇪</span>
+        <span class="lang-name">Nemis tili</span>
+        <span class="lang-native">Deutsch</span>
+        <span class="lang-tutor">Ustoz: Hans</span>
+      </button>
+      <button type="button" class="lang-card" data-lang="ko">
+        <span class="flag">🇰🇷</span>
+        <span class="lang-name">Koreys tili</span>
+        <span class="lang-native">한국어</span>
+        <span class="lang-tutor">Ustoz: Minji</span>
+      </button>
+    </div>
+    <p class="hint">Mikrofonga ruxsat so'raladi. Eng yaxshi ishlashi uchun Chrome brauzeridan foydalaning.</p>
+    <div class="login-hint" id="startLogin" hidden>
+      <p>🔐 Natijalaringiz yo'qolmasligi va boshqa telefonda ham ochilishi uchun kiring:</p>
+      <div class="login-slot" data-login-slot></div>
+    </div>
+  </main>
+
+  <!-- 2. Menyu -->
+  <main id="menuScreen" class="screen menu" hidden>
+    <button type="button" class="account-bar" id="accountBar" hidden>
+      <span class="avatar" id="accountAvatar">👤</span>
+      <span class="account-text">
+        <b id="accountName">Kirish</b>
+        <span id="accountPlan">Natijalarni saqlash uchun</span>
+      </span>
+      <span class="plan-badge" id="planBadge"></span>
+    </button>
+    <div class="face-slot" id="menuFace" data-face="happy" data-state="idle"></div>
+    <h1 id="menuTitle">Anna bilan rus tili</h1>
+
+    <div class="announce" id="announceBar" hidden></div>
+    <button type="button" class="plan-card" id="planCard">
+      <span class="act-text">
+        <b id="planTitle">🎯 Bugungi dars</b>
+        <span id="planDesc"></span>
+      </span>
+      <span class="plan-count" id="planCount">0/4</span>
+    </button>
+    <button type="button" class="goal-card" id="goalCard" hidden>
+      <span class="goal-text">
+        <span id="goalHello"></span>
+        <b id="goalLabel"></b>
+      </span>
+      <span class="goal-go">→</span>
+    </button>
+
+    <section class="daily" id="daily">
+      <div class="daily-top">
+        <span class="streak" id="streak">🔥 0 kun</span>
+        <span class="daily-xp" id="dailyXp">Bugun 0 / 50 XP</span>
+      </div>
+      <div class="xp-bar"><div class="xp-fill" id="xpFill"></div></div>
+      <div class="week" id="week"></div>
+      <div class="daily-links">
+        <button type="button" class="link-btn" id="ratingBtn">🏆 Haftalik reyting</button>
+        <button type="button" class="link-btn" id="badgesBtn">🏅 Yutuqlar</button>
+        <button type="button" class="link-btn" id="koTrToggle" hidden>🔤 Lotincha o'qilishi</button>
+      </div>
+    </section>
+
+    <button type="button" class="big-card course-card hangul-card" id="hangulCard" hidden>
+      <span class="act-icon">🔤</span>
+      <span class="act-text">
+        <span class="act-title">Hangul alifbosi</span>
+        <span class="act-desc">Koreys harflarini o'rganing: ovozi va harf testi bilan</span>
+      </span>
+      <span class="course-count no-tr">한글</span>
+    </button>
+
+    <button type="button" class="big-card course-card" id="courseCard">
+      <span class="act-icon">🗺️</span>
+      <span class="act-text">
+        <span class="act-title">Kurs: A1 → B1</span>
+        <span class="act-desc" id="courseNow">1-bosqich</span>
+      </span>
+      <span class="course-count" id="courseCount">0/12</span>
+    </button>
+
+    <button type="button" class="big-card course-card vocab-card" id="vocabCard">
+      <span class="act-icon">📚</span>
+      <span class="act-text">
+        <span class="act-title">Lug'at — so'z yodlash</span>
+        <span class="act-desc" id="vocabDesc">26 mavzu, har birida yuzlab so'z</span>
+      </span>
+      <span class="course-count" id="vocabCount">0/20</span>
+    </button>
+
+    <button type="button" class="big-card review-card" id="reviewCard">
+      <span class="act-icon">🧠</span>
+      <span class="act-text">
+        <span class="act-title">Takrorlash</span>
+        <span class="act-desc" id="reviewDesc">Daftaringiz hali bo'sh</span>
+      </span>
+      <span class="due-badge" id="dueBadge" hidden>0</span>
+    </button>
+
+    <button type="button" class="big-card exam-card" id="examCard">
+      <span class="act-icon">🎓</span>
+      <span class="act-text">
+        <span class="act-title">Imtihonga tayyorgarlik</span>
+        <span class="act-desc" id="examCardDesc">Goethe / ТРКИ / TOPIK formatida sinov imtihoni</span>
+      </span>
+    </button>
+
+    <div class="card-pair">
+      <button type="button" class="big-card prof-card" id="profCard">
+        <span class="act-icon">💼</span>
+        <span class="act-text">
+          <span class="act-title">Kasbiy kurslar</span>
+          <span class="act-desc">Quruvchi, haydovchi, oshpaz...</span>
+        </span>
+      </button>
+      <button type="button" class="big-card role-card" id="roleCard">
+        <span class="act-icon">🎭</span>
+        <span class="act-text">
+          <span class="act-title">Rolli vaziyatlar</span>
+          <span class="act-desc">Politsiya, ish beruvchi, shifokor...</span>
+        </span>
+      </button>
+    </div>
+
+    <h2 class="section-title">Erkin mashq</h2>
+    <button type="button" class="settings-summary" id="settingsSummary">
+      <span id="settingsText"></span>
+      <span class="change">O'zgartirish</span>
+    </button>
+
+    <div class="activities">
+      <button type="button" class="activity main" data-activity="lesson">
+        <span class="act-icon">🎙️</span>
+        <span class="act-text">
+          <span class="act-title">Ovozli dars</span>
+          <span class="act-desc">10 daqiqa jonli suhbat</span>
+        </span>
+      </button>
+      <button type="button" class="activity" data-activity="quiz">
+        <span class="act-icon">📝</span>
+        <span class="act-title">Test</span>
+        <span class="act-desc">Grammatika va so'zlar</span>
+        <span class="best" data-best="quiz"></span>
+      </button>
+      <button type="button" class="activity" data-activity="match">
+        <span class="act-icon">🧩</span>
+        <span class="act-title">So'z juftlash</span>
+        <span class="act-desc">So'zni tarjimasiga ulang</span>
+        <span class="best" data-best="match"></span>
+      </button>
+      <button type="button" class="activity" data-activity="order">
+        <span class="act-icon">🔤</span>
+        <span class="act-title">Gap tuzish</span>
+        <span class="act-desc">So'zlarni to'g'ri tering</span>
+        <span class="best" data-best="order"></span>
+      </button>
+      <button type="button" class="activity" data-activity="listen">
+        <span class="act-icon">🎧</span>
+        <span class="act-title">Eshitib top</span>
+        <span class="act-desc">Eshitganingizni tanlang</span>
+        <span class="best" data-best="listen"></span>
+      </button>
+      <button type="button" class="activity" data-activity="speak">
+        <span class="act-icon">🗣️</span>
+        <span class="act-title">Talaffuz</span>
+        <span class="act-desc">Ustozdan keyin takrorlang</span>
+        <span class="best" data-best="speak"></span>
+      </button>
+      <button type="button" class="activity" data-activity="story">
+        <span class="act-icon">📖</span>
+        <span class="act-title">Hikoya</span>
+        <span class="act-desc">O'qing, tinglang, tushuning</span>
+        <span class="best" data-best="story"></span>
+      </button>
+    </div>
+
+    <p class="focus-note" id="focusNote" hidden>✨ Ustoz oldingi xatolaringizni eslaydi — darslar va o'yinlarda ularni qayta mashq qildiradi</p>
+    <div class="menu-links">
+      <button type="button" class="link-btn" id="notebookBtn">📒 Daftar</button>
+      <button type="button" class="link-btn" id="certBtn">📜 Sertifikatlar</button>
+      <button type="button" class="link-btn" id="reminderBtn">⏰ Eslatma</button>
+      <button type="button" class="link-btn" id="installBtn" hidden>📲 Ilovani o'rnatish</button>
+      <button type="button" class="link-btn" id="menuHomeBtn">🌐 Tilni almashtirish</button>
+    </div>
+  </main>
+
+  <!-- 3. Sozlamalar -->
+  <main id="setupScreen" class="screen setup" hidden>
+    <div class="face-slot" id="setupFace" data-face="happy" data-state="idle"></div>
+    <h1 id="setupTitle">Anna bilan dars</h1>
+    <p class="lead" id="setupLead"></p>
+
+    <section class="option-group">
+      <h2>Ustoz qanaqa bo'lsin?</h2>
+      <div class="mode-cards" role="radiogroup" aria-label="Ustoz rejimi">
+        <button type="button" class="mode-card selected" data-mode="kind" role="radio" aria-checked="true">
+          <span class="mode-title">😊 Mehribon</span>
+          <span class="mode-text">Sabrli, ko'p maqtaydi, xatoni yumshoq tuzatadi</span>
+        </button>
+        <button type="button" class="mode-card" data-mode="strict" role="radio" aria-checked="false">
+          <span class="mode-title">🔥 Qattiqqo'l</span>
+          <span class="mode-text">Talabchan, hazil aralash koyiydi, lekin so'kinmaydi</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="option-group">
+      <h2>Mavzu</h2>
+      <div class="chips" data-group="topic">
+        <button type="button" class="chip selected" data-value="free">💬 Erkin suhbat</button>
+        <button type="button" class="chip" data-value="meet">👋 Tanishuv</button>
+        <button type="button" class="chip" data-value="shop">🛒 Do'konda</button>
+        <button type="button" class="chip" data-value="food">🍽️ Restoranda</button>
+        <button type="button" class="chip" data-value="travel">✈️ Sayohat</button>
+        <button type="button" class="chip" data-value="job">💼 Ish suhbati</button>
+        <button type="button" class="chip" data-value="migrant">🛂 Migrant hayoti</button>
+        <button type="button" class="chip" data-value="vocab">📚 Ko'p so'z yodlash</button>
+      </div>
+    </section>
+
+    <section class="option-group">
+      <h2>Dars davomiyligi</h2>
+      <div class="chips" data-group="length">
+        <button type="button" class="chip selected" data-value="10">⏱️ 10 daqiqa</button>
+        <button type="button" class="chip" data-value="20">⏱️ 20 daqiqa</button>
+        <button type="button" class="chip" data-value="30">⏱️ 30 daqiqa</button>
+      </div>
+    </section>
+
+    <section class="option-group">
+      <h2>Darajangiz</h2>
+      <div class="chips" data-group="level">
+        <button type="button" class="chip selected" data-value="auto">🤔 Bilmayman — aniqlab ber</button>
+        <button type="button" class="chip" data-value="a1">Boshlang'ich</button>
+        <button type="button" class="chip" data-value="b1">O'rta</button>
+        <button type="button" class="chip" data-value="b2">Yuqori</button>
+      </div>
+    </section>
+
+    <section class="option-group">
+      <h2>Kunlik maqsad</h2>
+      <div class="chips" id="goalChips">
+        <button type="button" class="chip" data-goal="20">🙂 Yengil — 20 XP</button>
+        <button type="button" class="chip" data-goal="50">💪 O'rtacha — 50 XP</button>
+        <button type="button" class="chip" data-goal="100">🚀 Jiddiy — 100 XP</button>
+      </div>
+    </section>
+
+    <div class="end-actions">
+      <button type="button" class="primary big" id="setupDoneBtn">Tayyor</button>
+      <button type="button" class="secondary" id="surveyEditBtn">📝 Anketani o'zgartirish</button>
+    </div>
+  </main>
+
+  <!-- 4. Dars -->
+  <main id="lessonScreen" class="screen lesson" hidden>
+    <div class="lesson-bar">
+      <span class="timer" id="timer">00:00 / 10:00</span>
+      <span class="lesson-info" id="lessonInfo"></span>
+      <button type="button" class="stop-btn" id="stopBtn"><span class="square"></span>Stop</button>
+    </div>
+
+    <div class="stage">
+      <button type="button" class="face-slot big" id="face" data-face="calm" data-state="idle" aria-label="Gapirish uchun bosing"></button>
+      <div class="status" id="status">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-2.1A7 7 0 0 0 19 12z" fill="currentColor"/></svg>
+        <span id="statusText">Tayyorlanmoqda...</span>
+      </div>
+      <p class="subtitle" id="subtitle" aria-live="polite"></p>
+    </div>
+
+    <div class="controls">
+      <div class="speak-lang" role="group" aria-label="Qaysi tilda gapirasiz">
+        <button type="button" class="pill active" data-speak="target" id="speakTarget">Ruscha</button>
+        <button type="button" class="pill" data-speak="uz">O'zbekcha</button>
+      </div>
+      <div class="control-row">
+        <button type="button" class="round-btn" id="keyboardBtn" aria-label="Yozib yuborish">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6 10h1M9 10h1M12 10h1M15 10h1M18 10h0M7 14h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button type="button" class="mic-btn" id="micBtn" aria-label="Gapirish">
+          <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-2.1A7 7 0 0 0 19 12z" fill="currentColor"/></svg>
+        </button>
+        <button type="button" class="round-btn" id="subsBtn" aria-label="Matnni ko'rsatish" aria-pressed="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6 14h5M13 14h5M6 10.5h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <form class="type-form" id="typeForm" hidden>
+        <input id="typeInput" type="text" maxlength="500" autocomplete="off" placeholder="Yozing va Enter bosing...">
+        <button type="submit">Yuborish</button>
+      </form>
+    </div>
+  </main>
+
+  <!-- 4b. Dars tugadi -->
+  <main id="endScreen" class="screen end" hidden>
+    <div class="face-slot" data-face="excited" data-state="idle"></div>
+    <h1 id="endTitle">Dars tugadi!</h1>
+    <p class="lead" id="endText"></p>
+
+    <section class="report" id="report" hidden>
+      <p class="report-loading" id="reportLoading">Ustoz hisobot tayyorlayapti...</p>
+      <div id="reportBody" hidden>
+        <div class="report-head">
+          <span class="level-badge" id="reportLevel"></span>
+          <span class="level-badge score" id="reportScore" hidden></span>
+          <p id="reportSummary"></p>
+        </div>
+        <div class="report-block" id="mistakesBlock">
+          <h2>Xatolar ustida ishlaymiz</h2>
+          <ul class="mistakes" id="reportMistakes"></ul>
+        </div>
+        <div class="report-block" id="wordsBlock">
+          <h2>Yangi so'zlar</h2>
+          <ul class="words" id="reportWords"></ul>
+        </div>
+        <div class="report-block tip">
+          <h2>Keyingi dars uchun maslahat</h2>
+          <p id="reportTip"></p>
+        </div>
+      </div>
+    </section>
+
+    <div class="end-actions">
+      <button type="button" class="primary" id="againBtn">Yana gaplashish</button>
+      <button type="button" class="secondary" id="endMenuBtn">O'yinlar va menyu</button>
+    </div>
+  </main>
+
+  <!-- 5. O'yin -->
+  <main id="gameScreen" class="screen game" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="gameBackBtn">← Menyu</button>
+      <span class="game-title" id="gameTitle"></span>
+      <span class="game-score" id="gameScore"></span>
+    </div>
+    <div class="progress" aria-hidden="true"><div class="progress-fill" id="gameProgress"></div></div>
+
+    <div class="game-face">
+      <div class="face-slot small" id="gameFace" data-face="calm" data-state="idle"></div>
+      <p class="reaction" id="gameReaction"></p>
+    </div>
+
+    <div class="game-body" id="gameBody"></div>
+
+    <div class="feedback" id="feedback" hidden>
+      <p class="feedback-text" id="feedbackText"></p>
+      <button type="button" class="primary big" id="nextBtn">Keyingi</button>
+    </div>
+  </main>
+
+  <!-- 6. O'yin natijasi -->
+  <main id="resultScreen" class="screen end" hidden>
+    <div class="face-slot" id="resultFace" data-face="excited" data-state="idle"></div>
+    <div class="stars" id="resultStars"></div>
+    <h1 id="resultTitle"></h1>
+    <p class="lead" id="resultText"></p>
+    <div class="end-actions">
+      <button type="button" class="primary" id="replayBtn">Yana o'ynash</button>
+      <button type="button" class="secondary" id="resultMenuBtn">Menyu</button>
+    </div>
+  </main>
+
+  <!-- 7. Kurs xaritasi -->
+  <main id="courseScreen" class="screen course" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">🗺️ Kurs xaritasi</span>
+      <span></span>
+    </div>
+    <p class="lead small">Har bosqichda: qoida, ovozli dars, so'zlar va imtihon. Imtihondan o'tsangiz, keyingi bosqich ochiladi.</p>
+    <button type="button" class="secondary placement-btn" id="placementBtn">📊 Darajamni aniqlash — mos bosqichdan boshlash</button>
+    <ol class="unit-path" id="unitPath"></ol>
+  </main>
+
+  <!-- 8. Bosqich -->
+  <main id="unitScreen" class="screen unit" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="course">← Xarita</button>
+      <span class="game-title" id="unitLevel"></span>
+      <span></span>
+    </div>
+    <div class="unit-icon" id="unitIcon"></div>
+    <h1 id="unitTitle"></h1>
+    <p class="lead small" id="unitGrammar"></p>
+    <div class="unit-steps">
+      <button type="button" class="step" data-step="grammar">
+        <span class="step-check" aria-hidden="true"></span>
+        <span class="act-text">
+          <span class="act-title">📘 1. Qoida (grammatika)</span>
+          <span class="act-desc">Sodda tushuntirish, misollar va 6 ta mashq</span>
+        </span>
+      </button>
+      <button type="button" class="step" data-step="lesson">
+        <span class="step-check" aria-hidden="true"></span>
+        <span class="act-text">
+          <span class="act-title">🎙️ 2. Ovozli dars</span>
+          <span class="act-desc">Ustoz bilan shu mavzuda gaplashing</span>
+        </span>
+      </button>
+      <button type="button" class="step" data-step="words">
+        <span class="step-check" aria-hidden="true"></span>
+        <span class="act-text">
+          <span class="act-title">🧩 3. Yangi so'zlar</span>
+          <span class="act-desc">Bosqich so'zlarini juftlab yodlang</span>
+        </span>
+      </button>
+      <button type="button" class="step" data-step="speak">
+        <span class="step-check" aria-hidden="true"></span>
+        <span class="act-text">
+          <span class="act-title">🗣️ 4. Talaffuz</span>
+          <span class="act-desc">Bosqich iboralarini ovoz chiqarib ayting</span>
+        </span>
+      </button>
+      <button type="button" class="step exam" data-step="exam">
+        <span class="step-check" aria-hidden="true"></span>
+        <span class="act-text">
+          <span class="act-title">🏁 5. Bosqich imtihoni</span>
+          <span class="act-desc" id="examDesc">8 ta savol, o'tish uchun 6 ta to'g'ri</span>
+        </span>
+      </button>
+    </div>
+  </main>
+
+  <!-- 9. Takrorlash -->
+  <main id="reviewScreen" class="screen review" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">🧠 Takrorlash</span>
+      <span class="game-score" id="reviewLeft"></span>
+    </div>
+    <div class="progress" aria-hidden="true"><div class="progress-fill" id="reviewProgress"></div></div>
+    <div class="flashcard" id="flashcard">
+      <p class="fc-hint" id="fcHint"></p>
+      <p class="fc-front" id="fcFront"></p>
+      <button type="button" class="icon-btn fc-say" id="fcSay" aria-label="Eshitish">🔊</button>
+      <p class="fc-back" id="fcBack" hidden></p>
+    </div>
+    <div class="review-actions">
+      <button type="button" class="primary big" id="revealBtn">Javobni ko'rish</button>
+      <div class="grade-row" id="gradeRow" hidden>
+        <button type="button" class="grade bad" id="gradeBad">❌ Bilmadim</button>
+        <button type="button" class="grade good" id="gradeGood">✅ Bildim</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- 10. Daftar -->
+  <main id="notebookScreen" class="screen notebook" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">📒 Daftar</span>
+      <span></span>
+    </div>
+    <div class="speak-lang tabs" role="tablist">
+      <button type="button" class="pill active" data-tab="words">So'zlar</button>
+      <button type="button" class="pill" data-tab="mistakes">Xatolar</button>
+    </div>
+    <p class="lead small" id="notebookStats"></p>
+    <ul class="note-list" id="noteList"></ul>
+  </main>
+
+  <!-- 11. Hikoya -->
+  <main id="storyScreen" class="screen story" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">📖 Hikoya</span>
+      <button type="button" class="stop-btn" id="storyPlayBtn">🔊 O'qib berish</button>
+    </div>
+    <div id="storyBody" class="story-body"></div>
+  </main>
+
+  <!-- 12. Imtihonlar ro'yxati -->
+  <main id="examListScreen" class="screen exams" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">🎓 Imtihon sinovi</span>
+      <span></span>
+    </div>
+    <p class="lead small">Haqiqiy imtihon formatidagi mashq: vaqt cheklovi, barcha bo'limlar va ballar. Yozish va gapirishni ustoz imtihon oluvchidek baholaydi.</p>
+    <p class="disclaimer">⚠️ Bu — tayyorgarlik uchun sinov. Rasmiy sertifikatni faqat imtihon markazi (Goethe-Institut, ТРКИ markazlari, TOPIK / HRD Korea) beradi.</p>
+    <div class="exam-list" id="examList"></div>
+  </main>
+
+  <!-- 13. Imtihon bo'limi -->
+  <main id="examScreen" class="screen exam-run" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="examQuitBtn">✕ To'xtatish</button>
+      <span class="game-title" id="examSectionTitle"></span>
+      <span class="exam-timer" id="examTimer">00:00</span>
+    </div>
+    <div class="exam-steps" id="examSteps"></div>
+    <div class="exam-body" id="examBody"></div>
+    <div class="exam-submit">
+      <button type="button" class="primary big" id="examSubmitBtn">Bo'limni yakunlash</button>
+    </div>
+  </main>
+
+  <!-- 14. Imtihon natijasi -->
+  <main id="examResultScreen" class="screen exam-result" hidden>
+    <div class="face-slot" id="examResultFace" data-face="excited" data-state="idle"></div>
+    <p class="exam-name" id="examResultName"></p>
+    <h1 id="examResultTitle"></h1>
+    <p class="verdict" id="examVerdict"></p>
+    <div class="section-scores" id="sectionScores"></div>
+    <div id="examFeedback"></div>
+    <div class="end-actions">
+      <button type="button" class="primary" id="examAgainBtn">Yana sinov</button>
+      <button type="button" class="secondary" id="examListBtn">Imtihonlar</button>
+      <button type="button" class="secondary" data-back="menu">Menyu</button>
+    </div>
+    <p class="disclaimer">Bu sinov natijasi — haqiqiy imtihondagi natijangizni taxminiy ko'rsatadi, rasmiy hujjat emas.</p>
+  </main>
+
+  <!-- 15. Sertifikatlar -->
+  <main id="certScreen" class="screen certs" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">📜 Sertifikatlar</span>
+      <span></span>
+    </div>
+    <p class="lead small">Kursning har bir darajasini (barcha bosqich imtihonlarini) tugatsangiz, ismingiz yozilgan sertifikat olasiz.</p>
+    <label class="name-field">
+      <span>Sertifikatda yoziladigan ism-familiyangiz</span>
+      <input type="text" id="certName" maxlength="40" autocomplete="name" placeholder="Masalan: Muxriddin Karimov">
+    </label>
+    <div class="cert-list" id="certList"></div>
+    <div class="cert-preview" id="certPreview" hidden>
+      <canvas id="certCanvas" width="1600" height="1131" aria-label="Sertifikat"></canvas>
+      <div class="end-actions">
+        <button type="button" class="primary" id="certDownload">⬇️ Yuklab olish</button>
+        <button type="button" class="secondary" id="certShare">📤 Ulashish</button>
+      </div>
+    </div>
+    <p class="disclaimer">Til Ustoz sertifikati o'quv yutug'ingizni tasdiqlaydi, lekin rasmiy til sertifikati (ТРКИ, Goethe-Zertifikat, TOPIK) emas va ularning o'rnini bosmaydi.</p>
+  </main>
+
+  <!-- 16. Akkaunt va Premium -->
+  <main id="accountScreen" class="screen account" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">👤 Akkaunt</span>
+      <span></span>
+    </div>
+
+    <section class="panel" id="loginPanel">
+      <h2>🔐 Kirish</h2>
+      <p>Telegram, Google yoki telefon raqamingiz orqali kiring — so'zlaringiz, streak, kurs va sertifikatlar saqlanadi va istalgan telefonda ochiladi. Parol kerak emas.</p>
+      <div class="login-slot" data-login-slot></div>
+      <p class="hint-left" id="loginOff" hidden>Kirish hali sozlanmagan (sayt egasi uchun: README → "Akkaunt").</p>
+    </section>
+
+    <section class="panel" id="profilePanel" hidden>
+      <div class="profile">
+        <span class="avatar big" id="profileAvatar">👤</span>
+        <div>
+          <b id="profileName"></b>
+          <p class="hint-left" id="syncState">☁️ Natijalar saqlanmoqda</p>
+        </div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="ratingToggle">
+        <span>Umumiy reytingda ko'rinish</span>
+      </label>
+      <button type="button" class="link-btn" id="logoutBtn">Chiqish</button>
+    </section>
+
+    <section class="panel premium-panel" id="premiumPanel">
+      <h2>⭐ Obuna</h2>
+      <p class="plan-state" id="planState"></p>
+      <ul class="usage" id="usageList"></ul>
+      <div class="period-tabs" id="periodTabs" role="tablist"></div>
+      <div class="plan-cards" id="planCards"></div>
+      <ul class="benefits">
+        <li>🎙️ Har kuni ustoz bilan ovozli dars — tarifdagi daqiqalar</li>
+        <li>♾️ Cheksiz o'yinlar, lug'at, hikoyalar va imtihon sinovlari</li>
+        <li>⏱️ 20 va 30 daqiqalik uzun darslar</li>
+      </ul>
+      <p class="premium-buy" id="premiumBuy"></p>
+      <form class="code-form" id="codeForm">
+        <input type="text" id="codeInput" placeholder="Obuna kodi: TU-XXXX-XXXX" autocomplete="off" maxlength="20">
+        <button type="submit" class="primary">Faollashtirish</button>
+      </form>
+    </section>
+
+    <section class="panel" id="invitePanel" hidden>
+      <h2>👥 Do'stlarni taklif qiling</h2>
+      <p id="inviteText"></p>
+      <div class="invite-link">
+        <input type="text" id="inviteLink" readonly>
+        <button type="button" class="secondary" id="inviteShare">📤 Ulashish</button>
+      </div>
+      <form class="code-form" id="friendForm">
+        <input type="text" id="friendInput" placeholder="Do'stingizning kodi" autocomplete="off" maxlength="10">
+        <button type="submit" class="secondary">Do'st qo'shish</button>
+      </form>
+    </section>
+  </main>
+
+  <!-- 17. Yutuqlar -->
+  <main id="planScreen" class="screen hangul-screen" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="planBack">← Menyu</button>
+      <span class="game-title">🎯 Bugungi dars</span>
+      <span></span>
+    </div>
+    <div class="hangul-body" id="planBody"></div>
+  </main>
+
+  <main id="studyScreen" class="screen hangul-screen" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="studyBack">← Orqaga</button>
+      <span class="game-title" id="studyTitle"></span>
+      <span class="game-score" id="studyScore"></span>
+    </div>
+    <div class="hangul-body" id="studyBody"></div>
+  </main>
+
+  <main id="vocabScreen" class="screen hangul-screen" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="vocabBack">← Menyu</button>
+      <span class="game-title" id="vocabTitle">📚 Lug'at</span>
+      <span class="game-score" id="vocabScore"></span>
+    </div>
+    <div class="hangul-body" id="vocabBody"></div>
+  </main>
+
+  <main id="hangulScreen" class="screen hangul-screen" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">🔤 Hangul alifbosi</span>
+      <span></span>
+    </div>
+    <div class="hangul-body" id="hangulBody"></div>
+  </main>
+
+  <main id="badgesScreen" class="screen badges-screen" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">🏅 Yutuqlar</span>
+      <span></span>
+    </div>
+    <p class="lead small" id="badgeCount"></p>
+    <div class="badge-grid" id="badgeGrid"></div>
+  </main>
+
+  <!-- 18. Reyting -->
+  <main id="ratingScreen" class="screen rating" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">🏆 Haftalik reyting</span>
+      <span></span>
+    </div>
+    <div class="speak-lang tabs" role="tablist">
+      <button type="button" class="pill active" data-tab="friends">👥 Do'stlar</button>
+      <button type="button" class="pill" data-tab="global">🌍 Hammasi</button>
+    </div>
+    <div class="login-hint" id="ratingLogin" hidden>
+      <p>Reytingda qatnashish va do'stlar bilan bellashish uchun akkauntga kiring.</p>
+      <button type="button" class="primary" id="ratingLoginBtn">🔐 Kirish</button>
+    </div>
+    <p class="lead small" id="ratingNote"></p>
+    <ol class="rank-list" id="ratingList"></ol>
+  </main>
+
+  <!-- 19. Kasblar -->
+  <main id="profListScreen" class="screen prof-list" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">💼 Kasbiy kurslar</span>
+      <span></span>
+    </div>
+    <p class="lead small">Ish joyida kerak bo'ladigan so'zlar, suhbatlar va vaziyatlar. Kasbingizni tanlang:</p>
+    <div class="prof-grid" id="profGrid"></div>
+  </main>
+
+  <!-- 20. Bitta kasb -->
+  <main id="profScreen" class="screen prof" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="profBackBtn">← Kasblar</button>
+      <span class="game-title" id="profTitle"></span>
+      <span></span>
+    </div>
+    <div class="unit-icon" id="profIcon"></div>
+    <p class="lead small">Har mavzuda: so'zlar, test, ustoz bilan dars va rolli vaziyat.</p>
+    <div class="theme-list" id="themeList"></div>
+  </main>
+
+  <!-- 21. Rolli vaziyatlar -->
+  <main id="rolesScreen" class="screen roles" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" data-back="menu">← Menyu</button>
+      <span class="game-title">🎭 Rolli vaziyatlar</span>
+      <span></span>
+    </div>
+    <p class="lead small">Ustoz rol o'ynaydi — politsiyachi, ish beruvchi, shifokor. Siz maqsadga erishishingiz kerak! 5 daqiqa, oxirida baho va xatolar tahlili.</p>
+    <div class="role-list" id="roleList"></div>
+  </main>
+
+  <!-- 22. Ro'yxatdan o'tish anketasi -->
+  <main id="surveyScreen" class="screen survey" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="surveyClose">✕</button>
+      <span class="game-title" id="surveyTitle">📝 Anketa</span>
+      <span class="game-score" id="surveyStep"></span>
+    </div>
+    <div class="progress" aria-hidden="true"><div class="progress-fill" id="surveyProgress"></div></div>
+    <div class="face-slot small" id="surveyFace" data-face="happy" data-state="idle"></div>
+    <div class="survey-body" id="surveyBody"></div>
+    <div class="survey-nav">
+      <button type="button" class="secondary" id="surveyBack">← Назад</button>
+      <button type="button" class="primary big" id="surveyNext">Дальше →</button>
+    </div>
+  </main>
+
+  <dialog class="sheet" id="limitDialog">
+    <form method="dialog">
+      <div class="face-slot small" id="limitFace" data-face="surprised" data-state="idle"></div>
+      <h2>Bugungi bepul limit tugadi</h2>
+      <p id="limitText">Premium bilan cheksiz mashq qiling yoki ertaga davom eting. Takrorlash kartochkalari va daftar bepul va cheksiz!</p>
+      <div class="end-actions">
+        <button type="button" class="primary" id="limitPremium">⭐ Tariflar</button>
+        <button type="submit" class="secondary">Keyinroq</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="sheet" id="phoneDialog">
+    <form id="phoneForm" novalidate>
+      <h2>📱 Telefon raqam bilan</h2>
+      <div class="speak-lang tabs phone-tabs" role="tablist">
+        <button type="button" class="pill active" data-phone-mode="login">Kirish</button>
+        <button type="button" class="pill" data-phone-mode="register">Ro'yxatdan o'tish</button>
+      </div>
+      <input type="tel" id="phoneInput" placeholder="+998 90 123 45 67" autocomplete="tel" inputmode="tel" maxlength="20">
+      <input type="text" id="phoneName" placeholder="Ismingiz" autocomplete="name" maxlength="60" hidden>
+      <input type="password" id="phonePassword" placeholder="Parol" autocomplete="current-password" maxlength="100">
+      <p class="form-error" id="phoneError" role="alert" hidden></p>
+      <div class="end-actions">
+        <button type="submit" class="primary" id="phoneSubmit">Kirish</button>
+        <button type="button" class="secondary" id="phoneCancel">Bekor qilish</button>
+      </div>
+      <p class="phone-forgot" id="phoneForgot"></p>
+    </form>
+  </dialog>
+
+  <dialog class="sheet" id="reminderDialog">
+    <form method="dialog">
+      <h2>⏰ Har kuni eslatsin</h2>
+      <p id="pushInfo">Qaysi vaqtda mashq qilasiz? O'sha vaqtda, agar bugun hali dars qilmagan bo'lsangiz, telefoningizga bildirishnoma keladi.</p>
+      <input type="time" id="reminderTime" value="20:00">
+      <p class="push-state" id="pushState" hidden></p>
+      <div class="end-actions push-actions">
+        <button type="button" class="primary" id="pushOn">🔔 Bildirishnomani yoqish</button>
+        <button type="button" class="secondary" id="pushTest" hidden>📨 Sinab ko'rish</button>
+        <button type="button" class="secondary" id="pushOff" hidden>🔕 O'chirish</button>
+      </div>
+      <p class="hint-left" id="pushHint"></p>
+      <div class="end-actions">
+        <button type="button" class="link-btn" id="reminderSave">📅 Yoki taqvimga qo'shish (.ics)</button>
+        <button type="submit" class="secondary">Yopish</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="plan-bar" id="planBar" hidden>
+    <span id="planBarText"></span>
+    <button type="button" class="primary" id="planBarGo">Davom →</button>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="face.js"></script>
+  <script src="store.js"></script>
+  <script src="course.js"></script>
+  <script src="scenarios.js"></script>
+  <script src="exams.js"></script>
+  <script src="learn.js"></script>
+  <script src="plans.js"></script>
+  <script src="app.js"></script>
+  <script src="games.js"></script>
+  <script src="practice.js"></script>
+  <script src="hangul.js"></script>
+  <script src="themes.js"></script>
+  <script src="vocab.js"></script>
+  <script src="study.js"></script>
+  <script src="plan.js"></script>
+  <script src="exam.js"></script>
+  <script src="cert.js"></script>
+  <script src="account-ui.js"></script>
+  <script src="social.js"></script>
+  <script src="roles.js"></script>
+  <script src="survey.js"></script>
+  <script src="pwa.js"></script>
+  <script src="fx.js"></script>
+</body>
+</html>
