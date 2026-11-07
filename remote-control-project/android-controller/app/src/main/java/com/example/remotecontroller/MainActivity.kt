@@ -200,7 +200,7 @@ class MainActivity : AppCompatActivity() {
             .setVideoDecoderFactory(decoderFactory)
             .createPeerConnectionFactory()
 
-        val rtcConfig = PeerConnection.RTCConfiguration(emptyList())
+        val rtcConfig = PeerConnection.RTCConfiguration(Config.iceServers())
         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : PeerConnection.Observer {
             override fun onIceCandidate(candidate: IceCandidate) {
                 val sid = sessionId ?: return

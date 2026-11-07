@@ -53,8 +53,8 @@ xizmatidan (masalan Twilio, Xirsys) foydalanishingiz mumkin.
 
 - **Login/registratsiya UI** — ✅ qo'shildi (`LoginActivity.kt`, ikkala ilovada ham)
 - Deploy qo'llanmasi uchun `DEPLOYMENT.md`ga qarang
-- **TURN server** — production'da albatta kerak (DEPLOYMENT.md'da yo'riqnoma bor)
-- **Ma'lumotlar bazasi** — hozir backend xotirada (server qayta ishga tushsa hammasi o'chadi); Postgres/Redis kerak
+- **TURN server** — ✅ backend tomoni tayyor (`/ice-servers` endpointi `.env`dan STUN/TURN beradi); production'da o'z TURN serveringizni (coturn yoki Twilio/Xirsys) `.env`da sozlang (DEPLOYMENT.md'da yo'riqnoma bor)
+- **Ma'lumotlar bazasi** — ✅ qo'shildi (`src/store.js`): `DATABASE_URL` bo'lsa Postgres, bo'lmasa xotira. Jadvallar `schema.sql`dan avtomatik yaratiladi
 - **HTTPS/WSS** — hozirgi kod oddiy http; deploy qilishda TLS sertifikat (masalan Let's Encrypt) shart
 - **Video sifat/bitrate boshqaruvi**, ekran aylanishi (orientation) hisobga olish
 - **Matn kiritish** (klaviatura) — ✅ qo'shildi (ACTION_SET_TEXT orqali, fokusdagi maydonga)

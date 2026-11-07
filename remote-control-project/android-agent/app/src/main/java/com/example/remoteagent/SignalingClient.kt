@@ -60,9 +60,31 @@ class SignalingClient(
 object Config {
     const val API_BASE_URL = "https://your-backend.example.com"
     const val WS_BASE_URL = "wss://your-backend.example.com"
-    // WebRTC uchun STUN/TURN. Mobil tarmoqda (NAT orqasida) ulanish uchun shart;
-    // production'da o'z TURN serveringiz manzilini qo'ying (DEPLOYMENT.md).
+
+    // WebRTC STUN/TURN. Mobil tarmoqda (NAT orqasida) ulanish uchun TURN shart.
+    // ESLATMA: production'da bu ro'yxatni serverning GET /ice-servers endpointidan
+    // olish tavsiya etiladi (TURN paroli kodda saqlanmasligi uchun). Bu yerda
+    // soddalashtirilgan statik fallback berilgan.
     const val STUN_URL = "stun:stun.l.google.com:19302"
+    const val TURN_URL = ""        // masalan "turn:turn.example.com:3478"
+    const val TURN_USERNAME = ""
+    const val TURN_PASSWORD = ""
+
+    /** RTCConfiguration uchun ICE server ro'yxati (STUN + agar sozlangan bo'lsa TURN). */
+    fun iceServers(): List<org.webrtc.PeerConnection.IceServer> {
+        val list = mutableListOf(
+            org.webrtc.PeerConnection.IceServer.builder(STUN_URL).createIceServer()
+        )
+        if (TURN_URL.isNotEmpty()) {
+            list.add(
+                org.webrtc.PeerConnection.IceServer.builder(TURN_URL)
+                    .setUsername(TURN_USERNAME)
+                    .setPassword(TURN_PASSWORD)
+                    .createIceServer()
+            )
+        }
+        return list
+    }
 }
 
 /** Token va deviceId'ni saqlash uchun soddalashtirilgan joy (real loyihada EncryptedSharedPreferences). */

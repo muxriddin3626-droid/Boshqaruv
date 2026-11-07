@@ -110,25 +110,50 @@ systemctl start coturn
 ```
 
 Keyin `.env` faylidagi `TURN_URL`, `TURN_USERNAME`, `TURN_PASSWORD`ni
-to'ldiring va `server.js`dagi ICE server ro'yxatiga qo'shing (hozircha
-namunada faqat STUN bor - TURN qo'shish keyingi qadam sifatida kod bilan
-ko'rsatiladi, xohlasangiz shuni ham yozib beraman).
+to'ldiring. Bular avtomatik ishlatiladi: server `GET /ice-servers`
+endpointi orqali mijozlarga (Android/web) STUN va TURN ro'yxatini beradi,
+shuning uchun TURN maxfiy ma'lumotlari ilovaning kodiga yozilmaydi — faqat
+serverdagi `.env`da turadi. Mijozlar WebRTC'ni shu ro'yxat bilan sozlaydi.
+
+Tekshirish:
+```bash
+curl -s https://remote-api.sizning-domeningiz.com/ice-servers \
+  -H "Authorization: Bearer <token>"
+# -> {"iceServers":[{"urls":"stun:..."},{"urls":"turn:...","username":"...","credential":"..."}]}
+```
 
 Muqobil variant: o'z TURN server o'rnatish o'rniga tayyor xizmatdan
 foydalanish (masalan Twilio Network Traversal Service yoki Xirsys) -
 bu sozlash vaqtini qisqartiradi, lekin oylik to'lov talab qiladi.
 
-## 7) Ma'lumotlar bazasi (keyingi bosqich)
+## 7) Ma'lumotlar bazasi (Postgres)
 
-Hozirgi backend barcha ma'lumotni (foydalanuvchilar, qurilmalar, sessiyalar)
-xotirada saqlaydi - server qayta ishga tushirilganda hammasi o'chib ketadi.
-Production uchun:
-- **Postgres** - foydalanuvchilar va qurilmalar uchun
-- **Redis** - qisqa muddatli pairing kodlari va faol sessiyalar uchun
+Backend endi saqlash qatlami (`src/store.js`) orqali ishlaydi:
+- **`DATABASE_URL` o'rnatilgan bo'lsa** → Postgres (doimiy saqlash).
+  Jadvallar (`users`, `devices`, `sessions`) server ishga tushganda
+  `schema.sql`dan avtomatik yaratiladi.
+- **Bo'sh bo'lsa** → xotira (in-memory), faqat dev uchun; server qayta
+  ishga tushsa ma'lumot o'chadi.
 
-Bu o'zgarishni alohida bosqich sifatida qilish tavsiya etiladi, chunki
-`server.js`dagi `Map()` obyektlarini mos ravishda almashtirish kerak
-bo'ladi.
+Doimiy ma'lumot: foydalanuvchilar, qurilmalar va sessiyalar tarixi
+(audit-log). Qisqa muddatli runtime holati — faol WebSocket ulanishlari,
+pairing kodlar va faol sessiya marshruti — ataylab xotirada qoladi (ularni
+saqlash shart emas va ws obyektini serializatsiya qilib bo'lmaydi).
+
+Lokalda sinash:
+```bash
+export DATABASE_URL="postgres://user:parol@localhost:5432/rc"
+npm start   # jadvallar avtomatik yaratiladi
+```
+
+Render'da (`render.yaml`da sozlangan): `remote-control-db` bazasi
+yaratiladi va uning `connectionString`i `DATABASE_URL`ga avtomatik
+bog'lanadi — qo'shimcha sozlash shart emas.
+
+> **Redis** (ixtiyoriy, keyinroq): bir nechta server nusxasi (horizontal
+> scaling) kerak bo'lganda pairing kodlar va faol sessiyalarni nusxalar
+> o'rtasida bo'lishish uchun qo'shish mumkin. Bitta nusxa uchun hozirgi
+> xotira yetarli.
 
 ## 8) Xavfsizlik nazorat ro'yxati (production'ga chiqarishdan oldin)
 

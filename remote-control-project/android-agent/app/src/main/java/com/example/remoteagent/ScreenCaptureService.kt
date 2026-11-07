@@ -98,11 +98,8 @@ class ScreenCaptureService : Service() {
 
         val videoTrack = peerConnectionFactory.createVideoTrack("screen_track", videoSource)
 
-        // ICE server sozlamalari - backend'dan olingan STUN/TURN
-        val iceServers = listOf(
-            PeerConnection.IceServer.builder(Config.STUN_URL).createIceServer()
-        )
-        val rtcConfig = PeerConnection.RTCConfiguration(iceServers)
+        // ICE server sozlamalari - STUN + (sozlangan bo'lsa) TURN
+        val rtcConfig = PeerConnection.RTCConfiguration(Config.iceServers())
 
         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : PeerConnection.Observer {
             override fun onIceCandidate(candidate: IceCandidate?) {
