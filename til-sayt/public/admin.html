@@ -20,6 +20,7 @@
       <button type="button" class="tab active" data-tab="stats">📊 Statistika</button>
       <button type="button" class="tab" data-tab="users">👥 Foydalanuvchilar</button>
       <button type="button" class="tab" data-tab="payments">💳 To'lovlar <span class="tab-badge" id="payBadge" hidden>0</span></button>
+      <button type="button" class="tab" data-tab="knowledge">📚 Bilim bazasi</button>
       <button type="button" class="tab" data-tab="settings">⚙️ Sozlamalar</button>
     </nav>
     <button type="button" class="link-btn" id="logoutBtn" hidden>Chiqish</button>
@@ -54,6 +55,12 @@
     </section>
 
     <section class="panel">
+      <h2>📉 O'quvchilar eng ko'p qiynaladigan joylar</h2>
+      <p class="hint-left">Hamma darslar hisobotidan yig'iladi. Ustoz yangi o'quvchilarga shu joylarni oldindan mashq qildiradi.</p>
+      <div class="dist-grid" id="insightsBox"></div>
+    </section>
+
+    <section class="panel">
       <h2>Anketa natijalari</h2>
       <p class="hint-left" id="surveyNote"></p>
       <div class="dist-grid" id="surveyDist"></div>
@@ -71,6 +78,36 @@
     </div>
     <p class="hint-left" id="payNote"></p>
     <div class="pay-grid" id="payList"></div>
+  </main>
+
+  <main class="admin-main" id="knowledgeView" hidden>
+    <section class="panel">
+      <h2>🌐 Internetdan yangilanadigan qoidalar</h2>
+      <p class="hint-left">Patent, EPS-TOPIK, vizalar va imtihon qoidalari haftada bir marta internetdan o'zi tekshiriladi va pastdagi ro'yxatga «🤖 avto» bo'lib yoziladi. Ustoz ularni darsda ishlatadi. Xohlasangiz, hozir yangilang (1-2 daqiqa).</p>
+      <div class="kb-refresh" id="kbRefresh"></div>
+    </section>
+    <section class="panel">
+      <h2>✍️ Yangi ma'lumot qo'shish</h2>
+      <form class="settings-form" id="kbForm">
+        <input type="hidden" id="kbId">
+        <div class="field-row">
+          <label>Til <select id="kbLang"><option value="all">Hamma tillar</option><option value="ru">Rus</option><option value="de">Nemis</option><option value="ko">Koreys</option></select></label>
+          <label>Mavzu (teg) <input type="text" id="kbTopic" maxlength="40" placeholder="patent, imtihon, chegirma..."></label>
+          <label>Manba havolasi (ixtiyoriy) <input type="text" id="kbUrl" maxlength="400" placeholder="https://..."></label>
+        </div>
+        <label>Sarlavha <input type="text" id="kbTitle" maxlength="160" placeholder="Masalan: Patent imtihoni endi faqat kompyuterda"></label>
+        <label>Matn — ustoz shuni biladi va darsda ishlatadi <textarea id="kbBody" rows="4" maxlength="2000" placeholder="Aniq ma'lumot: raqamlar, sanalar, talablar..."></textarea></label>
+        <div class="end-actions"><button type="submit" class="primary" id="kbSave">Saqlash</button><button type="button" class="secondary" id="kbCancel" hidden>Bekor qilish</button></div>
+      </form>
+    </section>
+    <div class="chips pay-filter" id="kbFilter">
+      <button type="button" class="chip selected" data-lang="">Hammasi</button>
+      <button type="button" class="chip" data-lang="ru">🇷🇺 Rus</button>
+      <button type="button" class="chip" data-lang="de">🇩🇪 Nemis</button>
+      <button type="button" class="chip" data-lang="ko">🇰🇷 Koreys</button>
+      <button type="button" class="chip" data-lang="all">🌍 Umumiy</button>
+    </div>
+    <div class="kb-list" id="kbList"></div>
   </main>
 
   <main class="admin-main" id="usersView" hidden>

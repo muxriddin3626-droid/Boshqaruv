@@ -57,6 +57,8 @@ const TOPICS = {
   food: 'Restoranda — taom buyurtma qilish, hisob so\'rash',
   travel: "Sayohat — aeroport, mehmonxona, yo'l so'rash",
   job: "Ish suhbati — o'zini tanishtirish, tajriba, kuchli tomonlar",
+  news:
+    "Bugungi yangiliklar — o'quvchi bilan yangiliklarni o'rganilayotgan tilda muhokama qilish (yangiliklar pastda berilgan)",
   vocab:
     "KO'P SO'Z O'RGANISH (lug'at darsi). Maqsad — bir darsda iloji boricha ko'p yangi so'z yodlatish (20-40 ta). Har javobda 2-3 ta yangi foydali so'zni o'rgat: so'zni o'rganilayotgan tilda ayt, 'uz' segmentida tarjimasini va qisqa misolini ber, so'ng o'quvchidan shu so'zlarni ishlatib javob berishni so'ra. Har 4-5 javobda oldin o'rgatilgan so'zlardan tezkor so'roq qil («'olma' qanday edi?» yoki teskarisi) — xato qilsa, qayta eslat va keyinroq yana so'ra. So'zlarni mavzular bo'yicha guruhla (masalan, avval ovqat, keyin uy), o'quvchining darajasi va qiziqishlariga mos tanla. Har 10 ta so'zdan keyin o'zbekcha qisqa xulosa: «Bugun N ta so'z o'rgandik!».",
   hangul:
@@ -181,7 +183,8 @@ function profileLines(profile) {
   ];
 }
 
-function sessionPrompt(lang, settings, memory, profile) {
+// extra — qo'shimcha qatorlar: bilim bazasi, umumiy qiyinchiliklar, bugungi yangiliklar (fresh.js).
+function sessionPrompt(lang, settings, memory, profile, extra = []) {
   const p = PERSONAS[lang];
   const scenario = settings.scenario && SC.findScenario(settings.scenario);
   if (scenario) {
@@ -192,6 +195,7 @@ function sessionPrompt(lang, settings, memory, profile) {
       ...roleplayLines(scenario),
       `Foydalanuvchi darajasi: ${LEVELS[settings.level]} Darajaga mos so'zlar ishlat.`,
       ...profileLines(profile),
+      ...extra,
     ].filter(Boolean).join('\n\n');
   }
   const [topic, ...rest] = topicLines(lang, settings, LEVELS);
@@ -204,6 +208,7 @@ function sessionPrompt(lang, settings, memory, profile) {
     ...rest,
     ...profileLines(profile),
     memoryLines(memory).join('\n'),
+    ...extra,
   ].filter(Boolean).join('\n\n');
 }
 

@@ -128,6 +128,14 @@
       <span class="course-count" id="vocabCount">0/20</span>
     </button>
 
+    <button type="button" class="big-card news-card-btn" id="newsCard">
+      <span class="act-icon">📰</span>
+      <span class="act-text">
+        <span class="act-title">Bugungi yangiliklar</span>
+        <span class="act-desc" id="newsDesc">O'qing, tinglang, ustoz bilan muhokama qiling</span>
+      </span>
+    </button>
+
     <button type="button" class="big-card review-card" id="reviewCard">
       <span class="act-icon">🧠</span>
       <span class="act-text">
@@ -255,6 +263,7 @@
         <button type="button" class="chip" data-value="job">💼 Ish suhbati</button>
         <button type="button" class="chip" data-value="migrant">🛂 Migrant hayoti</button>
         <button type="button" class="chip" data-value="vocab">📚 Ko'p so'z yodlash</button>
+        <button type="button" class="chip" data-value="news">📰 Bugungi yangiliklar</button>
       </div>
     </section>
 
@@ -664,6 +673,15 @@
     <div class="hangul-body" id="studyBody"></div>
   </main>
 
+  <main id="newsScreen" class="screen hangul-screen" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="newsBack">← Menyu</button>
+      <span class="game-title">📰 Yangiliklar</span>
+      <span></span>
+    </div>
+    <div class="hangul-body" id="newsBody"></div>
+  </main>
+
   <main id="vocabScreen" class="screen hangul-screen" hidden>
     <div class="game-bar">
       <button type="button" class="stop-btn" id="vocabBack">← Menyu</button>
@@ -861,6 +879,7 @@
   <script src="vocab.js"></script>
   <script src="study.js"></script>
   <script src="plan.js"></script>
+  <script src="news.js"></script>
   <script src="exam.js"></script>
   <script src="cert.js"></script>
   <script src="account-ui.js"></script>

@@ -36,6 +36,7 @@
     vocab: $('vocabScreen'),
     study: $('studyScreen'),
     plan: $('planScreen'),
+    news: $('newsScreen'),
     rating: $('ratingScreen'),
     profList: $('profListScreen'),
     prof: $('profScreen'),
@@ -163,6 +164,7 @@
     window.Hangul.renderMenu(lang);
     window.Vocab.renderCard();
     window.Plan.renderCard();
+    window.News.renderCard();
     show('menu');
   }
 

@@ -83,6 +83,31 @@ const ready = (async () => {
         created_at INTEGER NOT NULL,
         decided_at INTEGER
       )`,
+      `CREATE TABLE IF NOT EXISTS knowledge (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lang TEXT NOT NULL,
+        topic TEXT NOT NULL DEFAULT '',
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        source TEXT NOT NULL DEFAULT 'admin',
+        source_url TEXT NOT NULL DEFAULT '',
+        enabled INTEGER NOT NULL DEFAULT 1,
+        updated_at INTEGER NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS kv_cache (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS insights (
+        lang TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        text_key TEXT NOT NULL,
+        text TEXT NOT NULL,
+        count INTEGER NOT NULL DEFAULT 1,
+        last_at INTEGER NOT NULL,
+        PRIMARY KEY (lang, kind, text_key)
+      )`,
       `CREATE TABLE IF NOT EXISTS passwords (
         user_id TEXT PRIMARY KEY,
         hash TEXT NOT NULL,
@@ -590,7 +615,128 @@ async function countPaymentsSince(userId, since) {
   return Number(r.rows[0].n);
 }
 
+// ---------- Bilim bazasi (admin materiallari va internetdan yangilangan qoidalar) ----------
+
+const rowToKnowledge = (x) => ({
+  id: Number(x.id),
+  lang: String(x.lang),
+  topic: String(x.topic),
+  title: String(x.title),
+  body: String(x.body),
+  source: String(x.source),
+  sourceUrl: String(x.source_url),
+  enabled: Number(x.enabled) === 1,
+  updatedAt: Number(x.updated_at),
+});
+
+async function listKnowledge({ lang = '', enabledOnly = false } = {}) {
+  const r = await client.execute({
+    sql: `SELECT * FROM knowledge WHERE (? = '' OR lang = ? OR lang = 'all') AND (? = 0 OR enabled = 1)
+          ORDER BY source = 'admin' DESC, updated_at DESC LIMIT 300`,
+    args: [lang, lang, enabledOnly ? 1 : 0],
+  });
+  return r.rows.map(rowToKnowledge);
+}
+
+async function saveKnowledge({ id, lang, topic, title, body, source = 'admin', sourceUrl = '', enabled = true }) {
+  if (id) {
+    await client.execute({
+      sql: 'UPDATE knowledge SET lang = ?, topic = ?, title = ?, body = ?, source_url = ?, enabled = ?, updated_at = ? WHERE id = ?',
+      args: [lang, topic, title, body, sourceUrl, enabled ? 1 : 0, Date.now(), id],
+    });
+    return id;
+  }
+  const r = await client.execute({
+    sql: `INSERT INTO knowledge (lang, topic, title, body, source, source_url, enabled, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+    args: [lang, topic, title, body, source, sourceUrl, enabled ? 1 : 0, Date.now()],
+  });
+  return Number(r.rows[0].id);
+}
+
+async function setKnowledgeEnabled(id, enabled) {
+  await client.execute({ sql: 'UPDATE knowledge SET enabled = ? WHERE id = ?', args: [enabled ? 1 : 0, id] });
+}
+
+async function deleteKnowledge(id) {
+  await client.execute({ sql: 'DELETE FROM knowledge WHERE id = ?', args: [id] });
+}
+
+// Internetdan yangilangan yozuvlar: shu til uchun eskilarini almashtiradi.
+async function replaceAutoKnowledge(lang, items) {
+  await client.batch(
+    [
+      { sql: "DELETE FROM knowledge WHERE lang = ? AND source = 'auto'", args: [lang] },
+      ...items.map((it) => ({
+        sql: `INSERT INTO knowledge (lang, topic, title, body, source, source_url, enabled, updated_at)
+              VALUES (?, ?, ?, ?, 'auto', ?, 1, ?)`,
+        args: [lang, it.topic, it.title, it.body, it.sourceUrl || '', Date.now()],
+      })),
+    ],
+    'write'
+  );
+}
+
+// ---------- Kesh (kunlik yangiliklar va h.k.) ----------
+
+async function cacheGet(key) {
+  const r = await client.execute({ sql: 'SELECT value, updated_at FROM kv_cache WHERE key = ?', args: [key] });
+  const x = r.rows[0];
+  if (!x) return null;
+  try {
+    return { value: JSON.parse(String(x.value)), updatedAt: Number(x.updated_at) };
+  } catch {
+    return null;
+  }
+}
+
+async function cacheSet(key, value) {
+  await client.execute({
+    sql: `INSERT INTO kv_cache (key, value, updated_at) VALUES (?, ?, ?)
+          ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    args: [key, JSON.stringify(value), Date.now()],
+  });
+}
+
+async function cacheCleanup(prefix, keepAfter) {
+  await client.execute({ sql: 'DELETE FROM kv_cache WHERE key LIKE ? AND updated_at < ?', args: [`${prefix}%`, keepAfter] });
+}
+
+// ---------- O'quvchilar qiynaladigan joylar (hamma darslardan) ----------
+
+async function addInsights(lang, kind, texts) {
+  const now = Date.now();
+  const list = texts.map((t) => String(t).trim()).filter((t) => t.length >= 3 && t.length <= 120);
+  if (!list.length) return;
+  await client.batch(
+    list.map((t) => ({
+      sql: `INSERT INTO insights (lang, kind, text_key, text, count, last_at) VALUES (?, ?, ?, ?, 1, ?)
+            ON CONFLICT(lang, kind, text_key) DO UPDATE SET count = count + 1, last_at = excluded.last_at, text = excluded.text`,
+      args: [lang, kind, t.toLowerCase().replace(/\s+/g, ' '), t, now],
+    })),
+    'write'
+  );
+}
+
+async function topInsights(lang, kind, limit = 10) {
+  const r = await client.execute({
+    sql: 'SELECT text, count, last_at FROM insights WHERE lang = ? AND kind = ? ORDER BY count DESC, last_at DESC LIMIT ?',
+    args: [lang, kind, limit],
+  });
+  return r.rows.map((x) => ({ text: String(x.text), count: Number(x.count), lastAt: Number(x.last_at) }));
+}
+
 module.exports = {
+  listKnowledge,
+  saveKnowledge,
+  setKnowledgeEnabled,
+  deleteKnowledge,
+  replaceAutoKnowledge,
+  cacheGet,
+  cacheSet,
+  cacheCleanup,
+  addInsights,
+  topInsights,
   createPayment,
   listPayments,
   getPaymentFile,

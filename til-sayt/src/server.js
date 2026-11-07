@@ -7,6 +7,8 @@ const account = require('./account');
 const admin = require('./admin');
 const push = require('./push');
 const payments = require('./payments');
+const fresh = require('./fresh');
+const db = require('./db');
 const auth = require('./auth');
 const {
   TUTOR_PROMPT,
@@ -232,6 +234,7 @@ async function askJson({ system, messages, schema, fast = false }) {
 }
 
 payments.setAsker(askJson);
+fresh.setup({ client, askJson, model: MODEL });
 
 const REFUSAL_REPLY = {
   mood: 'calm',
@@ -284,12 +287,15 @@ async function handleChat(req, res) {
     return;
   }
   const now = Date.now();
+  const settings = cleanSettings(body.settings);
+  const memory = cleanMemory(body.memory);
+  const extra = await fresh.lessonContext(lang, settings, memory);
 
   try {
     const reply = await askJson({
       system: [
         { type: 'text', text: TUTOR_PROMPT, cache_control: { type: 'ephemeral' } },
-        { type: 'text', text: sessionPrompt(lang, cleanSettings(body.settings), cleanMemory(body.memory), cleanProfile(body.profile)) },
+        { type: 'text', text: sessionPrompt(lang, settings, memory, cleanProfile(body.profile), extra) },
       ],
       messages,
       schema: REPLY_SCHEMA,
@@ -372,6 +378,7 @@ async function handleReport(req, res) {
     report.facts = strList(report.facts, 20, 160);
     report.topics = strList(report.topics, 3, 80);
     report.weak = strList(report.weak, 3, 80);
+    db.addInsights(lang, 'weak', report.weak).catch(() => {});
     sendJson(res, 200, report);
   } catch (err) {
     sendClaudeError(res, err);
@@ -527,6 +534,21 @@ async function handleGame(req, res) {
     sendJson(res, 200, game);
   } catch (err) {
     sendClaudeError(res, err);
+  }
+}
+
+// ---------- Bugungi yangiliklar ----------
+
+async function handleNews(req, res) {
+  const lang = new URL(req.url, 'http://x').searchParams.get('lang');
+  if (!Object.hasOwn(LANGUAGES, lang)) {
+    sendJson(res, 400, { error: "Noto'g'ri so'rov." });
+    return;
+  }
+  try {
+    sendJson(res, 200, await fresh.getNews(lang));
+  } catch (err) {
+    sendJson(res, 503, { error: err.message });
   }
 }
 
@@ -742,7 +764,7 @@ async function handleExamSection(req, res) {
   }
   try {
     const raw = await askJson({
-      system: examSectionPrompt(body.lang, found.exam, found.section),
+      system: [examSectionPrompt(body.lang, found.exam, found.section), ...(await fresh.examContext(body.lang, found.section.id))].join('\n\n'),
       messages: [{ role: 'user', content: "Topshiriqni tayyorla." }],
       schema: EXAM_SCHEMAS[found.kind],
       fast: true,
@@ -863,6 +885,10 @@ async function handleTts(req, res) {
   }
 }
 
+const GET_ROUTES = {
+  '/api/news': handleNews,
+};
+
 const ROUTES = {
   '/api/chat': handleChat,
   '/api/report': handleReport,
@@ -887,7 +913,7 @@ const server = http.createServer((req, res) => {
   const route =
     req.method === 'POST'
       ? ROUTES[url] || account.POST_ROUTES[url] || admin.POST_ROUTES[url] || push.POST_ROUTES[url] || payments.POST_ROUTES[url]
-      : account.GET_ROUTES[url] || admin.GET_ROUTES[url] || push.GET_ROUTES[url] || payments.GET_ROUTES[url];
+      : GET_ROUTES[url] || account.GET_ROUTES[url] || admin.GET_ROUTES[url] || push.GET_ROUTES[url] || payments.GET_ROUTES[url];
   if (route) {
     runRoute(route, req, res);
     return;
@@ -914,6 +940,7 @@ const server = http.createServer((req, res) => {
 
 account.ready.then(() => server.listen(PORT, () => {
   console.log(`Sayt ishga tushdi: http://localhost:${PORT}`);
+  fresh.startSchedule();
   if (!auth.enabled) console.log("Telegram orqali kirish sozlanmagan — natijalar faqat brauzerda saqlanadi.");
   else if (auth.secretIsRandom) console.log('Diqqat: SESSION_SECRET berilmagan — server qayta ishga tushsa, hamma qaytadan kirishi kerak.');
   if (!AZURE_KEY || !AZURE_REGION) {

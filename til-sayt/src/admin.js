@@ -6,6 +6,7 @@ const db = require('./db');
 const auth = require('./auth');
 const settings = require('./settings');
 const PLANS = require('../public/plans.js');
+const fresh = require('./fresh');
 const account = require('./account');
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || '';
@@ -232,7 +233,67 @@ async function handlePassword(req, res) {
   sendJson(res, 200, { ok: true, password });
 }
 
+// ---------- Bilim bazasi va o'quvchilar qiynaladigan joylar ----------
+
+const KB_LANGS = ['all', 'ru', 'de', 'ko'];
+
+async function handleKnowledge(req, res) {
+  if (!(await guard(req, res))) return;
+  if (req.method === 'GET') {
+    const lang = String(new URL(req.url, 'http://x').searchParams.get('lang') || '');
+    const items = await db.listKnowledge({ lang: KB_LANGS.includes(lang) && lang !== 'all' ? lang : '' });
+    const updated = {};
+    for (const l of fresh.LANGS) {
+      const c = await db.cacheGet(`rules:${l}`);
+      updated[l] = c ? c.value.at : null;
+    }
+    sendJson(res, 200, { items: lang === 'all' ? items.filter((k) => k.lang === 'all') : items, rulesUpdated: updated });
+    return;
+  }
+  const body = await readJson(req, res);
+  if (!body) return;
+  const id = parseInt(body.id, 10) || null;
+  if (body.action === 'delete' && id) {
+    await db.deleteKnowledge(id);
+  } else if (body.action === 'toggle' && id) {
+    await db.setKnowledgeEnabled(id, Boolean(body.enabled));
+  } else {
+    const lang = KB_LANGS.includes(body.lang) ? body.lang : 'all';
+    const title = String(body.title || '').trim().slice(0, 160);
+    const text = String(body.body || '').trim().slice(0, 2000);
+    if (!title || !text) {
+      sendJson(res, 400, { error: 'Sarlavha va matnni yozing.' });
+      return;
+    }
+    await db.saveKnowledge({ id, lang, topic: String(body.topic || '').trim().slice(0, 40), title, body: text, sourceUrl: String(body.sourceUrl || '').trim().slice(0, 400), enabled: body.enabled !== false });
+  }
+  fresh.clearCache();
+  sendJson(res, 200, { ok: true });
+}
+
+// Qoidalarni hozir internetdan yangilash (30-90 soniya davom etadi).
+async function handleKnowledgeRefresh(req, res) {
+  if (!(await guard(req, res))) return;
+  const body = await readJson(req, res);
+  if (!body) return;
+  try {
+    const count = await fresh.refreshRules(body.lang);
+    sendJson(res, 200, { ok: true, count });
+  } catch (err) {
+    sendJson(res, 502, { error: `Yangilab bo'lmadi: ${err.message}` });
+  }
+}
+
+async function handleInsights(req, res) {
+  if (!(await guard(req, res))) return;
+  const out = {};
+  for (const l of fresh.LANGS) out[l] = await db.topInsights(l, 'weak', 10);
+  sendJson(res, 200, { weak: out });
+}
+
 const GET_ROUTES = {
+  '/api/admin/knowledge': handleKnowledge,
+  '/api/admin/insights': handleInsights,
   '/api/admin/me': handleMe,
   '/api/admin/stats': handleStats,
   '/api/admin/users': handleUsers,
@@ -241,6 +302,8 @@ const GET_ROUTES = {
 };
 
 const POST_ROUTES = {
+  '/api/admin/knowledge': handleKnowledge,
+  '/api/admin/knowledge/refresh': handleKnowledgeRefresh,
   '/api/admin/login': handleLogin,
   '/api/admin/logout': handleLogout,
   '/api/admin/premium': handlePremium,

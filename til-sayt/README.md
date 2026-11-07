@@ -44,6 +44,23 @@ kasbiy kurs). Anketani sozlamalardan qayta to'ldirish mumkin (`public/survey.js`
 
 ### Tez o'rganish uchun
 
+- 📰 **Bugungi yangiliklar** — o'rganilayotgan til mamlakatidan (Rossiya, Germaniya, Koreya)
+  har kuni 4-5 ta yangilik: sodda tilda (A2-B1) matn, o'zbekcha mazmun, ovoz, so'zlarni
+  daftarga olish, manba havolasi va «Ustoz bilan muhokama qilish» darsi. Yangiliklarni
+  Claude internetda qidirib topadi (web search); har til uchun kuniga BIR marta tuziladi va
+  hamma o'quvchilarga umumiy (qidiruv narxi ~$10 / 1000 qidiruv — kuniga ~15 ta qidiruv).
+  Urush, siyosat, jinoyat mavzulari chetlab o'tiladi (`src/fresh.js`, `/api/news`).
+- 🌐 **Yangilanadigan qoidalar** — patent (Rossiya), EPS-TOPIK/TOPIK (Koreya), vizalar va
+  Goethe (Germaniya) qoidalari haftada bir marta internetdan rasmiy manbalardan tekshiriladi
+  va bilim bazasiga yoziladi; ustoz darsda va imtihon savollarida ularga tayanadi
+  (o'chirish: `FRESH_AUTO=off`).
+- 📚 **Bilim bazasi (admin)** — admin panel → «Bilim bazasi»: o'z ma'lumotlaringizni yozasiz
+  (yangi qoida, aksiya, tez-tez beriladigan savollar), avtomatik yangilanganlarni ko'rasiz,
+  o'chirasiz/tahrirlaysiz yoki «hozir yangilash». Ustoz darhol biladi.
+- 📉 **O'quvchilardan o'rganish** — har dars hisobotidagi qiyin joylar hamma o'quvchilar
+  bo'yicha yig'iladi; admin statistikada «eng ko'p qiynaladigan joylar» ko'rinadi, ustoz esa
+  yangi o'quvchilarga shu joylarni oldindan mashq qildiradi.
+
 - 🧠 **Ustoz o'quvchini eslab qoladi** — har darsdan keyin o'quvchi o'zi haqida aytganlari
   (ishi, oilasi, shahri, rejalari, qiziqishlari, yaqin voqealar, istaklari) xotiraga
   yoziladi; keyingi darslarda ustoz misollarni uning hayotidan oladi, oldingi gaplarining

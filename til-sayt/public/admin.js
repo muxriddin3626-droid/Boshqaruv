@@ -1,7 +1,7 @@
 // Til Ustoz admin paneli.
 (() => {
   const $ = (id) => document.getElementById(id);
-  const VIEWS = ['login', 'stats', 'users', 'payments', 'settings'];
+  const VIEWS = ['login', 'stats', 'users', 'payments', 'knowledge', 'settings'];
 
   const LABELS = {
     goal: { patent: '🛂 Patent (Rossiyada ish)', eps: '🏭 EPS (Koreyada ish)', work: '💼 Ish', study: "🎓 O'qish", family: '👨‍👩‍👧 Oila, ko\'chish', exam: '📜 Imtihon', travel: '✈️ Sayohat', self: "💡 O'zi uchun" },
@@ -112,9 +112,13 @@
   function openTab(tab) {
     show(tab);
     if (tab !== 'payments') refreshBadge();
-    if (tab === 'stats') loadStats();
+    if (tab === 'stats') {
+      loadStats();
+      loadInsights();
+    }
     else if (tab === 'users') loadUsers();
     else if (tab === 'payments') loadPayments();
+    else if (tab === 'knowledge') loadKnowledge();
     else if (tab === 'settings') loadSettings();
   }
 
@@ -575,6 +579,141 @@
 
   // Yangi cheklar haqida: har daqiqada nishonchani yangilaymiz.
   setInterval(() => !$('tabs').hidden && refreshBadge(), 60000);
+
+  // ---------- Bilim bazasi ----------
+
+  const KB_LANG = { all: '🌍 Hamma tillar', ru: '🇷🇺 Rus', de: '🇩🇪 Nemis', ko: '🇰🇷 Koreys' };
+  let kbLang = '';
+
+  async function loadKnowledge() {
+    let r;
+    try {
+      r = await api(`/api/admin/knowledge?lang=${kbLang}`);
+    } catch (err) {
+      return toast(err.message);
+    }
+    const ref = $('kbRefresh');
+    ref.textContent = '';
+    for (const l of ['ru', 'de', 'ko']) {
+      const at = r.rulesUpdated[l];
+      const b = button('secondary', `🔄 ${KB_LANG[l]} — ${at ? `yangilangan: ${fmtDate(at)}` : 'hali yangilanmagan'}`, async () => {
+        b.disabled = true;
+        b.textContent = `⏳ ${KB_LANG[l]} — internetdan tekshirilmoqda...`;
+        try {
+          const res = await api('/api/admin/knowledge/refresh', { lang: l });
+          toast(`✅ ${res.count} ta ma'lumot yangilandi`);
+        } catch (err) {
+          toast(err.message);
+        }
+        loadKnowledge();
+      });
+      ref.appendChild(b);
+    }
+    const list = $('kbList');
+    list.textContent = '';
+    if (!r.items.length) list.appendChild(el('p', 'hint-left', "Hozircha ma'lumot yo'q. Yuqorida qo'shing yoki internetdan yangilang."));
+    for (const k of r.items) {
+      const card = el('div', `panel kb-item${k.enabled ? '' : ' off'}`);
+      const head = el('div', 'kb-head');
+      head.append(
+        el('span', 'pill-badge', KB_LANG[k.lang] || k.lang),
+        el('span', `pill-badge ${k.source === 'auto' ? 'pro' : 'free'}`, k.source === 'auto' ? '🤖 avto (internet)' : '✍️ admin'),
+        k.topic ? el('span', 'pill-badge', `#${k.topic}`) : el('span'),
+        el('span', 'muted', fmtDate(k.updatedAt))
+      );
+      card.append(head, el('b', 'kb-title', k.title), el('p', 'kb-body', k.body));
+      if (k.sourceUrl) {
+        const a = el('a', 'kb-src', `Manba ↗ ${k.sourceUrl.replace(/^https?:\/\//, '').slice(0, 60)}`);
+        a.href = k.sourceUrl;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        card.appendChild(a);
+      }
+      const actions = el('div', 'end-actions kb-actions');
+      actions.append(
+        button('chip', k.enabled ? '⏸️ O\'chirish' : '▶️ Yoqish', async () => {
+          await api('/api/admin/knowledge', { action: 'toggle', id: k.id, enabled: !k.enabled }).catch((e) => toast(e.message));
+          loadKnowledge();
+        }),
+        button('chip', '✏️ Tahrirlash', () => editKnowledge(k)),
+        button('chip danger', "🗑️ O'chirib tashlash", async () => {
+          if (!confirm("Bu ma'lumot o'chirib tashlansinmi?")) return;
+          await api('/api/admin/knowledge', { action: 'delete', id: k.id }).catch((e) => toast(e.message));
+          loadKnowledge();
+        })
+      );
+      card.appendChild(actions);
+      list.appendChild(card);
+    }
+  }
+
+  function editKnowledge(k) {
+    $('kbId').value = k ? k.id : '';
+    $('kbLang').value = k ? k.lang : 'all';
+    $('kbTopic').value = k ? k.topic : '';
+    $('kbUrl').value = k ? k.sourceUrl : '';
+    $('kbTitle').value = k ? k.title : '';
+    $('kbBody').value = k ? k.body : '';
+    $('kbCancel').hidden = !k;
+    $('kbSave').textContent = k ? 'Saqlash (tahrir)' : 'Saqlash';
+    if (k) $('kbForm').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  $('kbForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await api('/api/admin/knowledge', {
+        id: $('kbId').value || null,
+        lang: $('kbLang').value,
+        topic: $('kbTopic').value,
+        sourceUrl: $('kbUrl').value,
+        title: $('kbTitle').value,
+        body: $('kbBody').value,
+      });
+      toast("✅ Saqlandi — ustoz endi buni biladi");
+      editKnowledge(null);
+      loadKnowledge();
+    } catch (err) {
+      toast(err.message);
+    }
+  });
+  $('kbCancel').addEventListener('click', () => editKnowledge(null));
+  $('kbFilter').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    kbLang = chip.dataset.lang;
+    $('kbFilter').querySelectorAll('.chip').forEach((c) => c.classList.toggle('selected', c === chip));
+    loadKnowledge();
+  });
+
+  async function loadInsights() {
+    let r;
+    try {
+      r = await api('/api/admin/insights');
+    } catch {
+      return;
+    }
+    const box = $('insightsBox');
+    box.textContent = '';
+    for (const l of ['ru', 'de', 'ko']) {
+      const list = r.weak[l] || [];
+      const col = el('div', 'dist');
+      col.appendChild(el('h3', '', KB_LANG[l]));
+      if (!list.length) col.appendChild(el('p', 'muted', "Hali ma'lumot yo'q"));
+      const max = Math.max(1, ...list.map((x) => x.count));
+      for (const it of list) {
+        const row = el('div', 'dist-row');
+        const bar = el('div', 'dist-bar');
+        const fill = el('div', 'dist-fill');
+        fill.style.width = `${Math.round((it.count / max) * 100)}%`;
+        bar.appendChild(fill);
+        row.append(el('span', 'dist-label', it.text), bar, el('span', 'dist-value', it.count));
+        row.title = it.text;
+        col.appendChild(row);
+      }
+      box.appendChild(col);
+    }
+  }
 
   // ---------- Sozlamalar ----------
 
