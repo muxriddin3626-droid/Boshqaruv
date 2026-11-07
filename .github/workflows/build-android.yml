@@ -94,3 +94,41 @@ jobs:
           name: ${{ matrix.artifact }}
           path: remote-control-project/${{ matrix.app }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+  # Ikkala APK tayyor bo'lgach, ularni backend/public/ ga joylab, branchga
+  # commit qiladi. Render shu papkadan APK'larni ommaviy ravishda uzatadi
+  # (token/sozlash kerak emas). Bu commit workflow'ni qayta ishga tushirmaydi
+  # ([skip ci] + paths filtri backend'ni qamramaydi), lekin Render'ni qayta
+  # deploy qiladi.
+  publish-apks:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dl
+
+      - name: APK'larni backend/public ga joylash
+        run: |
+          mkdir -p remote-control-project/backend/public
+          cp "$(find dl -path '*remote-agent*' -name '*.apk' | head -1)" remote-control-project/backend/public/agent.apk
+          cp "$(find dl -path '*remote-controller*' -name '*.apk' | head -1)" remote-control-project/backend/public/controller.apk
+          ls -la remote-control-project/backend/public
+
+      - name: Commit va push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add remote-control-project/backend/public/agent.apk remote-control-project/backend/public/controller.apk
+          if git diff --cached --quiet; then
+            echo "O'zgarish yo'q"
+          else
+            git commit -m "CI: APK'larni backend/public ga yangiladi [skip ci]"
+            git push
+          fi
