@@ -32,13 +32,19 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Android SDK o'rnatish
-        uses: android-actions/setup-android@v3
-
-      - name: SDK komponentlari (platform 34, build-tools)
+      # ubuntu-latest runnerida Android SDK allaqachon o'rnatilgan
+      # (ANDROID_HOME/ANDROID_SDK_ROOT sozlangan). Kerakli komponentlar
+      # yetishmasa, ularni qo'shamiz; bu qadam build'ni to'xtatmaydi.
+      - name: SDK komponentlari (agar yetishmasa)
         run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          [ -z "$SDKMANAGER" ] && [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ] && SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          echo "sdkmanager: ${SDKMANAGER:-topilmadi}; ANDROID_HOME=$ANDROID_HOME"
+          if [ -n "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+            "$SDKMANAGER" "platforms;android-34" "build-tools;34.0.0" >/dev/null 2>&1 || true
+          fi
+          ls "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools" 2>/dev/null || true
 
       - name: Gradle o'rnatish
         uses: gradle/actions/setup-gradle@v3
