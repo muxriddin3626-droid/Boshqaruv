@@ -252,3 +252,8 @@
 .pay-badge-approved { background: color-mix(in srgb, var(--leaf) 16%, var(--surface)); }
 .pay-badge-rejected { background: color-mix(in srgb, var(--danger) 12%, var(--surface)); }
 .pay-badge-pending { background: color-mix(in srgb, var(--sun) 25%, var(--surface)); }
+.pay-check { padding: 10px 12px; border-radius: 14px; background: var(--surface-2); border: 2px dashed var(--border); font-size: 13px; }
+.pay-check b { display: block; margin-bottom: 4px; font-size: 13px; }
+.pay-check ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.pay-check li.ok { color: var(--leaf); }
+.pay-check li.bad { color: var(--danger); font-weight: 600; }

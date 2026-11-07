@@ -335,6 +335,17 @@ rasmini (skrinshot) yoki PDF ni yuklaydi. Chek admin panel → «💳 To'lovlar�
 (tabda yangi cheklar soni ko'rinadi): chekni ko'rib, «✅ Tasdiqlash» bosilsa obuna o'zi
 yoqiladi; «❌ Rad etish» — sabab yoziladi va foydalanuvchiga ko'rinadi. Foydalanuvchi o'z
 to'lovlari holatini (tekshirilmoqda / tasdiqlandi / rad etildi) akkaunt sahifasida ko'radi.
+**Avtomatik tekshiruv (standart yoqilgan):** chek yuklanganda sun'iy intellekt undan summa,
+qabul qiluvchi kartaning oxirgi 4 raqami, sana, holat va tranzaksiya raqamini o'qiydi; server
+qat'iy qoidalar bilan solishtiradi: summa ≥ tarif narxi (so'mda), karta oxiri sizning kartangizniki,
+sana oxirgi 3 kun ichida, muvaffaqiyatli, tahrir belgisi yo'q, shu chek/tranzaksiya oldin
+ishlatilmagan. Hammasi mos bo'lsa — obuna DARHOL yoqiladi va to'lov «🤖 Avto-tasdiqlangan —
+ko'rib chiqing» bo'limiga tushadi: bank ilovangizda pul tushganini tekshirib «👍 To'g'ri» yoki
+«↩️ Bekor qilish» (obuna kunlari qaytarib olinadi, sabab foydalanuvchiga ko'rinadi). Biror
+narsa mos kelmasa — chek «Kutilmoqda»da qoladi va qaysi tekshiruv o'tmagani ko'rsatiladi.
+Sozlamalarda o'chirish mumkin (yoki `PAYMENT_AUTO_APPROVE=off`). Eslatma: AI soxta chekni
+har doim ham taniy olmaydi — shuning uchun keyingi ko'rib chiqish muhim.
+
 Fayl turi mazmunidan tekshiriladi (JPG, PNG, WEBP, PDF; 4 MB gacha), rasmlar yuklashdan oldin
 kichraytiriladi; chekni faqat admin ko'ra oladi. Bir vaqtda 3 tagacha kutilayotgan chek.
 

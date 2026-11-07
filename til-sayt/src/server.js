@@ -231,6 +231,8 @@ async function askJson({ system, messages, schema, fast = false }) {
   return JSON.parse(text);
 }
 
+payments.setAsker(askJson);
+
 const REFUSAL_REPLY = {
   mood: 'calm',
   segments: [{ lang: 'uz', text: "Kechirasiz, bu haqda gaplasha olmayman. Keling, boshqa mavzuda gaplashamiz." }],

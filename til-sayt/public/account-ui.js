@@ -381,11 +381,15 @@ window.AccountUI = (() => {
     if (!pay || !pay.file) return;
     const btn = $('paySubmit');
     btn.disabled = true;
-    btn.textContent = '⏳ Yuborilmoqda...';
+    btn.textContent = '⏳ Chek tekshirilmoqda...';
     try {
-      await App.postJson('/api/payments', { plan: pay.plan.id, months: pay.per.months, file: pay.file });
+      const r = await App.postJson('/api/payments', { plan: pay.plan.id, months: pay.per.months, file: pay.file });
       $('payDialog').close();
-      window.Practice.toast("✅ Chek yuborildi! Tekshirilgach, obuna o'zi yoqiladi.", 4500);
+      window.Practice.toast(
+        r.auto ? `🎉 To'lov tasdiqlandi! ${pay.plan.name} tarifi yoqildi.` : "✅ Chek qabul qilindi. Tez orada tekshirilib, obuna yoqiladi.",
+        5000
+      );
+      await refresh();
       loadPayments();
     } catch (err) {
       payError(err.message);
@@ -406,7 +410,7 @@ window.AccountUI = (() => {
       const li = document.createElement('li');
       li.className = `pay-${p.status}`;
       const head = document.createElement('b');
-      head.textContent = PAY_STATUS[p.status] || p.status;
+      head.textContent = p.status === 'approved' && p.auto ? '✅ Tasdiqlandi — obuna yoqildi' : PAY_STATUS[p.status] || p.status;
       const info = document.createElement('span');
       const plan = p.plan ? p.plan.name : '';
       const period = (window.PLANS.PERIODS.find((x) => x.months === p.months) || {}).label || '';

@@ -64,6 +64,7 @@
   <main class="admin-main" id="paymentsView" hidden>
     <div class="chips pay-filter" id="payFilter">
       <button type="button" class="chip selected" data-status="pending">⏳ Kutilmoqda</button>
+      <button type="button" class="chip" data-status="review">🤖 Avto-tasdiqlangan — ko'rib chiqing</button>
       <button type="button" class="chip" data-status="approved">✅ Tasdiqlangan</button>
       <button type="button" class="chip" data-status="rejected">❌ Rad etilgan</button>
       <button type="button" class="chip" data-status="">Hammasi</button>
@@ -114,6 +115,7 @@
       <div class="prices-grid" id="pricesGrid"></div>
 
       <h2>💳 To'lov kartasi</h2>
+      <label class="toggle"><input type="checkbox" id="setAutoApprove"> <span>Chekni avtomatik tekshirib, mos kelsa obunani darhol yoqish (keyin «To'lovlar»da ko'rib chiqasiz)</span></label>
       <p class="hint-left">Foydalanuvchi shu kartaga pul o'tkazib, chekni yuklaydi. Karta raqami bo'sh bo'lsa — eski usul (Telegram orqali yozish) ishlaydi.</p>
       <div class="field-row">
         <label>Karta raqami <input type="text" id="setCardNumber" maxlength="40" placeholder="8600 1234 5678 9012" inputmode="numeric"></label>
