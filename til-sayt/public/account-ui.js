@@ -581,7 +581,7 @@ window.AccountUI = (() => {
 
   $('inviteShare').addEventListener('click', async () => {
     const url = $('inviteLink').value;
-    const text = `Men Til Ustoz'da rus, nemis va koreys tilini o'rganyapman — ustoz bilan ovozli gaplashib! Qo'shiling: ${url}`;
+    const text = `Men Til Ustoz'da rus, nemis, koreys va ingliz tilini o'rganyapman — ustoz bilan ovozli gaplashib! Qo'shiling: ${url}`;
     if (navigator.share) {
       try {
         await navigator.share({ text, url });

@@ -1,11 +1,12 @@
 (() => {
   const LESSON_SECONDS = 10 * 60;
   const ROLEPLAY_SECONDS = 5 * 60;
-  const LOCALES = { ru: 'ru-RU', de: 'de-DE', ko: 'ko-KR', uz: 'uz-UZ' };
+  const LOCALES = { ru: 'ru-RU', de: 'de-DE', ko: 'ko-KR', en: 'en-GB', uz: 'uz-UZ' };
   const TUTORS = {
     ru: { name: 'Anna', speakLabel: 'Ruscha', lang: 'rus tili' },
     de: { name: 'Hans', speakLabel: 'Nemischa', lang: 'nemis tili' },
     ko: { name: 'Minji', speakLabel: 'Koreyscha', lang: 'koreys tili' },
+    en: { name: 'Emma', speakLabel: 'Inglizcha', lang: 'ingliz tili' },
   };
   const MODE_LABELS = { kind: 'Mehribon', strict: "Qattiqqo'l" };
   const THEME_KEY = 'til-ustoz-theme';
@@ -36,6 +37,7 @@
     vocab: $('vocabScreen'),
     study: $('studyScreen'),
     plan: $('planScreen'),
+    news: $('newsScreen'),
     rating: $('ratingScreen'),
     profList: $('profListScreen'),
     prof: $('profScreen'),
@@ -163,6 +165,7 @@
     window.Hangul.renderMenu(lang);
     window.Vocab.renderCard();
     window.Plan.renderCard();
+    window.News.renderCard();
     show('menu');
   }
 

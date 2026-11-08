@@ -1,10 +1,10 @@
 // Til Ustoz admin paneli.
 (() => {
   const $ = (id) => document.getElementById(id);
-  const VIEWS = ['login', 'stats', 'users', 'payments', 'settings'];
+  const VIEWS = ['login', 'stats', 'users', 'payments', 'costs', 'knowledge', 'settings'];
 
   const LABELS = {
-    goal: { patent: '🛂 Patent (Rossiyada ish)', eps: '🏭 EPS (Koreyada ish)', work: '💼 Ish', study: "🎓 O'qish", family: '👨‍👩‍👧 Oila, ko\'chish', exam: '📜 Imtihon', travel: '✈️ Sayohat', self: "💡 O'zi uchun" },
+    goal: { patent: '🛂 Patent (Rossiyada ish)', eps: '🏭 EPS (Koreyada ish)', ielts: '🎓 IELTS / CEFR', work: '💼 Ish', study: "🎓 O'qish", family: '👨‍👩‍👧 Oila, ko\'chish', exam: '📜 Imtihon', travel: '✈️ Sayohat', self: "💡 O'zi uchun" },
     prof: { builder: '👷 Quruvchi', driver: '🚕 Haydovchi', cook: '👨‍🍳 Oshpaz', seller: '🛒 Sotuvchi', courier: '📦 Kuryer', nurse: '🧑‍⚕️ Hamshira', factory: '🏭 Zavod', cleaner: '🧹 Tozalash', student: '🎓 Talaba', other: '✨ Boshqa' },
     level: { zero: '🌱 Noldan', little: '🌿 Biroz biladi', middle: "🌳 O'rta", good: '🏔️ Yaxshi' },
     age: { u18: '18 gacha', '18_25': '18–25', '26_35': '26–35', '36_50': '36–50', '50p': '50+' },
@@ -112,9 +112,14 @@
   function openTab(tab) {
     show(tab);
     if (tab !== 'payments') refreshBadge();
-    if (tab === 'stats') loadStats();
+    if (tab === 'stats') {
+      loadStats();
+      loadInsights();
+    }
     else if (tab === 'users') loadUsers();
     else if (tab === 'payments') loadPayments();
+    else if (tab === 'knowledge') loadKnowledge();
+    else if (tab === 'costs') loadCosts();
     else if (tab === 'settings') loadSettings();
   }
 
@@ -160,7 +165,7 @@
 
     const sv = s.survey;
     $('surveyNote').textContent = sv.total
-      ? `${sv.total} ta anketa (rus tili: ${sv.langs.ru}, nemis tili: ${sv.langs.de}, koreys tili: ${sv.langs.ko || 0}). Faqat akkauntga kirganlar hisoblanadi.`
+      ? `${sv.total} ta anketa (rus tili: ${sv.langs.ru}, nemis tili: ${sv.langs.de}, koreys tili: ${sv.langs.ko || 0}, ingliz tili: ${sv.langs.en || 0}). Faqat akkauntga kirganlar hisoblanadi.`
       : "Hali anketa yo'q. Faqat akkauntga kirgan foydalanuvchilarning anketasi serverga saqlanadi.";
     const dist = $('surveyDist');
     dist.textContent = '';
@@ -176,7 +181,8 @@
   }
 
   // Bitta qatorli ustunli grafik: har kun — bitta ustun, ustiga borganda aniq son.
-  function renderBarChart(box, rows) {
+  // opts: { axis(v), tip(r), footer } — boshqa grafiklar (masalan, xarajat) uchun.
+  function renderBarChart(box, rows, opts = {}) {
     box.textContent = '';
     // Grafik konteyner kengligida chiziladi, shunda telefonda ham yozuvlar o'qiladi.
     const W = Math.max(300, Math.min(1000, Math.round(box.clientWidth || 640)));
@@ -203,7 +209,7 @@
     for (let v = 0; v <= top; v += step) {
       const y = pad.t + ih - (v / top) * ih;
       mk('line', { x1: pad.l, x2: W - pad.r, y1: y, y2: y, class: 'grid' });
-      mk('text', { x: pad.l - 6, y: y + 4, class: 'axis', 'text-anchor': 'end' }, v);
+      mk('text', { x: pad.l - 6, y: y + 4, class: 'axis', 'text-anchor': 'end' }, opts.axis ? opts.axis(v) : v);
     }
     const tip = el('div', 'chart-tip');
     tip.hidden = true;
@@ -226,7 +232,7 @@
       // Ustundan kattaroq ko'rinmas maydon — sichqoncha va barmoq bilan oson tanlash uchun.
       const hit = mk('rect', { x: pad.l + i * bw, y: pad.t, width: bw, height: ih, class: 'hit' });
       const showTip = () => {
-        tip.textContent = `${r.day.slice(8)}.${r.day.slice(5, 7)} — ${r.count} ta yangi`;
+        tip.textContent = opts.tip ? opts.tip(r) : `${r.day.slice(8)}.${r.day.slice(5, 7)} — ${r.count} ta yangi`;
         tip.hidden = false;
         tip.style.left = `${((pad.l + i * bw + bw / 2) / W) * 100}%`;
       };
@@ -237,7 +243,7 @@
     mk('line', { x1: pad.l, x2: W - pad.r, y1: pad.t + ih, y2: pad.t + ih, class: 'baseline' });
     box.append(svg, tip);
     const total = rows.reduce((n, r) => n + r.count, 0);
-    box.appendChild(el('p', 'hint-left', `Jami 14 kunda: ${total} ta yangi foydalanuvchi`));
+    box.appendChild(el('p', 'hint-left', opts.footer || `Jami 14 kunda: ${total} ta yangi foydalanuvchi`));
   }
 
   // Taqsimot: gorizontal ustunlar, qiymat matn rangida.
@@ -353,6 +359,13 @@
     );
     box.appendChild(facts);
 
+    if (d.cost) {
+      const c = el('div', 'user-lang');
+      c.appendChild(el('h3', '', '💰 AI xarajati'));
+      c.appendChild(el('p', '', `Bugun: $${d.cost.today.toFixed(2)} · 30 kunda: $${d.cost.d30.usd.toFixed(2)} (${d.cost.d30.calls} ta so'rov)`));
+      box.appendChild(c);
+    }
+
     if (d.memory && d.memory.length) {
       const mem = el('div', 'user-lang');
       mem.appendChild(el('h3', '', '🧠 Ustoz u haqida biladi'));
@@ -360,11 +373,11 @@
       box.appendChild(mem);
     }
 
-    for (const lang of ['ru', 'de', 'ko']) {
+    for (const lang of ['ru', 'de', 'ko', 'en']) {
       const l = d.langs[lang];
       if (!l.profile && !l.words && !l.lessons) continue;
       const sec = el('div', 'user-lang');
-      sec.appendChild(el('h3', '', { ru: '🇷🇺 Rus tili', de: '🇩🇪 Nemis tili', ko: '🇰🇷 Koreys tili' }[lang]));
+      sec.appendChild(el('h3', '', { ru: '🇷🇺 Rus tili', de: '🇩🇪 Nemis tili', ko: '🇰🇷 Koreys tili', en: '🇬🇧 Ingliz tili' }[lang]));
       const p = l.profile || {};
       const lines = [
         p.name ? `Anketa: ${p.name}${p.city ? `, ${p.city}` : ''}${p.age ? `, ${LABELS.age[p.age] || p.age}` : ''}` : 'Anketa to\'ldirilmagan',
@@ -575,6 +588,247 @@
 
   // Yangi cheklar haqida: har daqiqada nishonchani yangilaymiz.
   setInterval(() => !$('tabs').hidden && refreshBadge(), 60000);
+
+  // ---------- AI xarajati ----------
+
+  let costRate = 12800;
+  const money = (usd) => `$${usd < 10 ? usd.toFixed(2) : Math.round(usd).toLocaleString('ru-RU')}`;
+  const som = (usd) => `${Math.round((usd * costRate) / 1000).toLocaleString('ru-RU').replace(/,/g, ' ')} ming so'm`;
+  const PLAN_NAMES = { light: 'Light', standard: 'Standard', pro: 'Pro' };
+
+  async function loadCosts() {
+    let r;
+    try {
+      r = await api('/api/admin/costs');
+    } catch (err) {
+      return toast(err.message);
+    }
+    costRate = r.usdRate;
+    const k = $('costKpis');
+    k.textContent = '';
+    const revUsd = r.revenue.monthlyUzs / r.usdRate;
+    const profit = revUsd - r.forecastMonth;
+    k.append(
+      kpi('Bugun', money(r.today), som(r.today)),
+      kpi('7 kun', money(r.d7), som(r.d7)),
+      kpi('30 kun', money(r.d30), som(r.d30)),
+      kpi('Oylik prognoz', money(r.forecastMonth), "oxirgi 30 kun bo'yicha"),
+      kpi(
+        'Obunadan daromad (oyiga)',
+        `${Math.round(r.revenue.monthlyUzs / 1000).toLocaleString('ru-RU').replace(/,/g, ' ')} ming so'm`,
+        r.revenue.subs.map((x) => `${PLAN_NAMES[x.plan] || x.plan}: ${x.count}`).join(' · ') || "faol obuna yo'q"
+      ),
+      kpi(profit >= 0 ? '✅ Taxminiy foyda' : '⚠️ Taxminiy zarar', money(Math.abs(profit)), `${som(Math.abs(profit))} / oy`)
+    );
+    renderBarChart(
+      $('costChart'),
+      r.byDay.map((d) => ({ day: d.day, count: Math.round(d.usd * 100) })),
+      {
+        axis: (v) => `$${(v / 100).toFixed(v >= 1000 ? 0 : v >= 100 ? 1 : 2)}`,
+        tip: (row) => `${row.day.slice(8)}.${row.day.slice(5, 7)} — $${(row.count / 100).toFixed(2)}`,
+        footer: `30 kunda jami: ${money(r.d30)} (${som(r.d30)})`,
+      }
+    );
+    const kinds = $('costKinds');
+    kinds.textContent = '';
+    const totalKinds = r.byKind.reduce((n, x) => n + x.usd, 0) || 1;
+    for (const x of r.byKind) {
+      const row = el('div', 'dist-row');
+      const bar = el('div', 'dist-bar');
+      const fill = el('div', 'dist-fill');
+      fill.style.width = `${Math.max(3, (x.usd / totalKinds) * 100)}%`;
+      bar.appendChild(fill);
+      row.append(el('span', 'dist-label', x.label), bar, el('span', 'dist-value cost-val', money(x.usd)));
+      row.title = `${x.calls} ta so'rov${x.searches ? `, ${x.searches} ta internet qidiruvi` : ''}`;
+      kinds.appendChild(row);
+    }
+    if (!r.byKind.length) kinds.appendChild(el('p', 'muted', "Hali xarajat yo'q"));
+
+    const al = $('costAlerts');
+    al.textContent = '';
+    al.hidden = !r.alerts.length;
+    if (r.alerts.length) {
+      al.appendChild(el('b', '', `⚠️ Bugun ${money(r.settings.costAlertUsd)} dan ko'p sarflaganlar:`));
+      for (const a of r.alerts) al.appendChild(el('p', '', `${a.name || a.subject} — ${money(a.todayUsd)}${a.premium ? '' : ' (bepul!)'}`));
+    }
+
+    const body = $('costTop');
+    body.textContent = '';
+    for (const t of r.top) {
+      const isUser = t.subject.startsWith('u:');
+      const tr = el('tr', isUser ? 'clickable' : '');
+      const who = isUser ? `${t.name || '—'} · ${loginLabel(t.subject.slice(2))}` : `Mehmon (IP ${t.subject.slice(3).replace(/\.\d+$/, '.*')})`;
+      const plan = t.premium ? `⭐ ${PLAN_NAMES[t.plan] || 'Premium'}` : 'Bepul';
+      tr.append(el('td', '', who), el('td', '', plan), el('td', 'num', money(t.todayUsd)), el('td', 'num', money(t.usd)), el('td', 'num', t.calls));
+      if (isUser) tr.addEventListener('click', () => openUser(t.subject.slice(2)));
+      body.appendChild(tr);
+    }
+    if (!r.top.length) {
+      const tr = el('tr');
+      const td = el('td', 'muted', "Hali ma'lumot yo'q");
+      td.colSpan = 5;
+      tr.appendChild(td);
+      body.appendChild(tr);
+    }
+    $('setCostAlert').value = r.settings.costAlertUsd;
+    $('setUserCap').value = r.settings.userDailyCapUsd;
+    $('setDailyBudget').value = r.settings.dailyBudgetUsd;
+    $('setUsdRate').value = r.settings.usdRate;
+  }
+
+  $('costForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const num = (id) => Math.max(0, parseFloat($(id).value) || 0);
+    try {
+      await api('/api/admin/settings', {
+        settings: {
+          costAlertUsd: num('setCostAlert'),
+          userDailyCapUsd: num('setUserCap'),
+          dailyBudgetUsd: num('setDailyBudget'),
+          usdRate: num('setUsdRate') || 12800,
+        },
+      });
+      toast('✅ Saqlandi');
+      loadCosts();
+    } catch (err) {
+      toast(err.message);
+    }
+  });
+
+  // ---------- Bilim bazasi ----------
+
+  const KB_LANG = { all: '🌍 Hamma tillar', ru: '🇷🇺 Rus', de: '🇩🇪 Nemis', ko: '🇰🇷 Koreys', en: '🇬🇧 Ingliz' };
+  let kbLang = '';
+
+  async function loadKnowledge() {
+    let r;
+    try {
+      r = await api(`/api/admin/knowledge?lang=${kbLang}`);
+    } catch (err) {
+      return toast(err.message);
+    }
+    const ref = $('kbRefresh');
+    ref.textContent = '';
+    for (const l of ['ru', 'de', 'ko', 'en']) {
+      const at = r.rulesUpdated[l];
+      const b = button('secondary', `🔄 ${KB_LANG[l]} — ${at ? `yangilangan: ${fmtDate(at)}` : 'hali yangilanmagan'}`, async () => {
+        b.disabled = true;
+        b.textContent = `⏳ ${KB_LANG[l]} — internetdan tekshirilmoqda...`;
+        try {
+          const res = await api('/api/admin/knowledge/refresh', { lang: l });
+          toast(`✅ ${res.count} ta ma'lumot yangilandi`);
+        } catch (err) {
+          toast(err.message);
+        }
+        loadKnowledge();
+      });
+      ref.appendChild(b);
+    }
+    const list = $('kbList');
+    list.textContent = '';
+    if (!r.items.length) list.appendChild(el('p', 'hint-left', "Hozircha ma'lumot yo'q. Yuqorida qo'shing yoki internetdan yangilang."));
+    for (const k of r.items) {
+      const card = el('div', `panel kb-item${k.enabled ? '' : ' off'}`);
+      const head = el('div', 'kb-head');
+      head.append(
+        el('span', 'pill-badge', KB_LANG[k.lang] || k.lang),
+        el('span', `pill-badge ${k.source === 'auto' ? 'pro' : 'free'}`, k.source === 'auto' ? '🤖 avto (internet)' : '✍️ admin'),
+        k.topic ? el('span', 'pill-badge', `#${k.topic}`) : el('span'),
+        el('span', 'muted', fmtDate(k.updatedAt))
+      );
+      card.append(head, el('b', 'kb-title', k.title), el('p', 'kb-body', k.body));
+      if (k.sourceUrl) {
+        const a = el('a', 'kb-src', `Manba ↗ ${k.sourceUrl.replace(/^https?:\/\//, '').slice(0, 60)}`);
+        a.href = k.sourceUrl;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        card.appendChild(a);
+      }
+      const actions = el('div', 'end-actions kb-actions');
+      actions.append(
+        button('chip', k.enabled ? '⏸️ O\'chirish' : '▶️ Yoqish', async () => {
+          await api('/api/admin/knowledge', { action: 'toggle', id: k.id, enabled: !k.enabled }).catch((e) => toast(e.message));
+          loadKnowledge();
+        }),
+        button('chip', '✏️ Tahrirlash', () => editKnowledge(k)),
+        button('chip danger', "🗑️ O'chirib tashlash", async () => {
+          if (!confirm("Bu ma'lumot o'chirib tashlansinmi?")) return;
+          await api('/api/admin/knowledge', { action: 'delete', id: k.id }).catch((e) => toast(e.message));
+          loadKnowledge();
+        })
+      );
+      card.appendChild(actions);
+      list.appendChild(card);
+    }
+  }
+
+  function editKnowledge(k) {
+    $('kbId').value = k ? k.id : '';
+    $('kbLang').value = k ? k.lang : 'all';
+    $('kbTopic').value = k ? k.topic : '';
+    $('kbUrl').value = k ? k.sourceUrl : '';
+    $('kbTitle').value = k ? k.title : '';
+    $('kbBody').value = k ? k.body : '';
+    $('kbCancel').hidden = !k;
+    $('kbSave').textContent = k ? 'Saqlash (tahrir)' : 'Saqlash';
+    if (k) $('kbForm').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  $('kbForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await api('/api/admin/knowledge', {
+        id: $('kbId').value || null,
+        lang: $('kbLang').value,
+        topic: $('kbTopic').value,
+        sourceUrl: $('kbUrl').value,
+        title: $('kbTitle').value,
+        body: $('kbBody').value,
+      });
+      toast("✅ Saqlandi — ustoz endi buni biladi");
+      editKnowledge(null);
+      loadKnowledge();
+    } catch (err) {
+      toast(err.message);
+    }
+  });
+  $('kbCancel').addEventListener('click', () => editKnowledge(null));
+  $('kbFilter').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    kbLang = chip.dataset.lang;
+    $('kbFilter').querySelectorAll('.chip').forEach((c) => c.classList.toggle('selected', c === chip));
+    loadKnowledge();
+  });
+
+  async function loadInsights() {
+    let r;
+    try {
+      r = await api('/api/admin/insights');
+    } catch {
+      return;
+    }
+    const box = $('insightsBox');
+    box.textContent = '';
+    for (const l of ['ru', 'de', 'ko', 'en']) {
+      const list = r.weak[l] || [];
+      const col = el('div', 'dist');
+      col.appendChild(el('h3', '', KB_LANG[l]));
+      if (!list.length) col.appendChild(el('p', 'muted', "Hali ma'lumot yo'q"));
+      const max = Math.max(1, ...list.map((x) => x.count));
+      for (const it of list) {
+        const row = el('div', 'dist-row');
+        const bar = el('div', 'dist-bar');
+        const fill = el('div', 'dist-fill');
+        fill.style.width = `${Math.round((it.count / max) * 100)}%`;
+        bar.appendChild(fill);
+        row.append(el('span', 'dist-label', it.text), bar, el('span', 'dist-value', it.count));
+        row.title = it.text;
+        col.appendChild(row);
+      }
+      box.appendChild(col);
+    }
+  }
 
   // ---------- Sozlamalar ----------
 

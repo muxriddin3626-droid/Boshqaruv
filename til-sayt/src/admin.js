@@ -6,6 +6,7 @@ const db = require('./db');
 const auth = require('./auth');
 const settings = require('./settings');
 const PLANS = require('../public/plans.js');
+const fresh = require('./fresh');
 const account = require('./account');
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || '';
@@ -104,9 +105,9 @@ async function handleStats(req, res) {
   // Anketa va tillar bo'yicha taqsimot (kirgan foydalanuvchilar ma'lumotidan).
   const states = await db.allStates();
   const profiles = [];
-  const langs = { ru: 0, de: 0, ko: 0 };
+  const langs = { ru: 0, de: 0, ko: 0, en: 0 };
   for (const { data } of states) {
-    for (const lang of ['ru', 'de', 'ko']) {
+    for (const lang of ['ru', 'de', 'ko', 'en']) {
       const p = data[`tu-profile-${lang}`] && data[`tu-profile-${lang}`].v;
       if (p && p.done) {
         profiles.push(p);
@@ -155,7 +156,7 @@ async function handleUser(req, res) {
   const data = await db.getState(id);
   const v = (k) => data[k] && data[k].v;
   const langs = {};
-  for (const lang of ['ru', 'de', 'ko']) {
+  for (const lang of ['ru', 'de', 'ko', 'en']) {
     const deck = v(`tu-deck-${lang}`) || {};
     const course = v(`tu-course-${lang}`) || {};
     langs[lang] = {
@@ -174,6 +175,10 @@ async function handleUser(req, res) {
     stats: v('tu-stats') || {},
     totalXp,
     badges: Object.keys(v('tu-badges') || {}).length,
+    cost: {
+      today: (await db.aiSubjectSince(`u:${id}`, tashkentDay())).usd,
+      d30: await db.aiSubjectSince(`u:${id}`, tashkentDay(Date.now() - 29 * DAY)),
+    },
     memory: (() => {
       const l = v('tu-learner') || {};
       return [...(l.pinned || []), ...(l.auto || l.facts || [])].slice(0, 25);
@@ -232,7 +237,124 @@ async function handlePassword(req, res) {
   sendJson(res, 200, { ok: true, password });
 }
 
+// ---------- AI xarajati ----------
+
+const KIND_LABELS = {
+  lesson: '🎙️ Ovozli darslar',
+  report: '📋 Dars hisobotlari',
+  practice: "🎮 O'yinlar va hikoyalar",
+  vocab: "📚 Lug'at to'plamlari",
+  grammar: '📘 Grammatika',
+  placement: '📊 Daraja testi',
+  exam: '🎓 Imtihon topshiriqlari',
+  'exam-grade': '✍️ Imtihon baholash',
+  news: '📰 Yangiliklar',
+  rules: '🌐 Qoidalarni yangilash',
+  receipt: '💳 Chek tekshiruvi',
+  other: 'Boshqa',
+};
+
+async function handleCosts(req, res) {
+  if (!(await guard(req, res))) return;
+  const s = settings.get();
+  const today = tashkentDay();
+  const since30 = tashkentDay(Date.now() - 29 * DAY);
+  const since7 = tashkentDay(Date.now() - 6 * DAY);
+  const byDayRaw = await db.aiByDay(since30);
+  const byDay = [];
+  for (let i = 29; i >= 0; i--) {
+    const day = tashkentDay(Date.now() - i * DAY);
+    const hit = byDayRaw.find((d) => d.day === day);
+    byDay.push({ day, usd: hit ? hit.usd : 0, calls: hit ? hit.calls : 0 });
+  }
+  const sum = (from) => byDay.filter((d) => d.day >= from).reduce((n, d) => n + d.usd, 0);
+  const total30 = sum(since30);
+  // Daromad taxmini: faol obunachilar × oylik narx (3 va 12 oylik chegirmalar hisobga olinmagan).
+  const subs = await db.activeSubscriptions();
+  const monthlyUzs = subs.reduce((n, x) => n + x.count * (Number(((s.prices || {})[x.plan] || {})[1]) || 0), 0);
+  const top = await db.aiTopSubjects(since7, today, 25);
+  sendJson(res, 200, {
+    today: sum(today),
+    d7: sum(since7),
+    d30: total30,
+    // Prognoz: xarajat boshlangan kundan beri o'rtacha kunlik × 30.
+    forecastMonth: (() => {
+      const first = byDay.findIndex((d) => d.usd > 0);
+      const days = first < 0 ? 30 : byDay.length - first;
+      return (total30 / Math.max(1, days)) * 30;
+    })(),
+    usdRate: s.usdRate,
+    byDay,
+    byKind: (await db.aiByKind(since30)).map((k) => ({ ...k, label: KIND_LABELS[k.kind] || k.kind })),
+    top,
+    alerts: top.filter((t) => s.costAlertUsd > 0 && t.todayUsd >= s.costAlertUsd),
+    revenue: { monthlyUzs, subs },
+    settings: { usdRate: s.usdRate, costAlertUsd: s.costAlertUsd, userDailyCapUsd: s.userDailyCapUsd, dailyBudgetUsd: s.dailyBudgetUsd },
+  });
+}
+
+// ---------- Bilim bazasi va o'quvchilar qiynaladigan joylar ----------
+
+const KB_LANGS = ['all', 'ru', 'de', 'ko', 'en'];
+
+async function handleKnowledge(req, res) {
+  if (!(await guard(req, res))) return;
+  if (req.method === 'GET') {
+    const lang = String(new URL(req.url, 'http://x').searchParams.get('lang') || '');
+    const items = await db.listKnowledge({ lang: KB_LANGS.includes(lang) && lang !== 'all' ? lang : '' });
+    const updated = {};
+    for (const l of fresh.LANGS) {
+      const c = await db.cacheGet(`rules:${l}`);
+      updated[l] = c ? c.value.at : null;
+    }
+    sendJson(res, 200, { items: lang === 'all' ? items.filter((k) => k.lang === 'all') : items, rulesUpdated: updated });
+    return;
+  }
+  const body = await readJson(req, res);
+  if (!body) return;
+  const id = parseInt(body.id, 10) || null;
+  if (body.action === 'delete' && id) {
+    await db.deleteKnowledge(id);
+  } else if (body.action === 'toggle' && id) {
+    await db.setKnowledgeEnabled(id, Boolean(body.enabled));
+  } else {
+    const lang = KB_LANGS.includes(body.lang) ? body.lang : 'all';
+    const title = String(body.title || '').trim().slice(0, 160);
+    const text = String(body.body || '').trim().slice(0, 2000);
+    if (!title || !text) {
+      sendJson(res, 400, { error: 'Sarlavha va matnni yozing.' });
+      return;
+    }
+    await db.saveKnowledge({ id, lang, topic: String(body.topic || '').trim().slice(0, 40), title, body: text, sourceUrl: String(body.sourceUrl || '').trim().slice(0, 400), enabled: body.enabled !== false });
+  }
+  fresh.clearCache();
+  sendJson(res, 200, { ok: true });
+}
+
+// Qoidalarni hozir internetdan yangilash (30-90 soniya davom etadi).
+async function handleKnowledgeRefresh(req, res) {
+  if (!(await guard(req, res))) return;
+  const body = await readJson(req, res);
+  if (!body) return;
+  try {
+    const count = await fresh.refreshRules(body.lang);
+    sendJson(res, 200, { ok: true, count });
+  } catch (err) {
+    sendJson(res, 502, { error: `Yangilab bo'lmadi: ${err.message}` });
+  }
+}
+
+async function handleInsights(req, res) {
+  if (!(await guard(req, res))) return;
+  const out = {};
+  for (const l of fresh.LANGS) out[l] = await db.topInsights(l, 'weak', 10);
+  sendJson(res, 200, { weak: out });
+}
+
 const GET_ROUTES = {
+  '/api/admin/costs': handleCosts,
+  '/api/admin/knowledge': handleKnowledge,
+  '/api/admin/insights': handleInsights,
   '/api/admin/me': handleMe,
   '/api/admin/stats': handleStats,
   '/api/admin/users': handleUsers,
@@ -241,6 +363,8 @@ const GET_ROUTES = {
 };
 
 const POST_ROUTES = {
+  '/api/admin/knowledge': handleKnowledge,
+  '/api/admin/knowledge/refresh': handleKnowledgeRefresh,
   '/api/admin/login': handleLogin,
   '/api/admin/logout': handleLogout,
   '/api/admin/premium': handlePremium,

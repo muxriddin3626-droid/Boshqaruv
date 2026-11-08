@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f4ede2">
-  <meta name="description" content="Rus, nemis va koreys tilini ovozli suhbat orqali o'rganing. Xatolaringiz o'zbek tilida tushuntiriladi.">
+  <meta name="description" content="Rus, nemis, koreys va ingliz tilini ovozli suhbat orqali o'rganing. Xatolaringiz o'zbek tilida tushuntiriladi.">
   <title>Til Ustoz</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
@@ -49,6 +49,12 @@
         <span class="lang-name">Koreys tili</span>
         <span class="lang-native">한국어</span>
         <span class="lang-tutor">Ustoz: Minji</span>
+      </button>
+      <button type="button" class="lang-card" data-lang="en">
+        <span class="flag">🇬🇧</span>
+        <span class="lang-name">Ingliz tili</span>
+        <span class="lang-native">English</span>
+        <span class="lang-tutor">Ustoz: Emma</span>
       </button>
     </div>
     <p class="hint">Mikrofonga ruxsat so'raladi. Eng yaxshi ishlashi uchun Chrome brauzeridan foydalaning.</p>
@@ -128,6 +134,14 @@
       <span class="course-count" id="vocabCount">0/20</span>
     </button>
 
+    <button type="button" class="big-card news-card-btn" id="newsCard">
+      <span class="act-icon">📰</span>
+      <span class="act-text">
+        <span class="act-title">Bugungi yangiliklar</span>
+        <span class="act-desc" id="newsDesc">O'qing, tinglang, ustoz bilan muhokama qiling</span>
+      </span>
+    </button>
+
     <button type="button" class="big-card review-card" id="reviewCard">
       <span class="act-icon">🧠</span>
       <span class="act-text">
@@ -141,7 +155,7 @@
       <span class="act-icon">🎓</span>
       <span class="act-text">
         <span class="act-title">Imtihonga tayyorgarlik</span>
-        <span class="act-desc" id="examCardDesc">Goethe / ТРКИ / TOPIK formatida sinov imtihoni</span>
+        <span class="act-desc" id="examCardDesc">Goethe / ТРКИ / TOPIK / IELTS formatida sinov imtihoni</span>
       </span>
     </button>
 
@@ -255,6 +269,7 @@
         <button type="button" class="chip" data-value="job">💼 Ish suhbati</button>
         <button type="button" class="chip" data-value="migrant">🛂 Migrant hayoti</button>
         <button type="button" class="chip" data-value="vocab">📚 Ko'p so'z yodlash</button>
+        <button type="button" class="chip" data-value="news">📰 Bugungi yangiliklar</button>
       </div>
     </section>
 
@@ -518,7 +533,7 @@
       <span></span>
     </div>
     <p class="lead small">Haqiqiy imtihon formatidagi mashq: vaqt cheklovi, barcha bo'limlar va ballar. Yozish va gapirishni ustoz imtihon oluvchidek baholaydi.</p>
-    <p class="disclaimer">⚠️ Bu — tayyorgarlik uchun sinov. Rasmiy sertifikatni faqat imtihon markazi (Goethe-Institut, ТРКИ markazlari, TOPIK / HRD Korea) beradi.</p>
+    <p class="disclaimer">⚠️ Bu — tayyorgarlik uchun sinov. Rasmiy sertifikatni faqat imtihon markazi (Goethe-Institut, ТРКИ markazlari, TOPIK / HRD Korea, British Council / IDP) beradi.</p>
     <div class="exam-list" id="examList"></div>
   </main>
 
@@ -572,7 +587,7 @@
         <button type="button" class="secondary" id="certShare">📤 Ulashish</button>
       </div>
     </div>
-    <p class="disclaimer">Til Ustoz sertifikati o'quv yutug'ingizni tasdiqlaydi, lekin rasmiy til sertifikati (ТРКИ, Goethe-Zertifikat, TOPIK) emas va ularning o'rnini bosmaydi.</p>
+    <p class="disclaimer">Til Ustoz sertifikati o'quv yutug'ingizni tasdiqlaydi, lekin rasmiy til sertifikati (ТРКИ, Goethe-Zertifikat, TOPIK, IELTS) emas va ularning o'rnini bosmaydi.</p>
   </main>
 
   <!-- 16. Akkaunt va Premium -->
@@ -662,6 +677,15 @@
       <span class="game-score" id="studyScore"></span>
     </div>
     <div class="hangul-body" id="studyBody"></div>
+  </main>
+
+  <main id="newsScreen" class="screen hangul-screen" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="newsBack">← Menyu</button>
+      <span class="game-title">📰 Yangiliklar</span>
+      <span></span>
+    </div>
+    <div class="hangul-body" id="newsBody"></div>
   </main>
 
   <main id="vocabScreen" class="screen hangul-screen" hidden>
@@ -861,6 +885,7 @@
   <script src="vocab.js"></script>
   <script src="study.js"></script>
   <script src="plan.js"></script>
+  <script src="news.js"></script>
   <script src="exam.js"></script>
   <script src="cert.js"></script>
   <script src="account-ui.js"></script>

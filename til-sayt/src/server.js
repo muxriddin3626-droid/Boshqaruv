@@ -7,6 +7,9 @@ const account = require('./account');
 const admin = require('./admin');
 const push = require('./push');
 const payments = require('./payments');
+const fresh = require('./fresh');
+const db = require('./db');
+const costs = require('./costs');
 const auth = require('./auth');
 const {
   TUTOR_PROMPT,
@@ -60,11 +63,12 @@ const AZURE_KEY = process.env.AZURE_SPEECH_KEY;
 const AZURE_REGION = process.env.AZURE_SPEECH_REGION;
 // Har bir ustozning ovozi: o'z tili, o'zbekcha tushuntirish va boshqa til uchun.
 const VOICES = {
-  ru: { ru: 'ru-RU-SvetlanaNeural', uz: 'uz-UZ-MadinaNeural', de: 'de-DE-KatjaNeural', ko: 'ko-KR-SunHiNeural' },
-  de: { de: 'de-DE-ConradNeural', uz: 'uz-UZ-SardorNeural', ru: 'ru-RU-DmitryNeural', ko: 'ko-KR-InJoonNeural' },
-  ko: { ko: 'ko-KR-SunHiNeural', uz: 'uz-UZ-MadinaNeural', ru: 'ru-RU-SvetlanaNeural', de: 'de-DE-KatjaNeural' },
+  ru: { ru: 'ru-RU-SvetlanaNeural', uz: 'uz-UZ-MadinaNeural', de: 'de-DE-KatjaNeural', ko: 'ko-KR-SunHiNeural', en: 'en-US-JennyNeural' },
+  de: { de: 'de-DE-ConradNeural', uz: 'uz-UZ-SardorNeural', ru: 'ru-RU-DmitryNeural', ko: 'ko-KR-InJoonNeural', en: 'en-US-GuyNeural' },
+  ko: { ko: 'ko-KR-SunHiNeural', uz: 'uz-UZ-MadinaNeural', ru: 'ru-RU-SvetlanaNeural', de: 'de-DE-KatjaNeural', en: 'en-US-JennyNeural' },
+  en: { en: 'en-GB-SoniaNeural', uz: 'uz-UZ-MadinaNeural', ru: 'ru-RU-SvetlanaNeural', de: 'de-DE-KatjaNeural', ko: 'ko-KR-SunHiNeural' },
 };
-const VOICE_LOCALES = { ru: 'ru-RU', de: 'de-DE', ko: 'ko-KR', uz: 'uz-UZ' };
+const VOICE_LOCALES = { ru: 'ru-RU', de: 'de-DE', ko: 'ko-KR', en: 'en-GB', uz: 'uz-UZ' };
 const MAX_TTS_CHARS = 600;
 
 // Suhbat tarixi brauzerda saqlanadi va har so'rovda yuboriladi. Server suhbat
@@ -223,6 +227,7 @@ async function askJson({ system, messages, schema, fast = false }) {
     system,
     messages,
   });
+  costs.record(response);
   if (response.stop_reason === 'refusal') return null;
   const text = response.content
     .filter((b) => b.type === 'text')
@@ -232,6 +237,7 @@ async function askJson({ system, messages, schema, fast = false }) {
 }
 
 payments.setAsker(askJson);
+fresh.setup({ client, askJson, model: MODEL });
 
 const REFUSAL_REPLY = {
   mood: 'calm',
@@ -284,12 +290,15 @@ async function handleChat(req, res) {
     return;
   }
   const now = Date.now();
+  const settings = cleanSettings(body.settings);
+  const memory = cleanMemory(body.memory);
+  const extra = await fresh.lessonContext(lang, settings, memory);
 
   try {
     const reply = await askJson({
       system: [
         { type: 'text', text: TUTOR_PROMPT, cache_control: { type: 'ephemeral' } },
-        { type: 'text', text: sessionPrompt(lang, cleanSettings(body.settings), cleanMemory(body.memory), cleanProfile(body.profile)) },
+        { type: 'text', text: sessionPrompt(lang, settings, memory, cleanProfile(body.profile), extra) },
       ],
       messages,
       schema: REPLY_SCHEMA,
@@ -372,6 +381,7 @@ async function handleReport(req, res) {
     report.facts = strList(report.facts, 20, 160);
     report.topics = strList(report.topics, 3, 80);
     report.weak = strList(report.weak, 3, 80);
+    db.addInsights(lang, 'weak', report.weak).catch(() => {});
     sendJson(res, 200, report);
   } catch (err) {
     sendClaudeError(res, err);
@@ -527,6 +537,21 @@ async function handleGame(req, res) {
     sendJson(res, 200, game);
   } catch (err) {
     sendClaudeError(res, err);
+  }
+}
+
+// ---------- Bugungi yangiliklar ----------
+
+async function handleNews(req, res) {
+  const lang = new URL(req.url, 'http://x').searchParams.get('lang');
+  if (!Object.hasOwn(LANGUAGES, lang)) {
+    sendJson(res, 400, { error: "Noto'g'ri so'rov." });
+    return;
+  }
+  try {
+    sendJson(res, 200, await fresh.getNews(lang));
+  } catch (err) {
+    sendJson(res, 503, { error: err.message });
   }
 }
 
@@ -742,7 +767,7 @@ async function handleExamSection(req, res) {
   }
   try {
     const raw = await askJson({
-      system: examSectionPrompt(body.lang, found.exam, found.section),
+      system: [examSectionPrompt(body.lang, found.exam, found.section), ...(await fresh.examContext(body.lang, found.section.id))].join('\n\n'),
       messages: [{ role: 'user', content: "Topshiriqni tayyorla." }],
       schema: EXAM_SCHEMAS[found.kind],
       fast: true,
@@ -863,6 +888,10 @@ async function handleTts(req, res) {
   }
 }
 
+const GET_ROUTES = {
+  '/api/news': handleNews,
+};
+
 const ROUTES = {
   '/api/chat': handleChat,
   '/api/report': handleReport,
@@ -875,8 +904,39 @@ const ROUTES = {
   '/api/tts': handleTts,
 };
 
+// AI ishlatadigan yo'llar: xarajat shu bo'lim va foydalanuvchiga yoziladi.
+const AI_KINDS = {
+  '/api/chat': 'lesson',
+  '/api/report': 'report',
+  '/api/game': 'practice',
+  '/api/vocab': 'vocab',
+  '/api/grammar': 'grammar',
+  '/api/placement': 'placement',
+  '/api/exam/section': 'exam',
+  '/api/exam/grade': 'exam-grade',
+  '/api/news': 'news',
+  '/api/payments': 'receipt',
+};
+// Kunlik chegara tekshiriladigan (o'quvchi bosib ishlatadigan) yo'llar.
+const BUDGETED = new Set(['/api/chat', '/api/game', '/api/vocab', '/api/grammar', '/api/placement', '/api/exam/section', '/api/exam/grade']);
+
+async function guarded(route, url, req, res) {
+  if (BUDGETED.has(url)) {
+    const user = await account.currentUser(req);
+    const b = await costs.checkBudget(req, account.isPremium(user));
+    if (!b.ok) {
+      sendJson(res, b.status, { error: b.error, budget: true });
+      return;
+    }
+  }
+  await route(req, res);
+}
+
 function runRoute(route, req, res) {
-  route(req, res).catch((err) => {
+  const url = req.url.split('?')[0];
+  const kind = AI_KINDS[url];
+  const job = kind ? costs.run(req, kind, () => guarded(route, url, req, res)) : route(req, res);
+  job.catch((err) => {
     console.error('Server xatoligi:', err);
     if (!res.headersSent) sendJson(res, 500, { error: 'Server xatoligi.' });
   });
@@ -887,7 +947,7 @@ const server = http.createServer((req, res) => {
   const route =
     req.method === 'POST'
       ? ROUTES[url] || account.POST_ROUTES[url] || admin.POST_ROUTES[url] || push.POST_ROUTES[url] || payments.POST_ROUTES[url]
-      : account.GET_ROUTES[url] || admin.GET_ROUTES[url] || push.GET_ROUTES[url] || payments.GET_ROUTES[url];
+      : GET_ROUTES[url] || account.GET_ROUTES[url] || admin.GET_ROUTES[url] || push.GET_ROUTES[url] || payments.GET_ROUTES[url];
   if (route) {
     runRoute(route, req, res);
     return;
@@ -914,6 +974,7 @@ const server = http.createServer((req, res) => {
 
 account.ready.then(() => server.listen(PORT, () => {
   console.log(`Sayt ishga tushdi: http://localhost:${PORT}`);
+  fresh.startSchedule();
   if (!auth.enabled) console.log("Telegram orqali kirish sozlanmagan — natijalar faqat brauzerda saqlanadi.");
   else if (auth.secretIsRandom) console.log('Diqqat: SESSION_SECRET berilmagan — server qayta ishga tushsa, hamma qaytadan kirishi kerak.');
   if (!AZURE_KEY || !AZURE_REGION) {

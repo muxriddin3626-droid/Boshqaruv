@@ -533,3 +533,19 @@ input[type="text"], input[type="tel"], input[type="password"], input[type="numbe
 .pay-status .pay-pending { border-color: color-mix(in srgb, var(--sun) 60%, var(--border)); background: color-mix(in srgb, var(--sun) 10%, var(--surface)); }
 .pay-status .pay-approved { border-color: color-mix(in srgb, var(--leaf) 50%, var(--border)); background: color-mix(in srgb, var(--leaf) 9%, var(--surface)); }
 .pay-status .pay-rejected { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); background: color-mix(in srgb, var(--danger) 7%, var(--surface)); }
+
+/* Bugungi yangiliklar */
+.news-card { width: 100%; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; padding: 16px; text-align: left; border: 2px solid var(--border); border-radius: 22px; background: var(--surface); box-shadow: 0 5px 0 var(--edge), var(--shadow); }
+.news-title, .news-text { padding: 0; border: none; background: none; color: var(--text); text-align: left; cursor: pointer; }
+.news-title { font-family: var(--display); font-size: 18px; font-weight: 700; line-height: 1.3; }
+.news-text { font-size: 16px; line-height: 1.55; }
+.news-uz { margin: 0; padding: 10px 12px; border-radius: 14px; background: var(--surface-2); color: var(--muted); font-size: 14px; line-height: 1.45; }
+.news-tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.news-words { display: flex; flex-wrap: wrap; gap: 6px; }
+.news-word { padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg); color: var(--text); font-size: 13px; cursor: pointer; }
+.news-source { font-size: 12px; color: var(--muted); text-decoration: none; }
+.news-go { width: 100%; }
+
+/* 4 ta til: 2×2 to'r */
+.lang-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 460px; }
+@media (min-width: 720px) { .lang-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 700px; } }

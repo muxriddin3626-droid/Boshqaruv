@@ -1,10 +1,10 @@
 const COURSE = require('../public/course.js');
 const SC = require('../public/scenarios.js');
 
-const TUTOR_PROMPT = `Sen professional va tajribali rus, nemis va koreys tili o'qituvchisisiz. Sening vazifang foydalanuvchiga rus, nemis yoki koreys tillarini jonli muloqot orqali o'rgatish.
+const TUTOR_PROMPT = `Sen professional va tajribali rus, nemis, koreys va ingliz tili o'qituvchisisiz. Sening vazifang foydalanuvchiga rus, nemis, koreys yoki ingliz tillarini jonli muloqot orqali o'rgatish.
 
 Quyidagi qoidalarga qat'iy amal qil:
-1. Til tanlash: Foydalanuvchi qaysi tilda muloqot qilishni xohlasa (rus, nemis yoki koreys tili), suhbatni o'sha tilda olib borasan.
+1. Til tanlash: Foydalanuvchi qaysi tilda muloqot qilishni xohlasa (rus, nemis, koreys yoki ingliz tili), suhbatni o'sha tilda olib borasan.
 2. Tushuntirish tili: Foydalanuvchining grammatik xatolarini, so'zlar ma'nosini va qoidalarni doimo O'ZBEK TILIDA tushuntirasan.
 3. Xatolarni tuzatish: Foydalanuvchi xato gapirsa, uni darhol qo'pol bo'lmagan tarzda to'g'rilab, to'g'ri variantini o'zbek tilida qisqacha tushuntirib o'tasan.
 4. Muloqot uslubi: Do'stona, sabrli va rag'batlantiruvchi tarzda muloqot qilasan. Har bir javobing oxirida suhbat davom etishi uchun foydalanuvchiga o'sha tilda qiziqarli savol berasan.
@@ -13,7 +13,7 @@ Quyidagi qoidalarga qat'iy amal qil:
 Bu OVOZLI dars: foydalanuvchi mikrofon orqali gapiradi, sening javobing esa ovoz chiqarib o'qiladi.
 - Jonli suhbatdagidek qisqa gapir: bir javobda 1-4 ta qisqa gap. Uzun ro'yxat va ma'ruzalardan qoch.
 - Emoji, Markdown, qavs ichidagi transliteratsiya va maxsus belgilar ishlatma — ular ovozda o'qilmaydi.
-- Javobni "segments" ro'yxatiga bo'l: har bir bo'lak bitta tilda bo'lsin ("ru", "de", "ko" yoki "uz"), shunda har birini to'g'ri talaffuz bilan o'qiymiz. O'zbekcha bo'laklarni lotin yozuvida yoz.
+- Javobni "segments" ro'yxatiga bo'l: har bir bo'lak bitta tilda bo'lsin ("ru", "de", "ko", "en" yoki "uz"), shunda har birini to'g'ri talaffuz bilan o'qiymiz. O'zbekcha bo'laklarni lotin yozuvida yoz.
 - Foydalanuvchining gapi nutqni tanish dasturi orqali yoziladi, shuning uchun unda tinish belgilari yoki kichik xatolar bo'lishi mumkin — bunday narsalarni xato deb hisoblama, faqat aniq grammatik va so'z xatolarini tuzat.
 - "mood" — yuzchaning kayfiyati, javobingga mos tanla:
   calm — oddiy suhbat; happy — foydalanuvchi to'g'ri aytdi; excited — juda yaxshi javob yoki yutuq;
@@ -28,6 +28,7 @@ const LANGUAGES = {
   ru: 'rus tili',
   de: 'nemis tili',
   ko: 'koreys tili',
+  en: 'ingliz tili',
 };
 
 // Tilga xos qo'shimcha ko'rsatmalar.
@@ -39,6 +40,7 @@ const PERSONAS = {
   ru: { name: 'Anna', about: "Moskvalik rus tili o'qituvchisi, ayol" },
   de: { name: 'Hans', about: "Berlinlik nemis tili o'qituvchisi, erkak" },
   ko: { name: 'Minji', about: "Seullik koreys tili o'qituvchisi, ayol" },
+  en: { name: 'Emma', about: "Londonlik ingliz tili o'qituvchisi, ayol (IELTS bo'yicha tajribali)" },
 };
 
 const MODES = {
@@ -57,12 +59,14 @@ const TOPICS = {
   food: 'Restoranda — taom buyurtma qilish, hisob so\'rash',
   travel: "Sayohat — aeroport, mehmonxona, yo'l so'rash",
   job: "Ish suhbati — o'zini tanishtirish, tajriba, kuchli tomonlar",
+  news:
+    "Bugungi yangiliklar — o'quvchi bilan yangiliklarni o'rganilayotgan tilda muhokama qilish (yangiliklar pastda berilgan)",
   vocab:
     "KO'P SO'Z O'RGANISH (lug'at darsi). Maqsad — bir darsda iloji boricha ko'p yangi so'z yodlatish (20-40 ta). Har javobda 2-3 ta yangi foydali so'zni o'rgat: so'zni o'rganilayotgan tilda ayt, 'uz' segmentida tarjimasini va qisqa misolini ber, so'ng o'quvchidan shu so'zlarni ishlatib javob berishni so'ra. Har 4-5 javobda oldin o'rgatilgan so'zlardan tezkor so'roq qil («'olma' qanday edi?» yoki teskarisi) — xato qilsa, qayta eslat va keyinroq yana so'ra. So'zlarni mavzular bo'yicha guruhla (masalan, avval ovqat, keyin uy), o'quvchining darajasi va qiziqishlariga mos tanla. Har 10 ta so'zdan keyin o'zbekcha qisqa xulosa: «Bugun N ta so'z o'rgandik!».",
   hangul:
     "HANGUL HARFLARI DARSI. O'quvchi koreys yozuvini endi o'rganyapti. Har javobda faqat 1-2 ta yangi harf yoki bo'g'in o'rgat: 'uz' segmentida harfning shakli va tovushini o'zbekcha, lotincha qisqa tushuntir (eslab qolish usuli bilan, masalan «ㅏ — tik chiziq, tayoqcha o'ngga, «a» deb o'qiladi»), so'ng 'ko' segmentida o'sha bo'g'in yoki oddiy so'zni ayt (masalan 아, 가, 나비) — u ekranda Hangul bilan ko'rinadi — va o'quvchidan ovoz chiqarib takrorlashni so'ra. Tartib: asosiy unlilar (아 어 오 우 으 이), keyin ㄱ ㄴ ㄷ ㄹ ㅁ ㅂ ㅅ ㅈ ㅎ, keyin oddiy so'zlar (나, 아이, 바다, 나비, 하나). Takrorlaganda talaffuzini baholab, xatosini tuzat. Har 3-4 javobda o'rgangan harflardan kichik savol ber: «가 qanday o'qiladi?». Koreys tilida uzun gapirma — bu o'qish darsi, asosiy tushuntirish o'zbekcha.",
   migrant:
-    "Chet elda ishlovchi migrant hayoti (Rossiya, Germaniya yoki Janubiy Koreyada — tanlangan tilga qarab) — politsiya hujjat tekshiruvi, ish beruvchi bilan suhbat va ish haqi, migratsiya xizmati (Rossiyada MFC/МВД, Germaniyada Ausländerbehörde, Koreyada 출입국관리사무소 va 고용센터), shifokor, kvartira ijarasi, bank va pul o'tkazmasi. Amaliy, kundalik iboralar.",
+    "Chet elda ishlovchi migrant hayoti (Rossiya, Germaniya, Janubiy Koreya yoki Buyuk Britaniya/AQShda — tanlangan tilga qarab) — politsiya hujjat tekshiruvi, ish beruvchi bilan suhbat va ish haqi, migratsiya xizmati (Rossiyada MFC/МВД, Germaniyada Ausländerbehörde, Koreyada 출입국관리사무소 va 고용센터), shifokor, kvartira ijarasi, bank va pul o'tkazmasi. Amaliy, kundalik iboralar.",
 };
 
 const LEVELS = {
@@ -146,6 +150,7 @@ const PROFILE_TEXT = {
   goal: {
     patent: 'Rossiyada ishlash uchun patent olish',
     eps: "Janubiy Koreyada ishlash (EPS-TOPIK imtihoni orqali)",
+    ielts: "IELTS yoki CEFR imtihonini topshirish (o'qishga kirish, grant, chet elda o'qish)",
     work: 'chet elda ishlash',
     study: "o'qish",
     family: "oila, ko'chib o'tish",
@@ -181,7 +186,8 @@ function profileLines(profile) {
   ];
 }
 
-function sessionPrompt(lang, settings, memory, profile) {
+// extra — qo'shimcha qatorlar: bilim bazasi, umumiy qiyinchiliklar, bugungi yangiliklar (fresh.js).
+function sessionPrompt(lang, settings, memory, profile, extra = []) {
   const p = PERSONAS[lang];
   const scenario = settings.scenario && SC.findScenario(settings.scenario);
   if (scenario) {
@@ -192,6 +198,7 @@ function sessionPrompt(lang, settings, memory, profile) {
       ...roleplayLines(scenario),
       `Foydalanuvchi darajasi: ${LEVELS[settings.level]} Darajaga mos so'zlar ishlat.`,
       ...profileLines(profile),
+      ...extra,
     ].filter(Boolean).join('\n\n');
   }
   const [topic, ...rest] = topicLines(lang, settings, LEVELS);
@@ -204,6 +211,7 @@ function sessionPrompt(lang, settings, memory, profile) {
     ...rest,
     ...profileLines(profile),
     memoryLines(memory).join('\n'),
+    ...extra,
   ].filter(Boolean).join('\n\n');
 }
 
@@ -219,7 +227,7 @@ const REPLY_SCHEMA = {
       items: {
         type: 'object',
         properties: {
-          lang: { type: 'string', enum: ['ru', 'de', 'ko', 'uz'] },
+          lang: { type: 'string', enum: ['ru', 'de', 'ko', 'en', 'uz'] },
           text: { type: 'string' },
         },
         required: ['lang', 'text'],

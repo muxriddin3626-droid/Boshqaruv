@@ -1,7 +1,7 @@
 // Kasbiy kurslar va rolli vaziyatlar. Bu fayl ham brauzerda, ham serverda ishlatiladi.
 // Har kasbda 4 ta mavzu; har mavzuda o'z rolli vaziyati bor.
 (function (root) {
-  const COUNTRY = "o'rganilayotgan til mamlakatida (rus tili bo'lsa — Rossiyada, nemis tili bo'lsa — Germaniyada, koreys tili bo'lsa — Janubiy Koreyada)";
+  const COUNTRY = "o'rganilayotgan til mamlakatida (rus tili bo'lsa — Rossiyada, nemis tili bo'lsa — Germaniyada, koreys tili bo'lsa — Janubiy Koreyada, ingliz tili bo'lsa — Buyuk Britaniyada)";
 
   const PROFESSIONS = [
     {
