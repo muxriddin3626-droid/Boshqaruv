@@ -27,7 +27,6 @@ import org.webrtc.*
  */
 class ScreenCaptureService : Service() {
 
-    private var mediaProjection: MediaProjection? = null
     private lateinit var eglBase: EglBase
     private lateinit var peerConnectionFactory: PeerConnectionFactory
     private var videoCapturer: VideoCapturer? = null
@@ -41,15 +40,23 @@ class ScreenCaptureService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         sessionId = intent?.getStringExtra("sessionId")
-        val resultCode = intent?.getIntExtra("resultCode", Activity_RESULT_CANCELED) ?: return START_NOT_STICKY
-        val data = intent.getParcelableExtra<Intent>("data") ?: return START_NOT_STICKY
+        val data = intent?.getParcelableExtra<Intent>("data") ?: return START_NOT_STICKY
         permissionData = data
 
-        startForeground(NOTIFICATION_ID, buildNotification())
+        // Android 14 (API 34): mediaProjection foreground service TUR bilan
+        // startForeground qilinishi SHART, aks holda ilova yiqiladi.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                NOTIFICATION_ID, buildNotification(),
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, buildNotification())
+        }
 
-        val projectionManager = getSystemService(MediaProjectionManager::class.java)
-        mediaProjection = projectionManager.getMediaProjection(resultCode, data)
-
+        // MUHIM: getMediaProjection'ni O'ZIMIZ chaqirmaymiz - MediaProjection
+        // tokeni BIR MARTALIK. ScreenCapturerAndroid uni ichida o'zi ishlatadi;
+        // biz ham chaqirsak, Android 14'da ikkinchi chaqiruv yiqitadi.
         instance = this
         initWebRtcAndStartStreaming()
         return START_NOT_STICKY
@@ -176,7 +183,6 @@ class ScreenCaptureService : Service() {
         videoSource?.dispose()
         surfaceHelper?.dispose()
         peerConnection?.close()
-        mediaProjection?.stop()
     }
 
     companion object {
