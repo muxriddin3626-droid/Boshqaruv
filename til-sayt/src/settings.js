@@ -17,6 +17,10 @@ const DEFAULTS = {
   cardHolder: process.env.PAYMENT_CARD_HOLDER || '',
   cardBank: process.env.PAYMENT_CARD_BANK || '',
   autoApprove: process.env.PAYMENT_AUTO_APPROVE !== 'off',
+  usdRate: Number(process.env.USD_RATE || 12800),
+  costAlertUsd: Number(process.env.COST_ALERT_USD || 1),
+  userDailyCapUsd: Number(process.env.USER_DAILY_CAP_USD || 0),
+  dailyBudgetUsd: Number(process.env.DAILY_BUDGET_USD || 0),
 };
 
 // Narxlar: har tarif uchun { 1: so'm, 3: so'm, 12: so'm }.
@@ -43,6 +47,10 @@ const VALIDATE = {
   cardHolder: (v) => typeof v === 'string' && v.length <= 80,
   cardBank: (v) => typeof v === 'string' && v.length <= 80,
   autoApprove: (v) => typeof v === 'boolean',
+  usdRate: (v) => typeof v === 'number' && v >= 1000 && v <= 100000,
+  costAlertUsd: (v) => typeof v === 'number' && v >= 0 && v <= 1000,
+  userDailyCapUsd: (v) => typeof v === 'number' && v >= 0 && v <= 1000,
+  dailyBudgetUsd: (v) => typeof v === 'number' && v >= 0 && v <= 100000,
 };
 
 let current = { ...DEFAULTS };

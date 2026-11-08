@@ -3,15 +3,18 @@
 // Yangiliklar har til uchun kuniga bir marta tuziladi va hamma o'quvchilarga umumiy — shuning
 // uchun internet qidiruvi kam ishlatiladi.
 const db = require('./db');
+const costs = require('./costs');
 
-const LANGS = ['ru', 'de', 'ko'];
-const COUNTRY = { ru: 'Rossiya', de: 'Germaniya', ko: 'Janubiy Koreya' };
-const LANG_NAME = { ru: 'rus tili', de: 'nemis tili', ko: 'koreys tili' };
+const LANGS = ['ru', 'de', 'ko', 'en'];
+const COUNTRY = { ru: 'Rossiya', de: 'Germaniya', ko: 'Janubiy Koreya', en: 'Buyuk Britaniya va AQSh' };
+const LANG_NAME = { ru: 'rus tili', de: 'nemis tili', ko: 'koreys tili', en: 'ingliz tili' };
 const RULE_TOPICS = {
   ru: "Rossiyada chet el fuqarolari (ayniqsa O'zbekiston fuqarolari) uchun: patent olish tartibi va hujjatlar, patent imtihoni (rus tili, tarix, qonunchilik asoslari) talablari va o'tish bali, patent uchun oylik to'lov (Moskva va boshqa hududlar), migratsiya hisobiga turish muddatlari, so'nggi o'zgarishlar va yangi qoidalar.",
   de: "Germaniyaga O'zbekiston fuqarolari uchun: ishlash va o'qish vizalari, Chancenkarte, malakali mutaxassislar uchun talablar, Goethe-Zertifikat imtihonlari (A1-B1) tartibi, oila birlashuvi uchun til talabi, so'nggi o'zgarishlar.",
   ko: "Janubiy Koreyaga O'zbekistondan EPS (Employment Permit System) orqali ishlashga borish: EPS-TOPIK imtihoni tartibi, ball talablari, ro'yxatdan o'tish (Tashqi mehnat migratsiyasi agentligi), TOPIK imtihoni sanalari va darajalari, E-9 viza, so'nggi o'zgarishlar.",
 };
+RULE_TOPICS.en =
+  "O'zbekistondagi o'quvchilar uchun: IELTS imtihoni (Academic va General) — narxi, formati, ro'yxatdan o'tish va sanalar (British Council, IDP), natija qancha muddat amal qiladi; O'zbekistondagi CEFR (Multilevel) ingliz tili imtihoni — formati, darajalari, imtiyozlari (grant, OTMga kirish, ustama); Buyuk Britaniya va AQSh talaba vizasi uchun til talablari; so'nggi o'zgarishlar.";
 const RULES_MAX_AGE = 7 * 86400000;
 const RETRY_AFTER = 12 * 3600000;
 
@@ -42,6 +45,7 @@ async function searchText(system, prompt, maxUses = 5) {
       tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: maxUses }],
       messages,
     });
+    costs.record(res);
     if (res.stop_reason === 'refusal') throw new Error('rad etildi');
     for (const b of res.content) {
       if (b.type === 'text') text += b.text;
@@ -135,7 +139,8 @@ async function getNews(lang) {
   if (!inflight.has(key)) {
     inflight.set(
       key,
-      buildNews(lang, day)
+      costs
+        .runSystem('news', () => buildNews(lang, day))
         .then(async (news) => {
           await db.cacheSet(key, news);
           db.cacheCleanup(`news:${lang}:`, Date.now() - 7 * 86400000).catch(() => {});
@@ -179,6 +184,10 @@ const RULES_SCHEMA = {
 };
 
 async function refreshRules(lang) {
+  return costs.runSystem('rules', () => refreshRulesNow(lang));
+}
+
+async function refreshRulesNow(lang) {
   if (!LANGS.includes(lang)) throw new Error("Noto'g'ri til");
   await db.cacheSet(`rules-try:${lang}`, { at: Date.now() });
   const found = await searchText(

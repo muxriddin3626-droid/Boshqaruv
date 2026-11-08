@@ -5,7 +5,7 @@ const webpush = require('web-push');
 const db = require('./db');
 const { sendJson, readJson, clientIp } = require('./account');
 
-const TUTORS = { ru: 'Anna', de: 'Hans', ko: 'Minji' };
+const TUTORS = { ru: 'Anna', de: 'Hans', ko: 'Minji', en: 'Emma' };
 const MESSAGES = [
   (t) => `${t} kutyapti: bugungi dars hali bajarilmadi. 15 daqiqa — va streak saqlanadi! 🔥`,
   (t) => `Bugun hali mashq qilmadingiz. ${t} bilan 10 daqiqa gaplashamizmi? 🎙️`,
@@ -100,7 +100,7 @@ async function handleSubscribe(req, res) {
     sendJson(res, 400, { error: "Noto'g'ri so'rov." });
     return;
   }
-  const lang = ['ru', 'de', 'ko'].includes(body.lang) ? body.lang : 'ru';
+  const lang = ['ru', 'de', 'ko', 'en'].includes(body.lang) ? body.lang : 'ru';
   const uid = require('./auth').sessionUserId(req);
   await db.savePushSub({ endpoint: sub.endpoint, sub, userId: uid, lang, time: body.time, tz, activeDay: typeof body.activeDay === 'string' ? body.activeDay.slice(0, 10) : '' });
   sendJson(res, 200, { ok: true });

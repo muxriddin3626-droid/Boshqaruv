@@ -9,6 +9,7 @@ const push = require('./push');
 const payments = require('./payments');
 const fresh = require('./fresh');
 const db = require('./db');
+const costs = require('./costs');
 const auth = require('./auth');
 const {
   TUTOR_PROMPT,
@@ -62,11 +63,12 @@ const AZURE_KEY = process.env.AZURE_SPEECH_KEY;
 const AZURE_REGION = process.env.AZURE_SPEECH_REGION;
 // Har bir ustozning ovozi: o'z tili, o'zbekcha tushuntirish va boshqa til uchun.
 const VOICES = {
-  ru: { ru: 'ru-RU-SvetlanaNeural', uz: 'uz-UZ-MadinaNeural', de: 'de-DE-KatjaNeural', ko: 'ko-KR-SunHiNeural' },
-  de: { de: 'de-DE-ConradNeural', uz: 'uz-UZ-SardorNeural', ru: 'ru-RU-DmitryNeural', ko: 'ko-KR-InJoonNeural' },
-  ko: { ko: 'ko-KR-SunHiNeural', uz: 'uz-UZ-MadinaNeural', ru: 'ru-RU-SvetlanaNeural', de: 'de-DE-KatjaNeural' },
+  ru: { ru: 'ru-RU-SvetlanaNeural', uz: 'uz-UZ-MadinaNeural', de: 'de-DE-KatjaNeural', ko: 'ko-KR-SunHiNeural', en: 'en-US-JennyNeural' },
+  de: { de: 'de-DE-ConradNeural', uz: 'uz-UZ-SardorNeural', ru: 'ru-RU-DmitryNeural', ko: 'ko-KR-InJoonNeural', en: 'en-US-GuyNeural' },
+  ko: { ko: 'ko-KR-SunHiNeural', uz: 'uz-UZ-MadinaNeural', ru: 'ru-RU-SvetlanaNeural', de: 'de-DE-KatjaNeural', en: 'en-US-JennyNeural' },
+  en: { en: 'en-GB-SoniaNeural', uz: 'uz-UZ-MadinaNeural', ru: 'ru-RU-SvetlanaNeural', de: 'de-DE-KatjaNeural', ko: 'ko-KR-SunHiNeural' },
 };
-const VOICE_LOCALES = { ru: 'ru-RU', de: 'de-DE', ko: 'ko-KR', uz: 'uz-UZ' };
+const VOICE_LOCALES = { ru: 'ru-RU', de: 'de-DE', ko: 'ko-KR', en: 'en-GB', uz: 'uz-UZ' };
 const MAX_TTS_CHARS = 600;
 
 // Suhbat tarixi brauzerda saqlanadi va har so'rovda yuboriladi. Server suhbat
@@ -225,6 +227,7 @@ async function askJson({ system, messages, schema, fast = false }) {
     system,
     messages,
   });
+  costs.record(response);
   if (response.stop_reason === 'refusal') return null;
   const text = response.content
     .filter((b) => b.type === 'text')
@@ -901,8 +904,39 @@ const ROUTES = {
   '/api/tts': handleTts,
 };
 
+// AI ishlatadigan yo'llar: xarajat shu bo'lim va foydalanuvchiga yoziladi.
+const AI_KINDS = {
+  '/api/chat': 'lesson',
+  '/api/report': 'report',
+  '/api/game': 'practice',
+  '/api/vocab': 'vocab',
+  '/api/grammar': 'grammar',
+  '/api/placement': 'placement',
+  '/api/exam/section': 'exam',
+  '/api/exam/grade': 'exam-grade',
+  '/api/news': 'news',
+  '/api/payments': 'receipt',
+};
+// Kunlik chegara tekshiriladigan (o'quvchi bosib ishlatadigan) yo'llar.
+const BUDGETED = new Set(['/api/chat', '/api/game', '/api/vocab', '/api/grammar', '/api/placement', '/api/exam/section', '/api/exam/grade']);
+
+async function guarded(route, url, req, res) {
+  if (BUDGETED.has(url)) {
+    const user = await account.currentUser(req);
+    const b = await costs.checkBudget(req, account.isPremium(user));
+    if (!b.ok) {
+      sendJson(res, b.status, { error: b.error, budget: true });
+      return;
+    }
+  }
+  await route(req, res);
+}
+
 function runRoute(route, req, res) {
-  route(req, res).catch((err) => {
+  const url = req.url.split('?')[0];
+  const kind = AI_KINDS[url];
+  const job = kind ? costs.run(req, kind, () => guarded(route, url, req, res)) : route(req, res);
+  job.catch((err) => {
     console.error('Server xatoligi:', err);
     if (!res.headersSent) sendJson(res, 500, { error: 'Server xatoligi.' });
   });

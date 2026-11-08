@@ -1,4 +1,4 @@
-// Sinov imtihonlari: rasmiy imtihonlar (Goethe, ТРКИ, TOPIK, EPS-TOPIK) formatiga o'xshatilgan mashq.
+// Sinov imtihonlari: rasmiy imtihonlar (Goethe, ТРКИ, TOPIK, EPS-TOPIK, IELTS, CEFR) formatiga o'xshatilgan mashq.
 // Bu fayl ham brauzerda, ham serverda ishlatiladi.
 (function (root) {
   const SECTION_INFO = {
@@ -133,6 +133,44 @@
       sections: [
         { id: 'listening', minutes: 12, format: "듣기 (tinglash): qisqa dialoglar va savollar — to'g'ri javobni yoki keyingi gapni tanlash, suhbat qayerda bo'layotganini, mavzuni va tafsilotni aniqlash. Har savolda 4 variant." },
         { id: 'reading', minutes: 15, format: "읽기 (o'qish): mavzuni topish, bo'sh joyga mos so'z yoki grammatikani (조사, 어미) tanlash, e'lon va xabarlar, qisqa matn mazmuni bo'yicha savollar, gaplar tartibi. Har savolda 4 variant." },
+      ],
+    },
+  ];
+
+  EXAMS.en = [
+    {
+      id: 'ielts',
+      name: 'IELTS Academic (sinov)',
+      short: 'IELTS',
+      level: 'B1-C1',
+      pass: 0.6,
+      rule: 'total',
+      options: 4,
+      about:
+        "Xalqaro ingliz tili imtihoni: chet elda va O'zbekistondagi xalqaro universitetlarga kirish, grant va vizalar uchun. To'rt bo'lim: tinglash, o'qish, yozish va gapirish.",
+      note: "Bu qisqartirilgan sinov. 60% taxminan 6.0 ball (band) atrofiga to'g'ri keladi. Haqiqiy imtihon narxi, sanalari va formati — British Council yoki IDP rasmiy saytida.",
+      sections: [
+        { id: 'listening', minutes: 12, format: "Listening: 4 qism — kundalik suhbat (masalan, ijaraga uy so'rash), monolog (shahar haqida ma'lumot), o'quv suhbati (talabalar va o'qituvchi), akademik ma'ruza. Bo'sh joyni to'ldirish va 4 variantli savollar." },
+        { id: 'reading', minutes: 15, format: "Reading: 2 ta akademik matn (fan, tarix, jamiyat mavzularida) — asosiy fikr, tafsilot, True/False/Not Given ma'nosidagi savollar, 4 variantli savollar." },
+        { id: 'writing', minutes: 20, format: "Writing Task 2: insho (taxminan 250 so'z) — fikr bildirish yoki muammo va yechim (masalan, «Some people think... Discuss both views and give your opinion»). Kirish, 2 ta asosiy paragraf, xulosa." },
+        { id: 'speaking', minutes: 8, format: "Speaking: 1-qism — o'zi haqida savollar (ish/o'qish, uy, qiziqishlar); 2-qism — kartochka bo'yicha 1-2 daqiqalik nutq (masalan, «Describe a place you visited»); 3-qism — mavzu bo'yicha chuqurroq munozara." },
+      ],
+    },
+    {
+      id: 'cefr-uz',
+      name: 'CEFR (Multilevel) — ingliz tili (sinov)',
+      short: 'CEFR',
+      level: 'B1-B2',
+      pass: 0.6,
+      rule: 'total',
+      options: 4,
+      about: "O'zbekistonda topshiriladigan ingliz tili darajasini aniqlash imtihoni (CEFR, Multilevel): tinglash, o'qish, yozish va gapirish. Natija OTMga kirish va boshqa imtiyozlar uchun ishlatiladi.",
+      note: "Format va ball chegaralari taxminiy — imtihondan oldin rasmiy manbadan (Bilim va malakalarni baholash agentligi) tekshiring.",
+      sections: [
+        { id: 'listening', minutes: 10, format: "Listening: qisqa dialoglar va e'lonlar, keyin uzunroq suhbat yoki intervyu. To'g'ri javobni tanlash (4 variant)." },
+        { id: 'reading', minutes: 14, format: "Reading: qisqa e'lon va xabarlar, keyin uzunroq matn (maqola). Mazmun, tafsilot va so'z ma'nosi bo'yicha savollar (4 variant)." },
+        { id: 'writing', minutes: 15, format: "Writing: xat yoki e-mail (rasmiy yoki norasmiy, 120-150 so'z) — berilgan vaziyatga javob, 3 ta nuqta bilan." },
+        { id: 'speaking', minutes: 6, format: "Speaking: o'zi haqida savollar, rasmni tasvirlash yoki ikki narsani solishtirish, mavzu bo'yicha fikr bildirish." },
       ],
     },
   ];

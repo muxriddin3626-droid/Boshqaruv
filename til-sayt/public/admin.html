@@ -20,6 +20,7 @@
       <button type="button" class="tab active" data-tab="stats">📊 Statistika</button>
       <button type="button" class="tab" data-tab="users">👥 Foydalanuvchilar</button>
       <button type="button" class="tab" data-tab="payments">💳 To'lovlar <span class="tab-badge" id="payBadge" hidden>0</span></button>
+      <button type="button" class="tab" data-tab="costs">💰 Xarajat</button>
       <button type="button" class="tab" data-tab="knowledge">📚 Bilim bazasi</button>
       <button type="button" class="tab" data-tab="settings">⚙️ Sozlamalar</button>
     </nav>
@@ -80,6 +81,40 @@
     <div class="pay-grid" id="payList"></div>
   </main>
 
+  <main class="admin-main" id="costsView" hidden>
+    <div class="kpis" id="costKpis"></div>
+    <div class="panel cost-alerts" id="costAlerts" hidden></div>
+    <section class="panel">
+      <h2>AI xarajati — oxirgi 30 kun</h2>
+      <div class="chart" id="costChart"></div>
+    </section>
+    <section class="panel">
+      <h2>Bo'limlar bo'yicha (30 kun)</h2>
+      <div class="cost-kinds" id="costKinds"></div>
+      <p class="hint-left">Narxlar Anthropic'ning rasmiy narxlari bo'yicha hisoblanadi (tokenlar, kesh va internet qidiruvi). Azure ovozi bu yerga kirmaydi.</p>
+    </section>
+    <section class="panel">
+      <h2>Eng ko'p sarflaganlar (7 kun)</h2>
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead><tr><th>Foydalanuvchi</th><th>Tarif</th><th class="num">Bugun</th><th class="num">7 kun</th><th class="num">So'rovlar</th></tr></thead>
+          <tbody id="costTop"></tbody>
+        </table>
+      </div>
+    </section>
+    <form class="panel settings-form" id="costForm">
+      <h2>🛡️ Ogohlantirish va chegaralar</h2>
+      <div class="field-row">
+        <label>Ogohlantirish: bir kishi kuniga ($) <input type="number" id="setCostAlert" min="0" step="any"></label>
+        <label>Bir kishiga kunlik chegara ($, 0 — yo'q) <input type="number" id="setUserCap" min="0" step="any"></label>
+        <label>Butun sayt kunlik byudjeti ($, 0 — yo'q) <input type="number" id="setDailyBudget" min="0" step="any"></label>
+        <label>Dollar kursi (so'm) <input type="number" id="setUsdRate" min="1000" step="any"></label>
+      </div>
+      <p class="hint-left">Bir kishilik chegaraga yetgan foydalanuvchi bugun AI'dan foydalana olmaydi (obunachilar ham). Sayt byudjeti tugasa — faqat bepul foydalanuvchilar to'xtatiladi, obunachilar davom etadi.</p>
+      <div class="end-actions"><button type="submit" class="primary">Saqlash</button></div>
+    </form>
+  </main>
+
   <main class="admin-main" id="knowledgeView" hidden>
     <section class="panel">
       <h2>🌐 Internetdan yangilanadigan qoidalar</h2>
@@ -91,7 +126,7 @@
       <form class="settings-form" id="kbForm">
         <input type="hidden" id="kbId">
         <div class="field-row">
-          <label>Til <select id="kbLang"><option value="all">Hamma tillar</option><option value="ru">Rus</option><option value="de">Nemis</option><option value="ko">Koreys</option></select></label>
+          <label>Til <select id="kbLang"><option value="all">Hamma tillar</option><option value="ru">Rus</option><option value="de">Nemis</option><option value="ko">Koreys</option><option value="en">Ingliz</option></select></label>
           <label>Mavzu (teg) <input type="text" id="kbTopic" maxlength="40" placeholder="patent, imtihon, chegirma..."></label>
           <label>Manba havolasi (ixtiyoriy) <input type="text" id="kbUrl" maxlength="400" placeholder="https://..."></label>
         </div>
@@ -105,6 +140,7 @@
       <button type="button" class="chip" data-lang="ru">🇷🇺 Rus</button>
       <button type="button" class="chip" data-lang="de">🇩🇪 Nemis</button>
       <button type="button" class="chip" data-lang="ko">🇰🇷 Koreys</button>
+      <button type="button" class="chip" data-lang="en">🇬🇧 Ingliz</button>
       <button type="button" class="chip" data-lang="all">🌍 Umumiy</button>
     </div>
     <div class="kb-list" id="kbList"></div>

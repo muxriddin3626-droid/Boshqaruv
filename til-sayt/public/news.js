@@ -3,7 +3,7 @@
 window.News = (() => {
   const App = window.App;
   const $ = (id) => document.getElementById(id);
-  const COUNTRY = { ru: 'Rossiya', de: 'Germaniya', ko: 'Koreya' };
+  const COUNTRY = { ru: 'Rossiya', de: 'Germaniya', ko: 'Koreya', en: 'Britaniya va AQSh' };
 
   function el(tag, cls, text) {
     const e = document.createElement(tag);

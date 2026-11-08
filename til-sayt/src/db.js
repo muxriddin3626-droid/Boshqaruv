@@ -108,6 +108,19 @@ const ready = (async () => {
         last_at INTEGER NOT NULL,
         PRIMARY KEY (lang, kind, text_key)
       )`,
+      `CREATE TABLE IF NOT EXISTS ai_usage (
+        day TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        calls INTEGER NOT NULL DEFAULT 0,
+        input_tokens INTEGER NOT NULL DEFAULT 0,
+        output_tokens INTEGER NOT NULL DEFAULT 0,
+        cache_read INTEGER NOT NULL DEFAULT 0,
+        cache_write INTEGER NOT NULL DEFAULT 0,
+        searches INTEGER NOT NULL DEFAULT 0,
+        cost_micros INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (day, subject, kind)
+      )`,
       `CREATE TABLE IF NOT EXISTS passwords (
         user_id TEXT PRIMARY KEY,
         hash TEXT NOT NULL,
@@ -726,7 +739,91 @@ async function topInsights(lang, kind, limit = 10) {
   return r.rows.map((x) => ({ text: String(x.text), count: Number(x.count), lastAt: Number(x.last_at) }));
 }
 
+// ---------- AI xarajati ----------
+
+async function addAiUsage({ day, subject, kind, input, output, cacheRead, cacheWrite, searches, usd }) {
+  await client.execute({
+    sql: `INSERT INTO ai_usage (day, subject, kind, calls, input_tokens, output_tokens, cache_read, cache_write, searches, cost_micros)
+          VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(day, subject, kind) DO UPDATE SET calls = calls + 1,
+            input_tokens = input_tokens + excluded.input_tokens, output_tokens = output_tokens + excluded.output_tokens,
+            cache_read = cache_read + excluded.cache_read, cache_write = cache_write + excluded.cache_write,
+            searches = searches + excluded.searches, cost_micros = cost_micros + excluded.cost_micros`,
+    args: [day, subject, kind, input, output, cacheRead, cacheWrite, searches, Math.round(usd * 1e6)],
+  });
+}
+
+const usd = (micros) => Number(micros || 0) / 1e6;
+
+async function aiDayTotal(day) {
+  const r = await client.execute({ sql: 'SELECT COALESCE(SUM(cost_micros), 0) AS c FROM ai_usage WHERE day = ?', args: [day] });
+  return usd(r.rows[0].c);
+}
+
+async function aiSubjectDay(subject, day) {
+  const r = await client.execute({ sql: 'SELECT COALESCE(SUM(cost_micros), 0) AS c FROM ai_usage WHERE day = ? AND subject = ?', args: [day, subject] });
+  return usd(r.rows[0].c);
+}
+
+async function aiByDay(sinceDay) {
+  const r = await client.execute({
+    sql: 'SELECT day, SUM(cost_micros) AS c, SUM(calls) AS n FROM ai_usage WHERE day >= ? GROUP BY day ORDER BY day',
+    args: [sinceDay],
+  });
+  return r.rows.map((x) => ({ day: String(x.day), usd: usd(x.c), calls: Number(x.n) }));
+}
+
+async function aiByKind(sinceDay) {
+  const r = await client.execute({
+    sql: `SELECT kind, SUM(cost_micros) AS c, SUM(calls) AS n, SUM(searches) AS s FROM ai_usage WHERE day >= ?
+          GROUP BY kind ORDER BY c DESC`,
+    args: [sinceDay],
+  });
+  return r.rows.map((x) => ({ kind: String(x.kind), usd: usd(x.c), calls: Number(x.n), searches: Number(x.s) }));
+}
+
+async function aiTopSubjects(sinceDay, today, limit = 20) {
+  const r = await client.execute({
+    sql: `SELECT a.subject, SUM(a.cost_micros) AS c, SUM(CASE WHEN a.day = ? THEN a.cost_micros ELSE 0 END) AS t, SUM(a.calls) AS n,
+                 u.first_name, u.last_name, u.premium_until, u.plan
+          FROM ai_usage a LEFT JOIN users u ON a.subject = 'u:' || u.id
+          WHERE a.day >= ? AND a.subject != 'system'
+          GROUP BY a.subject ORDER BY c DESC LIMIT ?`,
+    args: [today, sinceDay, limit],
+  });
+  return r.rows.map((x) => ({
+    subject: String(x.subject),
+    usd: usd(x.c),
+    todayUsd: usd(x.t),
+    calls: Number(x.n),
+    name: x.first_name == null ? '' : [x.first_name, x.last_name].filter(Boolean).join(' '),
+    premium: x.premium_until != null && Number(x.premium_until) > Date.now(),
+    plan: x.plan == null ? null : String(x.plan),
+  }));
+}
+
+async function aiSubjectSince(subject, sinceDay) {
+  const r = await client.execute({
+    sql: 'SELECT COALESCE(SUM(cost_micros), 0) AS c, COALESCE(SUM(calls), 0) AS n FROM ai_usage WHERE subject = ? AND day >= ?',
+    args: [subject, sinceDay],
+  });
+  return { usd: usd(r.rows[0].c), calls: Number(r.rows[0].n) };
+}
+
+async function activeSubscriptions() {
+  const r = await client.execute({ sql: 'SELECT plan, COUNT(*) AS n FROM users WHERE premium_until > ? GROUP BY plan', args: [Date.now()] });
+  return r.rows.map((x) => ({ plan: String(x.plan || 'standard'), count: Number(x.n) }));
+}
+
 module.exports = {
+  addAiUsage,
+  aiDayTotal,
+  aiSubjectDay,
+  aiByDay,
+  aiByKind,
+  aiTopSubjects,
+  aiSubjectSince,
+  activeSubscriptions,
   listKnowledge,
   saveKnowledge,
   setKnowledgeEnabled,

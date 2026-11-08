@@ -1,10 +1,10 @@
-# Til Ustoz — rus, nemis va koreys tili ovozli o'qituvchisi
+# Til Ustoz — rus, nemis, koreys va ingliz tili ovozli o'qituvchisi
 
-Rus, nemis yoki koreys tilini **ovozli suhbat** orqali o'rgatadigan veb-sayt (goprep.gg
+Rus, nemis, koreys yoki ingliz tilini **ovozli suhbat** orqali o'rgatadigan veb-sayt (goprep.gg
 uslubida). Telefonda ham, kompyuterda ham ishlaydi:
 
-- til tanlanadi: rus tilida ustoz **Anna**, nemis tilida ustoz **Hans**, koreys
-  tilida ustoz **Minji** (Hangul bilan, hurmatli 해요체 uslubida; qo'shimchalarni
+- til tanlanadi: rus tilida ustoz **Anna**, nemis tilida ustoz **Hans**, ingliz
+  tilida ustoz **Emma** (IELTS va CEFR sinovlari bilan), koreys tilida ustoz **Minji** (Hangul bilan, hurmatli 해요체 uslubida; qo'shimchalarni
   o'zbek tili qo'shimchalariga qiyoslab tushuntiradi);
   Hangulni bilmaganlar uchun: har bir koreyscha matn ostida **lotincha o'qilishi**
   chiqadi (menyuda o'chirib qo'yish mumkin), menyuda **«Hangul alifbosi»** bo'limi:
@@ -375,6 +375,17 @@ Ovozli dars va yozish/gapirishni baholash asosiy modelda (`CLAUDE_MODEL`,
 standart `claude-opus-5-5`), o'yin, hikoya, hisobot va imtihon topshiriqlari esa
 tezroq va arzonroq modelda (`CLAUDE_FAST_MODEL`, standart `claude-sonnet-5-5`)
 tuziladi.
+
+**Admin → «💰 Xarajat»:** har bir Claude chaqiruvi narxi (tokenlar, kesh, internet
+qidiruvi — Anthropic narxlari bo'yicha) foydalanuvchi va bo'lim bo'yicha yoziladi
+(`src/costs.js`). Ko'rinadi: bugun / 7 / 30 kun, oylik prognoz, faol obunalardan oylik
+daromad va taxminiy foyda yoki zarar, 30 kunlik grafik, bo'limlar (darslar, o'yinlar,
+yangiliklar, chek tekshiruvi...), eng ko'p sarflaganlar (bosilsa — foydalanuvchi oynasi,
+u yerda ham uning xarajati). Himoya: bir kishi kuniga ma'lum summadan oshsa ogohlantirish;
+bir kishiga kunlik chegara (oshsa — bugun AI ishlamaydi); butun sayt kunlik byudjeti
+(tugasa — faqat bepul foydalanuvchilar to'xtaydi). Dollar kursi sozlanadi. Muhit
+o'zgaruvchilari (ixtiyoriy, admin paneldan ham): `USD_RATE`, `COST_ALERT_USD`,
+`USER_DAILY_CAP_USD`, `DAILY_BUDGET_USD`. Azure ovozi bu hisobga kirmaydi.
 
 ## Internetga joylashtirish (Render)
 

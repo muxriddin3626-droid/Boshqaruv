@@ -97,7 +97,7 @@ window.Practice = (() => {
     $('courseCount').textContent = `${doneCount}/${C.UNITS.length}`;
 
     $('examCardDesc').textContent =
-      { ru: '🛂 Patent imtihoni va ТРКИ formatida sinov', de: 'Goethe-Zertifikat formatida sinov', ko: '🏭 EPS-TOPIK va TOPIK I formatida sinov' }[lang];
+      { ru: '🛂 Patent imtihoni va ТРКИ formatida sinov', de: 'Goethe-Zertifikat formatida sinov', ko: '🏭 EPS-TOPIK va TOPIK I formatida sinov', en: '🎓 IELTS va CEFR (Multilevel) formatida sinov' }[lang];
 
     const stats = Learn.deckStats(lang);
     $('reviewDesc').textContent = stats.total
