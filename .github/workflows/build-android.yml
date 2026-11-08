@@ -46,10 +46,19 @@ jobs:
           fi
           ls "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools" 2>/dev/null || true
 
-      - name: Gradle o'rnatish
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.7'
+      # gradle/actions/setup-gradle ba'zan nosoz bo'ladi - shuning uchun runnerda
+      # oldindan o'rnatilgan Gradle'ni ishlatamiz; bo'lmasa 8.7 ni to'g'ridan-to'g'ri yuklaymiz.
+      - name: Gradle tayyorlash
+        run: |
+          if command -v gradle >/dev/null 2>&1; then
+            echo "Tizim Gradle'si ishlatiladi:"
+            gradle --version | grep -i "Gradle " || true
+          else
+            echo "Gradle yo'q - 8.7 yuklanmoqda..."
+            curl -sSL https://services.gradle.org/distributions/gradle-8.7-bin.zip -o /tmp/g.zip
+            unzip -q /tmp/g.zip -d /opt
+            echo "/opt/gradle-8.7/bin" >> "$GITHUB_PATH"
+          fi
 
       - name: AAPT2 diagnostika (har bir values faylini alohida tekshirish)
         run: |
