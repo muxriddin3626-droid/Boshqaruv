@@ -1,0 +1,21 @@
+{
+  "name": "AI Ustoz — DTM va Milliy Sertifikat repetitori",
+  "short_name": "AI Ustoz",
+  "description": "Kimyo va Biologiyadan 0 dan 189 ballgacha olib chiqadigan AI repetitor.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a12",
+  "theme_color": "#a855f7",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
