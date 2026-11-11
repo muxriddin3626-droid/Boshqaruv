@@ -56,6 +56,8 @@ async function readJson(req, res, max = 64 * 1024) {
 }
 
 const isPremium = (user) => Boolean(user && user.premiumUntil > Date.now());
+// To'lagan obunachi (sinovda emas).
+const isPaid = (user) => isPremium(user) && !(user.premiumUntil <= user.trialUntil);
 // Faol obuna tarifi (light / standard / pro) yoki null.
 const onTrial = (user) => isPremium(user) && user.premiumUntil <= user.trialUntil;
 // Bepul sinovda — kuniga cheklangan daqiqa (sozlamalarda), qolgani obunadagidek cheksiz.
@@ -453,4 +455,5 @@ module.exports = {
   tashkentDay,
   weekStart,
   isPremium,
+  isPaid,
 };

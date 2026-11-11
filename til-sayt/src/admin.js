@@ -289,7 +289,8 @@ async function handleCosts(req, res) {
     top,
     alerts: top.filter((t) => s.costAlertUsd > 0 && t.todayUsd >= s.costAlertUsd),
     revenue: { monthlyUzs, subs },
-    settings: { usdRate: s.usdRate, costAlertUsd: s.costAlertUsd, userDailyCapUsd: s.userDailyCapUsd, dailyBudgetUsd: s.dailyBudgetUsd },
+    pool: await db.poolCounts(),
+    settings: { usdRate: s.usdRate, costAlertUsd: s.costAlertUsd, userDailyCapUsd: s.userDailyCapUsd, dailyBudgetUsd: s.dailyBudgetUsd, cheapFreeModel: s.cheapFreeModel },
   });
 }
 

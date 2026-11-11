@@ -111,7 +111,9 @@ window.Study = (() => {
     if (cache[unitId] && !fresh) return renderGrammar(unitId, cache[unitId]);
     loading('⏳ Ustoz qoidani tayyorlayapti...');
     try {
-      const card = await App.postJson('/api/grammar', { lang, unit: unitId });
+      // «Boshqacha tushuntir»: hozirgi variantdan boshqasini so'raymiz.
+      const prev = fresh && cache[unitId] ? cache[unitId].v : undefined;
+      const card = await App.postJson('/api/grammar', { lang, unit: unitId, not: prev });
       const all = App.loadStored(gKey(lang)) || {};
       all[unitId] = card;
       App.store(gKey(lang), all);

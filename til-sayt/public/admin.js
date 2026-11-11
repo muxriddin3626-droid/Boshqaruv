@@ -670,6 +670,12 @@
       tr.appendChild(td);
       body.appendChild(tr);
     }
+    const POOL_NAMES = { game: "o'yin", vocab: "lug'at to'plami", grammar: 'grammatika kartochkasi', placement: 'daraja testi', exam: "imtihon bo'limi" };
+    const poolTotal = r.pool.reduce((n, x) => n + x.count, 0);
+    $('poolNote').textContent = poolTotal
+      ? `Umumiy omborda ${poolTotal} ta tayyor material bor (${r.pool.map((x) => `${x.count} ta ${POOL_NAMES[x.kind] || x.kind}`).join(', ')}). Ular o'quvchilarga AI'siz — bepul beriladi.`
+      : "Umumiy ombor hali bo'sh: birinchi o'quvchilar uchun tuzilgan materiallar saqlanadi va keyingilarga AI'siz beriladi.";
+    $('setCheapFree').checked = Boolean(r.settings.cheapFreeModel);
     $('setCostAlert').value = r.settings.costAlertUsd;
     $('setUserCap').value = r.settings.userDailyCapUsd;
     $('setDailyBudget').value = r.settings.dailyBudgetUsd;
@@ -682,6 +688,7 @@
     try {
       await api('/api/admin/settings', {
         settings: {
+          cheapFreeModel: $('setCheapFree').checked,
           costAlertUsd: num('setCostAlert'),
           userDailyCapUsd: num('setUserCap'),
           dailyBudgetUsd: num('setDailyBudget'),

@@ -382,10 +382,25 @@ xabar bilan o'tadi, obunani admin foydalanuvchi oynasidan qo'lda yoqadi.
 
 ## Xarajat
 
-Ovozli dars va yozish/gapirishni baholash asosiy modelda (`CLAUDE_MODEL`,
-standart `claude-opus-5-5`), o'yin, hikoya, hisobot va imtihon topshiriqlari esa
-tezroq va arzonroq modelda (`CLAUDE_FAST_MODEL`, standart `claude-sonnet-5-5`)
-tuziladi.
+Modellar uch pog'onada:
+
+- **asosiy** (`CLAUDE_MODEL`, standart `claude-opus-5-5`) — obunachilarning ovozli darsi,
+  yozish/gapirishni baholash;
+- **o'rta** (`CLAUDE_FAST_MODEL`, `claude-sonnet-5-5`) — hisobot, grammatika, daraja testi,
+  imtihon bo'limlari, chek tekshiruvi, yangiliklar; shuningdek bepul va sinovdagi
+  foydalanuvchilarning ovozli darsi (`CLAUDE_FREE_MODEL`; admin → Xarajat → «Tejash»da
+  o'chiriladi yoki `FREE_CHEAP_MODEL=off`);
+- **eng arzon** (`CLAUDE_CHEAP_MODEL`, `claude-haiku-5-5`) — o'yinlar va lug'at to'plamlari
+  (rad etsa yoki yaroqsiz javob bersa — o'rta modelda qayta uriniladi).
+
+**Umumiy materiallar ombori** (`src/pool.js`): grammatika kartochkasi (har bosqichga 3 tagacha
+variant), lug'at to'plamlari, daraja testi (5 variant), imtihon bo'limlari (8 tadan; qonunchilik
+bo'limidan tashqari) va o'yinlar (kurs/kasb mashqlari va shaxsiy ma'lumotsiz so'rovlar) bir
+marta tuzilib bazada saqlanadi va keyingi o'quvchilarga AI'siz beriladi. O'quvchining xatolari
+yoki qiziqishlariga moslangan o'yinlar har safar yangidan tuziladi.
+
+**Kesh:** ovozli darsda tizim ko'rsatmasi va suhbat tarixi keshlanadi — har javobda takror
+yuboriladigan qism ~20 baravar arzon hisoblanadi.
 
 **Admin → «💰 Xarajat»:** har bir Claude chaqiruvi narxi (tokenlar, kesh, internet
 qidiruvi — Anthropic narxlari bo'yicha) foydalanuvchi va bo'lim bo'yicha yoziladi

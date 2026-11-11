@@ -121,6 +121,14 @@ const ready = (async () => {
         cost_micros INTEGER NOT NULL DEFAULT 0,
         PRIMARY KEY (day, subject, kind)
       )`,
+      `CREATE TABLE IF NOT EXISTS content_pool (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        kind TEXT NOT NULL,
+        key TEXT NOT NULL,
+        data TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      )`,
+      'CREATE INDEX IF NOT EXISTS content_pool_key ON content_pool (kind, key)',
       `CREATE TABLE IF NOT EXISTS passwords (
         user_id TEXT PRIMARY KEY,
         hash TEXT NOT NULL,
@@ -751,6 +759,32 @@ async function topInsights(lang, kind, limit = 10) {
   return r.rows.map((x) => ({ text: String(x.text), count: Number(x.count), lastAt: Number(x.last_at) }));
 }
 
+// ---------- Umumiy materiallar ombori ----------
+
+async function poolList(kind, key) {
+  const r = await client.execute({ sql: 'SELECT id, data FROM content_pool WHERE kind = ? AND key = ? ORDER BY id', args: [kind, key] });
+  const out = [];
+  for (const x of r.rows) {
+    try {
+      out.push({ id: Number(x.id), data: JSON.parse(String(x.data)) });
+    } catch {}
+  }
+  return out;
+}
+
+async function poolAdd(kind, key, data) {
+  const r = await client.execute({
+    sql: 'INSERT INTO content_pool (kind, key, data, created_at) VALUES (?, ?, ?, ?) RETURNING id',
+    args: [kind, key, JSON.stringify(data), Date.now()],
+  });
+  return Number(r.rows[0].id);
+}
+
+async function poolCounts() {
+  const r = await client.execute('SELECT kind, COUNT(*) AS n FROM content_pool GROUP BY kind');
+  return r.rows.map((x) => ({ kind: String(x.kind), count: Number(x.n) }));
+}
+
 // ---------- AI xarajati ----------
 
 async function addAiUsage({ day, subject, kind, input, output, cacheRead, cacheWrite, searches, usd }) {
@@ -828,6 +862,9 @@ async function activeSubscriptions() {
 }
 
 module.exports = {
+  poolList,
+  poolAdd,
+  poolCounts,
   addAiUsage,
   aiDayTotal,
   aiSubjectDay,
