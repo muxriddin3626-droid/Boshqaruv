@@ -595,3 +595,14 @@ input[type="text"], input[type="tel"], input[type="password"], input[type="numbe
   .land-price strong { grid-area: 1 / 2; text-align: right; margin: 0; }
   .land-price span:nth-of-type(2) { grid-area: 2 / 2; text-align: right; }
 }
+
+/* Bugun gaplashilgan vaqt */
+.talk-meter { margin-top: 12px; }
+.talk-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; font-size: 13px; color: var(--muted); }
+.talk-top b { color: var(--text); font-size: 14px; }
+.talk-fill { background: linear-gradient(90deg, var(--teal), var(--leaf)) !important; }
+.talk-meter.full .talk-fill { background: linear-gradient(90deg, var(--sun), var(--danger)) !important; }
+.day-time { padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--teal) 14%, var(--surface)); color: var(--text); font: 600 12px ui-monospace, 'SF Mono', Menlo, monospace; white-space: nowrap; }
+.day-time.low { background: color-mix(in srgb, var(--danger) 16%, var(--surface)); color: var(--danger); }
+.lesson-bar { flex-wrap: wrap; row-gap: 6px; }
+.lesson-bar .day-time { order: 9; flex-basis: 100%; text-align: center; padding: 5px 10px; font-size: 13px; }

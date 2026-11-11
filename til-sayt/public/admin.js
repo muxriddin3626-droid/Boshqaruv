@@ -839,6 +839,7 @@
     freeExam: ['setFreeExam', 'int'],
     refBonusDays: ['setRefBonusDays', 'int'],
     trialDays: ['setTrialDays', 'int'],
+    trialMinutes: ['setTrialMinutes', 'int'],
     premiumContact: ['setPremiumContact', 'str'],
     cardNumber: ['setCardNumber', 'str'],
     cardHolder: ['setCardHolder', 'str'],

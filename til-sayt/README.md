@@ -165,7 +165,7 @@ Goethe-Institut (Toshkentda bor), shuningdek telc, ÖSD, TestDaF; rus tili — �
 ### Akkaunt, Premium va do'stlar
 
 - 🎁 **Bepul sinov** — yangi ro'yxatdan o'tgan foydalanuvchiga 3 kun Standard tarif beriladi
-  (kun soni admin → Sozlamalarda, `TRIAL_DAYS`; 0 — o'chiq). Bir IP'dan oyiga 2 tagacha
+  (kun soni admin → Sozlamalarda, `TRIAL_DAYS`; 0 — o'chiq), sinovda kuniga 10 daqiqa ovozli dars (`TRIAL_MINUTES`); menyuda va dars paytida bugun qancha gaplashilgani ko'rinib turadi. Bir IP'dan oyiga 2 tagacha
   (qayta-qayta ro'yxatdan o'tishga qarshi). Akkauntda «🎁 Sinov · N kun» ko'rinadi; tugaganda
   bir marta «Tariflarni ko'rish» oynasi chiqadi. Sinovdagilar daromad hisobiga kirmaydi.
 - 🌐 **Bosh sahifa (landing)** — til tanlash ostida: afzalliklar, dars namunasi, qadamlar,

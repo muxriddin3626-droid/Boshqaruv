@@ -82,7 +82,7 @@ window.AccountUI = (() => {
     } catch {}
     window.Practice.toast(
       r.trialDays
-        ? `🎁 Xush kelibsiz, ${r.user.firstName}! ${r.trialDays + (r.bonus || 0)} kun bepul Premium sovg'a!`
+        ? `🎁 Xush kelibsiz, ${r.user.firstName}! ${r.trialDays} kun bepul sinov — har kuni ${config.trialMinutes || 10} daqiqa ustoz bilan!`
         : r.bonus
           ? `🎉 Xush kelibsiz, ${r.user.firstName}! Taklif uchun ${r.bonus} kun Premium sovg'a!`
           : `👋 Xush kelibsiz, ${r.user.firstName}!`,
@@ -197,7 +197,7 @@ window.AccountUI = (() => {
   const daysLeft = () => Math.max(1, Math.ceil((me.user.premiumUntil - Date.now()) / 86400000));
 
   function planText() {
-    if (me.trial && me.plan) return `🎁 Bepul sinov (${me.plan.name}) · ${daysLeft()} kun qoldi · kuniga ${me.plan.minutes} daqiqa`;
+    if (me.trial && me.plan) return `🎁 Bepul sinov · ${daysLeft()} kun qoldi · kuniga ${me.plan.minutes} daqiqa`;
     if (me.premium && me.plan) return `⭐ ${me.plan.name} · kuniga ${me.plan.minutes} daqiqa · ${fmtDate(me.user.premiumUntil)} gacha`;
     if (me.premium) return `⭐ Obuna · ${fmtDate(me.user.premiumUntil)} gacha`;
     if (!me.limits) return 'Cheksiz (limitlar o\'chirilgan)';
@@ -214,6 +214,7 @@ window.AccountUI = (() => {
     $('accountPlan').textContent = user ? planText() : loginOn() ? "Natijalarni saqlash uchun kiring" : planText();
     $('planBadge').textContent = me.trial ? `🎁 Sinov · ${daysLeft()} kun` : me.premium ? `⭐ ${me.plan ? me.plan.name : 'PRO'}` : me.limits ? 'Bepul' : '';
     renderLanding();
+    renderTalkMeter();
     maybeTrialEnded();
     $('planBadge').classList.toggle('pro', me.premium);
 
@@ -492,8 +493,9 @@ window.AccountUI = (() => {
     const days = config.trialDays || 0;
     const pill = $('trialPill');
     pill.hidden = !days || Boolean(me.user) || !loginOn();
-    pill.textContent = `🎁 Ro'yxatdan o'ting — ${days} kun Premium bepul`;
-    $('landTrial').textContent = days && loginOn() ? `Ro'yxatdan o'tsangiz — ${days} kun to'liq Premium sovg'a.` : '';
+    const mins = config.trialMinutes || 10;
+    pill.textContent = `🎁 Ro'yxatdan o'ting — ${days} kun bepul sinov, kuniga ${mins} daqiqa`;
+    $('landTrial').textContent = days && loginOn() ? `Ro'yxatdan o'tsangiz — ${days} kun bepul sinov: har kuni ${mins} daqiqa ustoz bilan, cheksiz o'yin va lug'at.` : '';
     const box = $('landPrices');
     if (box.dataset.done || !config.prices) return;
     box.dataset.done = '1';
@@ -511,6 +513,32 @@ window.AccountUI = (() => {
       card.append(name, mins, price, per);
       box.appendChild(card);
     }
+  }
+
+  // Menyuda: bugun ustoz bilan qancha gaplashilgani (obuna va sinovda — daqiqa, bepul rejada — darslar soni).
+  function renderTalkMeter() {
+    const box = $('talkMeter');
+    let used;
+    let total;
+    let unit;
+    if (me.plan) {
+      total = me.plan.minutes;
+      used = Math.min(total, Math.floor(((me.usage && me.usage.voice) || 0) / 60));
+      unit = 'daqiqa';
+    } else if (me.limits) {
+      total = me.limits.lesson;
+      used = Math.min(total, (me.usage && me.usage.lesson) || 0);
+      unit = 'dars';
+    } else {
+      box.hidden = true;
+      return;
+    }
+    box.hidden = false;
+    const left = total - used;
+    $('talkLabel').textContent = me.trial ? '🎁 Sinov: bugun gaplashdingiz' : '🎙️ Bugun gaplashdingiz';
+    $('talkValue').textContent = `${used} / ${total} ${unit}${left > 0 ? ` · ${left} qoldi` : ' · tugadi'}`;
+    $('talkFill').style.width = `${Math.round((used / Math.max(1, total)) * 100)}%`;
+    box.classList.toggle('full', left <= 0);
   }
 
   // Sinov tugagan va obuna olinmagan bo'lsa — bir marta taklif oynasi.
