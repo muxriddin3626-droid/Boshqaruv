@@ -132,6 +132,7 @@ const ready = (async () => {
   // Eski bazalarga yangi ustunlar (bor bo'lsa — xato e'tiborsiz qoldiriladi).
   for (const sql of [
     "ALTER TABLE users ADD COLUMN plan TEXT NOT NULL DEFAULT 'standard'",
+    'ALTER TABLE users ADD COLUMN trial_until INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE payments ADD COLUMN auto INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE payments ADD COLUMN reviewed INTEGER NOT NULL DEFAULT 0',
     "ALTER TABLE payments ADD COLUMN check_json TEXT NOT NULL DEFAULT ''",
@@ -161,6 +162,7 @@ const rowToUser = (r) =>
     referredBy: r.referred_by == null ? null : String(r.referred_by),
     premiumUntil: Number(r.premium_until),
     plan: r.plan == null ? 'standard' : String(r.plan),
+    trialUntil: Number(r.trial_until || 0),
     showInRating: Number(r.show_in_rating) === 1,
   };
 
@@ -207,6 +209,16 @@ async function addPremiumDays(userId, days, plan) {
   await client.execute({
     sql: 'UPDATE users SET premium_until = ?, plan = ? WHERE id = ?',
     args: [until, plan || user.plan || 'standard', userId],
+  });
+  return until;
+}
+
+// Bepul sinov: yangi foydalanuvchiga bir marta beriladi (Standard tarif).
+async function startTrial(userId, days) {
+  const until = Date.now() + days * DAY;
+  await client.execute({
+    sql: "UPDATE users SET premium_until = ?, trial_until = ?, plan = 'standard' WHERE id = ? AND trial_until = 0 AND premium_until < ?",
+    args: [until, until, userId, Date.now()],
   });
   return until;
 }
@@ -811,7 +823,7 @@ async function aiSubjectSince(subject, sinceDay) {
 }
 
 async function activeSubscriptions() {
-  const r = await client.execute({ sql: 'SELECT plan, COUNT(*) AS n FROM users WHERE premium_until > ? GROUP BY plan', args: [Date.now()] });
+  const r = await client.execute({ sql: 'SELECT plan, COUNT(*) AS n FROM users WHERE premium_until > ? AND premium_until > trial_until GROUP BY plan', args: [Date.now()] });
   return r.rows.map((x) => ({ plan: String(x.plan || 'standard'), count: Number(x.n) }));
 }
 
@@ -869,6 +881,7 @@ module.exports = {
   getUserByRef,
   upsertUser,
   addPremiumDays,
+  startTrial,
   setShowInRating,
   getState,
   mergeState,

@@ -123,6 +123,7 @@ function publicUser(user) {
     photoUrl: user.photoUrl,
     refCode: user.refCode,
     premiumUntil: user.premiumUntil,
+    trialUntil: user.trialUntil,
     showInRating: user.showInRating,
   };
 }
@@ -147,6 +148,7 @@ function config() {
       ? { number: settings.get().cardNumber, holder: settings.get().cardHolder, bank: settings.get().cardBank }
       : null,
     refBonusDays: settings.get().refBonusDays,
+    trialDays: settings.get().trialDays,
     announcement: settings.get().announcement,
   };
 }
@@ -157,6 +159,9 @@ async function handleMe(req, res) {
     user: user ? publicUser(user) : null,
     premium: isPremium(user),
     plan: planOf(user),
+    // Sinov: hozir sinovda / sinov tugagan va obuna olinmagan.
+    trial: isPremium(user) && user.premiumUntil <= user.trialUntil,
+    trialEnded: Boolean(user && !isPremium(user) && user.trialUntil > 0),
     usage: await usageFor(req, user),
     limits: settings.get().limitsOn ? settings.freeLimits() : null,
   });
@@ -168,6 +173,17 @@ async function finishLogin(req, res, profile, ref, { keepExisting = false } = {}
   const existing = keepExisting && (await db.getUser(profile.id));
   const { user, created } = existing ? { user: existing, created: false } : await db.upsertUser(profile);
   let bonus = 0;
+  // Yangi foydalanuvchiga bepul sinov (bitta IP'dan oyiga 2 tagacha — qayta-qayta ro'yxatdan o'tishga qarshi).
+  let trialDays = 0;
+  if (created && settings.get().trialDays > 0) {
+    const key = `trialip:${clientIp(req)}:${tashkentDay().slice(0, 7)}`;
+    const used = ((await db.cacheGet(key)) || { value: 0 }).value;
+    if (used < 2) {
+      await db.cacheSet(key, used + 1);
+      await db.startTrial(user.id, settings.get().trialDays);
+      trialDays = settings.get().trialDays;
+    }
+  }
   // Taklif havolasi orqali kelgan yangi foydalanuvchi: ikkalasi do'st bo'ladi va bonus oladi.
   if (created && typeof ref === 'string') {
     const inviter = await db.getUserByRef(ref.trim().toUpperCase());
@@ -183,7 +199,7 @@ async function finishLogin(req, res, profile, ref, { keepExisting = false } = {}
     }
   }
   const fresh = await db.getUser(user.id);
-  sendJson(res, 200, { user: publicUser(fresh), premium: isPremium(fresh), created, bonus }, { 'Set-Cookie': auth.sessionCookie(req, user.id) });
+  sendJson(res, 200, { user: publicUser(fresh), premium: isPremium(fresh), created, bonus, trialDays }, { 'Set-Cookie': auth.sessionCookie(req, user.id) });
 }
 
 async function handleTelegramLogin(req, res) {

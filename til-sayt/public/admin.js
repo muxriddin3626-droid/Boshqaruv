@@ -298,7 +298,7 @@
         el('td', 'num', u.invited)
       );
       const p = el('td');
-      p.appendChild(el('span', `pill-badge${premium ? ' pro' : ''}`, premium ? `⭐ ${planName(u.plan)} · ${fmtDate(u.premiumUntil)} gacha` : 'Bepul'));
+      p.appendChild(el('span', `pill-badge${premium ? ' pro' : ''}`, premium ? `${u.premiumUntil <= u.trialUntil ? '🎁 Sinov' : `⭐ ${planName(u.plan)}`} · ${fmtDate(u.premiumUntil)} gacha` : 'Bepul'));
       tr.appendChild(p);
       tr.addEventListener('click', () => openUser(u.id));
       body.appendChild(tr);
@@ -838,6 +838,7 @@
     freePractice: ['setFreePractice', 'int'],
     freeExam: ['setFreeExam', 'int'],
     refBonusDays: ['setRefBonusDays', 'int'],
+    trialDays: ['setTrialDays', 'int'],
     premiumContact: ['setPremiumContact', 'str'],
     cardNumber: ['setCardNumber', 'str'],
     cardHolder: ['setCardHolder', 'str'],

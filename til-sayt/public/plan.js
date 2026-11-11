@@ -118,6 +118,12 @@ window.Plan = (() => {
       list.appendChild(b);
     });
     body.appendChild(list);
+    if (!next) {
+      const sh = el('button', 'primary big plan-go', '📤 Natijani ulashish');
+      sh.type = 'button';
+      sh.addEventListener('click', () => window.Share.planDone());
+      body.appendChild(sh);
+    }
     if (next) {
       const go = el('button', 'primary big plan-go', n ? `▶ Davom etish: ${next.title}` : '▶ Boshlash');
       go.type = 'button';

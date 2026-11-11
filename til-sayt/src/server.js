@@ -109,6 +109,7 @@ const MIME_TYPES = {
   '.png': 'image/png',
   '.ico': 'image/x-icon',
   '.webmanifest': 'application/manifest+json',
+  '.txt': 'text/plain; charset=utf-8',
 };
 
 function sendJson(res, status, data) {
@@ -957,6 +958,13 @@ const server = http.createServer((req, res) => {
     return;
   }
   // Admin panel sahifasi (qidiruv tizimlariga ko'rsatilmaydi).
+  if (url === '/sitemap.xml' && req.method === 'GET') {
+    const proto = req.headers['x-forwarded-proto'] === 'https' || req.socket.encrypted ? 'https' : 'http';
+    const host = String(req.headers.host || '').replace(/[^a-zA-Z0-9.:-]/g, '');
+    res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
+    res.end(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${proto}://${host}/</loc><changefreq>weekly</changefreq></url></urlset>\n`);
+    return;
+  }
   if (url === '/admin' && (req.method === 'GET' || req.method === 'HEAD')) {
     fs.readFile(path.join(PUBLIC_DIR, 'admin.html'), (err, data) => {
       if (err) return res.writeHead(404).end();

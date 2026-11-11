@@ -81,8 +81,12 @@ window.AccountUI = (() => {
       localStorage.removeItem(REF_KEY);
     } catch {}
     window.Practice.toast(
-      r.bonus ? `🎉 Xush kelibsiz, ${r.user.firstName}! Taklif uchun ${r.bonus} kun Premium sovg'a!` : `👋 Xush kelibsiz, ${r.user.firstName}!`,
-      3500
+      r.trialDays
+        ? `🎁 Xush kelibsiz, ${r.user.firstName}! ${r.trialDays + (r.bonus || 0)} kun bepul Premium sovg'a!`
+        : r.bonus
+          ? `🎉 Xush kelibsiz, ${r.user.firstName}! Taklif uchun ${r.bonus} kun Premium sovg'a!`
+          : `👋 Xush kelibsiz, ${r.user.firstName}!`,
+      4500
     );
     await refresh();
     window.Store.setLoggedIn(true);
@@ -190,7 +194,10 @@ window.AccountUI = (() => {
     return me;
   }
 
+  const daysLeft = () => Math.max(1, Math.ceil((me.user.premiumUntil - Date.now()) / 86400000));
+
   function planText() {
+    if (me.trial && me.plan) return `🎁 Bepul sinov (${me.plan.name}) · ${daysLeft()} kun qoldi · kuniga ${me.plan.minutes} daqiqa`;
     if (me.premium && me.plan) return `⭐ ${me.plan.name} · kuniga ${me.plan.minutes} daqiqa · ${fmtDate(me.user.premiumUntil)} gacha`;
     if (me.premium) return `⭐ Obuna · ${fmtDate(me.user.premiumUntil)} gacha`;
     if (!me.limits) return 'Cheksiz (limitlar o\'chirilgan)';
@@ -205,7 +212,9 @@ window.AccountUI = (() => {
     setAvatar($('accountAvatar'), user);
     $('accountName').textContent = user ? user.name : 'Kirish';
     $('accountPlan').textContent = user ? planText() : loginOn() ? "Natijalarni saqlash uchun kiring" : planText();
-    $('planBadge').textContent = me.premium ? `⭐ ${me.plan ? me.plan.name : 'PRO'}` : me.limits ? 'Bepul' : '';
+    $('planBadge').textContent = me.trial ? `🎁 Sinov · ${daysLeft()} kun` : me.premium ? `⭐ ${me.plan ? me.plan.name : 'PRO'}` : me.limits ? 'Bepul' : '';
+    renderLanding();
+    maybeTrialEnded();
     $('planBadge').classList.toggle('pro', me.premium);
 
     $('startLogin').hidden = !loginOn() || Boolean(user);
@@ -476,6 +485,56 @@ window.AccountUI = (() => {
       box.appendChild(card);
     }
   }
+
+  // ---------- Bosh sahifa: sinov taklifi va narxlar ----------
+
+  function renderLanding() {
+    const days = config.trialDays || 0;
+    const pill = $('trialPill');
+    pill.hidden = !days || Boolean(me.user) || !loginOn();
+    pill.textContent = `🎁 Ro'yxatdan o'ting — ${days} kun Premium bepul`;
+    $('landTrial').textContent = days && loginOn() ? `Ro'yxatdan o'tsangiz — ${days} kun to'liq Premium sovg'a.` : '';
+    const box = $('landPrices');
+    if (box.dataset.done || !config.prices) return;
+    box.dataset.done = '1';
+    for (const plan of config.plans || window.PLANS.PLANS) {
+      const card = document.createElement('div');
+      card.className = `land-price${plan.popular ? ' popular' : ''}`;
+      const name = document.createElement('b');
+      name.textContent = plan.name;
+      const mins = document.createElement('span');
+      mins.textContent = plan.minutes >= 60 ? `kuniga ${plan.minutes / 60} soat` : `kuniga ${plan.minutes} daqiqa`;
+      const price = document.createElement('strong');
+      price.textContent = window.PLANS.fmt(priceOf(plan.id, 1));
+      const per = document.createElement('span');
+      per.textContent = 'oyiga';
+      card.append(name, mins, price, per);
+      box.appendChild(card);
+    }
+  }
+
+  // Sinov tugagan va obuna olinmagan bo'lsa — bir marta taklif oynasi.
+  function maybeTrialEnded() {
+    if (!me.trialEnded || !me.user) return;
+    const key = `tilustoz-trial-end-${me.user.id}`;
+    try {
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, '1');
+    } catch {
+      return;
+    }
+    const d = $('trialDialog');
+    window.Face.set($('trialFace'), 'thinking');
+    if (d.showModal && !d.open) d.showModal();
+  }
+
+  $('trialPlans').addEventListener('click', () => {
+    $('trialDialog').close();
+    open();
+    setTimeout(() => $('premiumPanel').scrollIntoView({ behavior: 'smooth' }), 200);
+  });
+  $('landCta').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  $('shareStreakBtn').addEventListener('click', () => window.Share.streak());
 
   // ---------- Ustoz xotirasi ----------
 

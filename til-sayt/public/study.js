@@ -270,7 +270,11 @@ window.Study = (() => {
       )
     );
     const actions = el('div', 'end-actions');
-    actions.append(button('primary', '✅ Shunday boshlayman', () => applyPlacement(level)), button('secondary', "🔁 Qayta topshirish", startPlacement));
+    actions.append(
+      button('primary', '✅ Shunday boshlayman', () => applyPlacement(level)),
+      button('secondary', '📤 Natijani ulashish', () => window.Share.level(LEVEL_NAMES[level], level === 'A0' ? 'Start' : level)),
+      button('secondary', "🔁 Qayta topshirish", startPlacement)
+    );
     box.appendChild(actions);
     b.appendChild(box);
   }

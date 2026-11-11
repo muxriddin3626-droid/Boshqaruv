@@ -164,6 +164,17 @@ Goethe-Institut (Toshkentda bor), shuningdek telc, ÖSD, TestDaF; rus tili — �
 
 ### Akkaunt, Premium va do'stlar
 
+- 🎁 **Bepul sinov** — yangi ro'yxatdan o'tgan foydalanuvchiga 3 kun Standard tarif beriladi
+  (kun soni admin → Sozlamalarda, `TRIAL_DAYS`; 0 — o'chiq). Bir IP'dan oyiga 2 tagacha
+  (qayta-qayta ro'yxatdan o'tishga qarshi). Akkauntda «🎁 Sinov · N kun» ko'rinadi; tugaganda
+  bir marta «Tariflarni ko'rish» oynasi chiqadi. Sinovdagilar daromad hisobiga kirmaydi.
+- 🌐 **Bosh sahifa (landing)** — til tanlash ostida: afzalliklar, dars namunasi, qadamlar,
+  narxlar (sozlamalardan), savol-javoblar. SEO: sarlavha, tavsif, Open Graph, FAQ
+  (JSON-LD), `robots.txt`, `/sitemap.xml`.
+- 📤 **Natijani ulashish** — streak, daraja testi natijasi va bajarilgan «Bugungi dars»
+  chiroyli rasm (1080×1350) bo'lib ulashiladi; rasmda sayt manzili, matnda taklif havolasi
+  (`public/share.js`).
+
 - 🔐 **Telegram, Google yoki telefon raqam + parol orqali kirish** — parolsiz. Natijalar (so'zlar, streak, kurs,
   sertifikatlar, sozlamalar) bazaga sinxronlanadi va istalgan qurilmada ochiladi.
   Kirmasdan ham ishlatish mumkin — unda natijalar faqat shu brauzerda qoladi.

@@ -4,8 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f4ede2">
-  <meta name="description" content="Rus, nemis, koreys va ingliz tilini ovozli suhbat orqali o'rganing. Xatolaringiz o'zbek tilida tushuntiriladi.">
-  <title>Til Ustoz</title>
+  <meta name="description" content="Rus, ingliz, koreys va nemis tilini ustoz bilan ovozli gaplashib o'rganing. Xatolar o'zbek tilida tushuntiriladi. Patent, IELTS, CEFR, EPS-TOPIK imtihonlariga tayyorlov. Bepul boshlang.">
+  <meta name="keywords" content="rus tili o'rganish, ingliz tili o'rganish, koreys tili, nemis tili, IELTS tayyorlov, CEFR, EPS-TOPIK, patent imtihoni, til kursi, onlayn repetitor">
+  <title>Til Ustoz — rus, ingliz, koreys va nemis tilini gaplashib o'rganing</title>
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Til Ustoz">
+  <meta property="og:title" content="Til Ustoz — ustoz bilan gaplashib til o'rganing">
+  <meta property="og:description" content="Rus, ingliz, koreys va nemis tili. Ovozli darslar, xatolar o'zbekcha tushuntiriladi. Bepul boshlang.">
+  <meta property="og:image" content="/icon-512.png">
+  <meta name="twitter:card" content="summary">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Noldan boshlasam bo'ladimi?","acceptedAnswer":{"@type":"Answer","text":"Ha. Ustoz darajangizni o'zi aniqlaydi va eng oddiy so'zlardan boshlaydi."}},{"@type":"Question","name":"Telefonda ishlaydimi?","acceptedAnswer":{"@type":"Answer","text":"Ha, Android va iPhone'da. Bosh ekranga ilova qilib o'rnatish mumkin."}},{"@type":"Question","name":"To'lov qanday qilinadi?","acceptedAnswer":{"@type":"Answer","text":"Tarifni tanlaysiz, kartaga o'tkazasiz va chek rasmini yuklaysiz. Obuna tekshiruvdan keyin yoqiladi."}}]}</script>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -62,6 +70,49 @@
       <p>🔐 Natijalaringiz yo'qolmasligi va boshqa telefonda ham ochilishi uchun kiring:</p>
       <div class="login-slot" data-login-slot></div>
     </div>
+    <p class="trial-pill" id="trialPill" hidden></p>
+
+    <section class="land" aria-label="Til Ustoz haqida">
+      <h2 class="land-h">Nega aynan Til Ustoz?</h2>
+      <div class="land-grid">
+        <div class="land-item"><span class="act-icon">🎙️</span><b>Jonli ovozli suhbat</b><p>Kitob yodlash emas — ustoz bilan gaplashasiz. U savol beradi, siz javob berasiz.</p></div>
+        <div class="land-item"><span class="act-icon">🇺🇿</span><b>Xatolar o'zbekcha tushuntiriladi</b><p>Har bir xato darhol, muloyim tuzatiladi va qoidasi o'zbek tilida aytiladi.</p></div>
+        <div class="land-item"><span class="act-icon">🧠</span><b>Ustoz sizni eslab qoladi</b><p>Ishingiz, rejalaringiz, qiyin joylaringiz — darslar aynan sizga moslanadi.</p></div>
+        <div class="land-item"><span class="act-icon">🎓</span><b>Imtihonga tayyorlov</b><p>Patent, IELTS, CEFR, EPS-TOPIK, TOPIK, Goethe, ТРКИ formatida sinovlar.</p></div>
+        <div class="land-item"><span class="act-icon">📚</span><b>Kuniga 20+ yangi so'z</b><p>26 mavzu, aqlli takrorlash — so'zlar unutilmaydi.</p></div>
+        <div class="land-item"><span class="act-icon">🕐</span><b>Istalgan vaqtda</b><p>Repetitor kutmaysiz: kechasi ham, tushlikda ham — 10 daqiqa yetarli.</p></div>
+      </div>
+
+      <h2 class="land-h">Dars qanday o'tadi?</h2>
+      <div class="land-chat" aria-label="Dars namunasi">
+        <p class="chat-row tutor"><span class="chat-who">Anna</span><span class="chat-bubble">Привет! Сколько тебе лет?</span></p>
+        <p class="chat-row you"><span class="chat-who">Siz</span><span class="chat-bubble">Я двадцать лет.</span></p>
+        <p class="chat-row tutor"><span class="chat-who">Anna</span><span class="chat-bubble">Deyarli to'g'ri! Rus tilida yosh aytilganda «мне» ishlatiladi: <b>Мне двадцать лет.</b> Qani, takrorlang 🙂</span></p>
+        <p class="chat-row you"><span class="chat-who">Siz</span><span class="chat-bubble">Мне двадцать лет!</span></p>
+        <p class="chat-row tutor"><span class="chat-who">Anna</span><span class="chat-bubble">Отлично! 🎉 А где ты работаешь?</span></p>
+      </div>
+      <ol class="land-steps">
+        <li><b>Tilni tanlang</b> va qisqa anketani to'ldiring — 1 daqiqa.</li>
+        <li><b>«Bugungi dars»ni bosing</b> — takrorlash, yangi so'zlar, qoida va suhbat tayyor turadi.</li>
+        <li><b>Har kuni 15 daqiqa</b> — streak, yutuqlar va haftalik reyting sizni to'xtatmaydi.</li>
+      </ol>
+
+      <h2 class="land-h">Narxlar</h2>
+      <p class="land-free">Boshlash <b>bepul</b>: har kuni 2 ta ovozli dars va o'yinlar. <span id="landTrial"></span></p>
+      <div class="land-prices" id="landPrices"></div>
+      <p class="hint">3 oylik obunada −10%, yillikda −25%. Repetitor bilan bir soatlik dars narxiga — butun oy.</p>
+
+      <h2 class="land-h">Ko'p beriladigan savollar</h2>
+      <div class="land-faq">
+        <details><summary>Noldan boshlasam bo'ladimi?</summary><p>Ha. Ustoz darajangizni o'zi aniqlaydi va eng oddiy so'zlardan boshlaydi. Koreys tili uchun alohida harflar (Hangul) kursi bor.</p></details>
+        <details><summary>Telefonda ishlaydimi?</summary><p>Ha, Android va iPhone'da. Chrome brauzerida ochib, bosh ekranga ilova qilib o'rnatish mumkin.</p></details>
+        <details><summary>Mikrofonsiz ham bo'ladimi?</summary><p>Bo'ladi — klaviaturada yozib yuborishingiz mumkin. Lekin gapirib o'rganish ancha tez natija beradi.</p></details>
+        <details><summary>To'lov qanday qilinadi?</summary><p>Tarifni tanlaysiz, kartaga o'tkazasiz va chek rasmini yuklaysiz. Chek bir necha soniyada tekshiriladi va obuna yoqiladi.</p></details>
+        <details><summary>Sertifikat beriladimi?</summary><p>Kurs darajalarini tugatganingizda Til Ustoz yutuq sertifikati beriladi. U rasmiy til sertifikati (IELTS, TOPIK va b.) o'rnini bosmaydi, lekin ularga tayyorlaydi.</p></details>
+      </div>
+
+      <button type="button" class="primary big land-cta" id="landCta">Bepul boshlash ↑</button>
+    </section>
   </main>
 
   <!-- 2. Menyu -->
@@ -103,6 +154,7 @@
       <div class="daily-links">
         <button type="button" class="link-btn" id="ratingBtn">🏆 Haftalik reyting</button>
         <button type="button" class="link-btn" id="badgesBtn">🏅 Yutuqlar</button>
+        <button type="button" class="link-btn" id="shareStreakBtn">📤 Ulashish</button>
         <button type="button" class="link-btn" id="koTrToggle" hidden>🔤 Lotincha o'qilishi</button>
       </div>
     </section>
@@ -785,6 +837,18 @@
     </div>
   </main>
 
+  <dialog class="sheet" id="trialDialog">
+    <form method="dialog">
+      <div class="face-slot small" id="trialFace" data-face="thinking" data-state="idle"></div>
+      <h2>🎁 Bepul sinov tugadi</h2>
+      <p id="trialText">Sizga yoqdimi? Obuna bilan har kuni ustoz bilan uzoqroq gaplashing, cheksiz o'yin, lug'at va imtihon sinovlari. So'zlaringiz, streak va natijalaringiz saqlanib qoladi.</p>
+      <div class="end-actions">
+        <button type="button" class="primary" id="trialPlans">⭐ Tariflarni ko'rish</button>
+        <button type="submit" class="secondary">Bepul davom etish</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog class="sheet" id="limitDialog">
     <form method="dialog">
       <div class="face-slot small" id="limitFace" data-face="surprised" data-state="idle"></div>
@@ -886,6 +950,7 @@
   <script src="study.js"></script>
   <script src="plan.js"></script>
   <script src="news.js"></script>
+  <script src="share.js"></script>
   <script src="exam.js"></script>
   <script src="cert.js"></script>
   <script src="account-ui.js"></script>
