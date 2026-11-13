@@ -549,3 +549,60 @@ input[type="text"], input[type="tel"], input[type="password"], input[type="numbe
 /* 4 ta til: 2×2 to'r */
 .lang-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 460px; }
 @media (min-width: 720px) { .lang-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 700px; } }
+
+/* Bosh sahifa (landing) */
+.trial-pill { margin: 14px 0 0; padding: 10px 18px; border-radius: 999px; background: linear-gradient(135deg, var(--sun), var(--accent)); color: #fff; font-weight: 800; box-shadow: 0 4px 0 var(--sun-deep); }
+.land { width: 100%; max-width: 700px; margin-top: 34px; display: flex; flex-direction: column; align-items: center; }
+.land-h { margin: 34px 0 14px; font-size: clamp(20px, 5vw, 26px); }
+.land-grid { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.land-item { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 16px; text-align: left; border: 2px solid var(--border); border-radius: 22px; background: var(--surface); box-shadow: 0 5px 0 var(--edge), var(--shadow); }
+.land-item:nth-child(6n + 1) .act-icon { --tile: var(--accent); }
+.land-item:nth-child(6n + 2) .act-icon { --tile: var(--teal); }
+.land-item:nth-child(6n + 3) .act-icon { --tile: var(--plum); }
+.land-item:nth-child(6n + 4) .act-icon { --tile: var(--sun); }
+.land-item:nth-child(6n + 5) .act-icon { --tile: var(--leaf); }
+.land-item b { font-family: var(--display); font-size: 15px; line-height: 1.25; }
+.land-item p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
+.land-chat { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 8px; padding: 16px; border: 2px solid var(--border); border-radius: 24px; background: var(--surface); box-shadow: 0 5px 0 var(--edge); }
+.chat-row { display: flex; flex-direction: column; gap: 2px; margin: 0; max-width: 86%; text-align: left; }
+.chat-row.you { align-self: flex-end; align-items: flex-end; }
+.chat-who { font-size: 11px; font-weight: 700; color: var(--muted); padding: 0 8px; }
+.chat-bubble { padding: 10px 14px; border-radius: 18px; background: var(--surface-2); border: 1px solid var(--border); font-size: 15px; line-height: 1.4; }
+.chat-row.you .chat-bubble { background: var(--text); color: var(--bg); border-color: var(--text); }
+.land-steps { width: 100%; max-width: 520px; margin: 16px 0 0; padding-left: 22px; text-align: left; line-height: 1.6; }
+.land-steps li { margin-bottom: 6px; }
+.land-free { margin: 0 0 12px; max-width: 520px; }
+.land-prices { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.land-price { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 14px 6px; border: 2px solid var(--border); border-radius: 20px; background: var(--surface); box-shadow: 0 5px 0 var(--edge); }
+.land-price.popular { border-color: var(--sun); box-shadow: 0 5px 0 var(--sun-deep); }
+.land-price b { font-family: var(--display); font-size: 15px; }
+.land-price span { font-size: 12px; color: var(--muted); }
+.land-price strong { font-family: var(--display); font-size: clamp(13px, 3.6vw, 18px); margin-top: 6px; white-space: nowrap; }
+.land-faq { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.land-faq details { padding: 12px 16px; border: 2px solid var(--border); border-radius: 16px; background: var(--surface); }
+.land-faq summary { font-weight: 700; cursor: pointer; }
+.land-faq p { margin: 8px 0 0; color: var(--muted); line-height: 1.5; }
+.land-cta { margin: 28px 0 10px; }
+@media (max-width: 520px) {
+  .land-prices { grid-template-columns: 1fr; }
+  .land-price { flex-direction: row; justify-content: space-between; align-items: baseline; gap: 8px; padding: 14px 16px; flex-wrap: wrap; }
+  .land-price strong { margin: 0 0 0 auto; font-size: 17px; }
+}
+@media (max-width: 520px) {
+  .land-price { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; text-align: left; align-items: center; }
+  .land-price b { grid-area: 1 / 1; }
+  .land-price span:nth-of-type(1) { grid-area: 2 / 1; }
+  .land-price strong { grid-area: 1 / 2; text-align: right; margin: 0; }
+  .land-price span:nth-of-type(2) { grid-area: 2 / 2; text-align: right; }
+}
+
+/* Bugun gaplashilgan vaqt */
+.talk-meter { margin-top: 12px; }
+.talk-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; font-size: 13px; color: var(--muted); }
+.talk-top b { color: var(--text); font-size: 14px; }
+.talk-fill { background: linear-gradient(90deg, var(--teal), var(--leaf)) !important; }
+.talk-meter.full .talk-fill { background: linear-gradient(90deg, var(--sun), var(--danger)) !important; }
+.day-time { padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--teal) 14%, var(--surface)); color: var(--text); font: 600 12px ui-monospace, 'SF Mono', Menlo, monospace; white-space: nowrap; }
+.day-time.low { background: color-mix(in srgb, var(--danger) 16%, var(--surface)); color: var(--danger); }
+.lesson-bar { flex-wrap: wrap; row-gap: 6px; }
+.lesson-bar .day-time { order: 9; flex-basis: 100%; text-align: center; padding: 5px 10px; font-size: 13px; }

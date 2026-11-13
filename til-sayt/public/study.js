@@ -111,7 +111,9 @@ window.Study = (() => {
     if (cache[unitId] && !fresh) return renderGrammar(unitId, cache[unitId]);
     loading('⏳ Ustoz qoidani tayyorlayapti...');
     try {
-      const card = await App.postJson('/api/grammar', { lang, unit: unitId });
+      // «Boshqacha tushuntir»: hozirgi variantdan boshqasini so'raymiz.
+      const prev = fresh && cache[unitId] ? cache[unitId].v : undefined;
+      const card = await App.postJson('/api/grammar', { lang, unit: unitId, not: prev });
       const all = App.loadStored(gKey(lang)) || {};
       all[unitId] = card;
       App.store(gKey(lang), all);
@@ -270,7 +272,11 @@ window.Study = (() => {
       )
     );
     const actions = el('div', 'end-actions');
-    actions.append(button('primary', '✅ Shunday boshlayman', () => applyPlacement(level)), button('secondary', "🔁 Qayta topshirish", startPlacement));
+    actions.append(
+      button('primary', '✅ Shunday boshlayman', () => applyPlacement(level)),
+      button('secondary', '📤 Natijani ulashish', () => window.Share.level(LEVEL_NAMES[level], level === 'A0' ? 'Start' : level)),
+      button('secondary', "🔁 Qayta topshirish", startPlacement)
+    );
     box.appendChild(actions);
     b.appendChild(box);
   }

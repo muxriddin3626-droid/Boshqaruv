@@ -10,6 +10,8 @@ const payments = require('./payments');
 const fresh = require('./fresh');
 const db = require('./db');
 const costs = require('./costs');
+const pool = require('./pool');
+const appSettings = require('./settings');
 const auth = require('./auth');
 const {
   TUTOR_PROMPT,
@@ -52,9 +54,13 @@ const client = new Anthropic();
 
 const MODEL = process.env.CLAUDE_MODEL || 'claude-opus-5-5';
 const EFFORT = process.env.CLAUDE_EFFORT || 'medium';
-// O'yin, hikoya, hisobot va imtihon topshiriqlarini tuzish uchun tezroq va arzonroq model.
+// Hisobot, grammatika, imtihon topshiriqlari va chek tekshiruvi uchun o'rta model.
 const FAST_MODEL = process.env.CLAUDE_FAST_MODEL || 'claude-sonnet-5-5';
 const FAST_EFFORT = process.env.CLAUDE_FAST_EFFORT || 'low';
+// O'yin va lug'at to'plamlari uchun eng arzon model.
+const CHEAP_MODEL = process.env.CLAUDE_CHEAP_MODEL || 'claude-haiku-5-5';
+// Bepul va sinov foydalanuvchilarining ovozli darsi uchun model (obunachilarda — asosiy model).
+const FREE_MODEL = process.env.CLAUDE_FREE_MODEL || 'claude-sonnet-5-5';
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
@@ -109,6 +115,7 @@ const MIME_TYPES = {
   '.png': 'image/png',
   '.ico': 'image/x-icon',
   '.webmanifest': 'application/manifest+json',
+  '.txt': 'text/plain; charset=utf-8',
 };
 
 function sendJson(res, status, data) {
@@ -213,36 +220,68 @@ function sendClaudeError(res, err) {
 
 // Claude'ga JSON sxemasi bilan so'rov yuboradi va tayyor obyektni qaytaradi.
 // Xavfsizlik filtri rad etsa null qaytaradi.
-async function askJson({ system, messages, schema, fast = false }) {
-  const response = await client.beta.messages.create({
-    model: fast ? FAST_MODEL : MODEL,
-    max_tokens: fast ? 8000 : 4000,
+// tier: 'main' (asosiy), 'mid' (fast: true) yoki 'cheap'. model — aniq modelni berish (tarifga qarab).
+// cache: true — tizim ko'rsatmasi va suhbat keshlanadi (takroriy qismi ~20 baravar arzon).
+async function askJson({ system, messages, schema, fast = false, tier, model, cache = false }) {
+  const level = tier || (fast ? 'mid' : 'main');
+  const useModel = model || { main: MODEL, mid: FAST_MODEL, cheap: CHEAP_MODEL }[level];
+  let sys = system;
+  let msgs = messages;
+  if (cache) {
+    const mark = { cache_control: { type: 'ephemeral' } };
+    sys = (Array.isArray(system) ? system : [{ type: 'text', text: system }]).map((blk, i, arr) => (i === arr.length - 1 ? { ...blk, ...mark } : blk));
+    msgs = messages.map((m, i) =>
+      i === messages.length - 1 && typeof m.content === 'string' ? { ...m, content: [{ type: 'text', text: m.content, ...mark }] } : m
+    );
+  }
+  const params = {
+    model: useModel,
+    max_tokens: level === 'main' ? 4000 : 8000,
     output_config: {
-      effort: fast ? FAST_EFFORT : EFFORT,
+      effort: level === 'main' ? EFFORT : FAST_EFFORT,
       format: { type: 'json_schema', schema },
     },
-    // Xavfsizlik filtri so'rovni rad etsa, server boshqa modelda qayta urinadi.
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
-    system,
-    messages,
-  });
+    system: sys,
+    messages: msgs,
+  };
+  // Xavfsizlik filtri so'rovni rad etsa, server boshqa modelda qayta urinadi (eng arzon modelda bu yo'q).
+  if (!useModel.startsWith('claude-haiku')) {
+    params.betas = ['server-side-fallback-2026-07-01'];
+    params.fallbacks = 'default';
+  }
+  const response = await client.beta.messages.create(params);
   costs.record(response);
-  if (response.stop_reason === 'refusal') return null;
-  const text = response.content
-    .filter((b) => b.type === 'text')
-    .map((b) => b.text)
-    .join('');
-  return JSON.parse(text);
+  let out = null;
+  if (response.stop_reason !== 'refusal') {
+    const text = response.content
+      .filter((blk) => blk.type === 'text')
+      .map((blk) => blk.text)
+      .join('');
+    try {
+      out = JSON.parse(text);
+    } catch (err) {
+      if (level !== 'cheap') throw err;
+    }
+  }
+  // Arzon model rad etsa yoki yaroqsiz javob bersa — o'rta modelda bir marta qayta urinamiz.
+  if (out === null && level === 'cheap') return askJson({ system, messages, schema, tier: 'mid' });
+  return out;
 }
 
 payments.setAsker(askJson);
-fresh.setup({ client, askJson, model: MODEL });
+fresh.setup({ client, askJson, model: FAST_MODEL });
 
 const REFUSAL_REPLY = {
   mood: 'calm',
   segments: [{ lang: 'uz', text: "Kechirasiz, bu haqda gaplasha olmayman. Keling, boshqa mavzuda gaplashamiz." }],
 };
+
+// Ovozli dars modeli: obunachilarga asosiy, bepul va sinovdagilarga arzonroq (sozlamalarda o'chiriladi).
+async function lessonModel(req) {
+  if (!appSettings.get().cheapFreeModel) return MODEL;
+  const user = await account.currentUser(req);
+  return account.isPaid(user) ? MODEL : FREE_MODEL;
+}
 
 // Ustoz javobi: { mood, segments: [{ lang, text }] }. Brauzer tarixga aynan
 // shu JSON matnini yozadi, shunda model o'z formatini ko'radi.
@@ -302,6 +341,8 @@ async function handleChat(req, res) {
       ],
       messages,
       schema: REPLY_SCHEMA,
+      model: await lessonModel(req),
+      cache: true,
     });
     const lessonToken = auth.lessonToken(now);
     // Oldingi javobdan beri o'tgan vaqt (uzoq tanaffus 2 daqiqadan ortiq hisoblanmaydi).
@@ -520,12 +561,26 @@ async function handleGame(req, res) {
     return;
   }
 
+  // Kurs bosqichi va kasb mashqlari, shuningdek shaxsiy ma'lumotsiz so'rovlar — umumiy ombordan.
+  // O'quvchining xatolari yoki qiziqishlari bo'lsa — unga moslab yangi tuziladi (eng arzon modelda).
+  const focus = cleanFocus(body.focus);
+  const profile = cleanProfile(body.profile);
+  const personal = focus.words.length || focus.mistakes.length || (profile && profile.interests && profile.interests.length);
+  const shared = Boolean(settings.unit || settings.prof || settings.exam || !personal);
+  const poolKey = [lang, type, settings.unit || '', settings.prof || '', settings.exam ? 'x' : '', settings.unit || settings.prof ? '' : `${settings.topic}:${settings.level}`].join('|');
+
   try {
+    const hit = shared && (await pool.take('game', poolKey, { target: 6 }));
+    if (hit) {
+      await q.commit();
+      sendJson(res, 200, hit.data);
+      return;
+    }
     const raw = await askJson({
-      system: gamePrompt(lang, type, settings, cleanFocus(body.focus), cleanProfile(body.profile)),
+      system: gamePrompt(lang, type, settings, shared ? { words: [], mistakes: [] } : focus, shared ? null : profile),
       messages: [{ role: 'user', content: "Mashqni tayyorla." }],
       schema: GAMES[type].schema,
-      fast: true,
+      tier: 'cheap',
     });
     const game = raw && cleanGame(type, raw);
     const size = game && (game.pairs || game.items || game.sentences).length;
@@ -533,6 +588,7 @@ async function handleGame(req, res) {
       sendJson(res, 502, { error: "Mashqni tayyorlab bo'lmadi, qayta urinib ko'ring." });
       return;
     }
+    if (shared) await pool.add('game', poolKey, game, 12);
     await q.commit();
     sendJson(res, 200, game);
   } catch (err) {
@@ -576,14 +632,27 @@ async function handleVocab(req, res) {
     account.sendLimit(res, q);
     return;
   }
+  const poolKey = `${body.lang}|${theme.id}|${level}`;
+  const known = new Set(exclude.map((w) => w.toLowerCase()));
+  const newWords = (pack) => pack.words.filter((w) => !known.has(w.word.toLowerCase()));
   try {
+    // Ombordagi to'plamlardan o'quvchi hali ko'rmaganini beramiz (kamida 15 ta yangi so'z bo'lsa).
+    const hit = await pool.take('vocab', poolKey, { target: 1, accept: (it) => newWords(it.data).length >= 15 });
+    if (hit) {
+      await q.commit();
+      sendJson(res, 200, { words: newWords(hit.data) });
+      return;
+    }
+    // Yangi to'plam: ombordagi so'zlarni ham takrorlamaslik uchun chiqarib tashlaymiz.
+    const pooled = (await pool.list('vocab', poolKey)).flatMap((it) => it.data.words.map((w) => w.word));
+    const avoid = [...new Set([...pooled, ...exclude])].slice(-200);
     const raw = await askJson({
-      system: vocabPrompt(body.lang, theme, level, exclude, cleanProfile(body.profile)),
+      system: vocabPrompt(body.lang, theme, level, avoid, null),
       messages: [{ role: 'user', content: "Lug'at to'plamini tayyorla." }],
       schema: VOCAB_SCHEMA,
-      fast: true,
+      tier: 'cheap',
     });
-    const seen = new Set(exclude.map((w) => w.toLowerCase()));
+    const seen = new Set(avoid.map((w) => w.toLowerCase()));
     const words = ((raw && raw.words) || [])
       .map((w) => ({
         word: str(w && w.word, 80),
@@ -597,6 +666,7 @@ async function handleVocab(req, res) {
       sendJson(res, 502, { error: "So'zlarni tayyorlab bo'lmadi, qayta urinib ko'ring." });
       return;
     }
+    if (words.length >= 15) await pool.add('vocab', poolKey, { words }, 40);
     await q.commit();
     sendJson(res, 200, { words });
   } catch (err) {
@@ -630,7 +700,16 @@ async function handleGrammar(req, res) {
     account.sendLimit(res, q);
     return;
   }
+  const gKey = `${body.lang}|${unit.id}`;
+  const notId = Number.isInteger(body.not) ? body.not : -1;
   try {
+    // Har bosqich uchun 3 tagacha tushuntirish varianti; «Boshqacha tushuntir» boshqasini beradi.
+    const hit = await pool.take('grammar', gKey, { target: notId >= 0 ? 3 : 1, accept: (it) => it.id !== notId });
+    if (hit) {
+      await q.commit();
+      sendJson(res, 200, { ...hit.data, v: hit.id });
+      return;
+    }
     const raw = await askJson({
       system: grammarPrompt(body.lang, unit),
       messages: [{ role: 'user', content: 'Grammatika kartochkasini tayyorla.' }],
@@ -656,8 +735,9 @@ async function handleGrammar(req, res) {
       sendJson(res, 502, { error: "Qoidani tayyorlab bo'lmadi, qayta urinib ko'ring." });
       return;
     }
+    const v = await pool.add('grammar', gKey, card, 3);
     await q.commit();
-    sendJson(res, 200, card);
+    sendJson(res, 200, { ...card, v });
   } catch (err) {
     sendClaudeError(res, err);
   }
@@ -680,6 +760,12 @@ async function handlePlacement(req, res) {
     return;
   }
   try {
+    const hit = await pool.take('placement', body.lang, { target: 5 });
+    if (hit) {
+      await q.commit();
+      sendJson(res, 200, hit.data);
+      return;
+    }
     const raw = await askJson({
       system: placementPrompt(body.lang),
       messages: [{ role: 'user', content: 'Daraja testini tayyorla.' }],
@@ -696,6 +782,7 @@ async function handlePlacement(req, res) {
       sendJson(res, 502, { error: "Testni tayyorlab bo'lmadi, qayta urinib ko'ring." });
       return;
     }
+    await pool.add('placement', body.lang, { items }, 5);
     await q.commit();
     sendJson(res, 200, { items });
   } catch (err) {
@@ -765,7 +852,17 @@ async function handleExamSection(req, res) {
     account.sendLimit(res, q);
     return;
   }
+  // Imtihon bo'limlari umumiy ombordan (har biriga 8 tagacha variant). Qonunchilik bo'limi bundan
+  // mustasno: u yangilanib turadigan qoidalarga tayanadi, shuning uchun har safar yangidan tuziladi.
+  const sharedExam = found.section.id !== 'law';
+  const examKey = `${body.lang}|${found.exam.id}|${found.section.id}`;
   try {
+    const hit = sharedExam && (await pool.take('exam', examKey, { target: 8 }));
+    if (hit) {
+      await q.commit();
+      sendJson(res, 200, hit.data);
+      return;
+    }
     const raw = await askJson({
       system: [examSectionPrompt(body.lang, found.exam, found.section), ...(await fresh.examContext(body.lang, found.section.id))].join('\n\n'),
       messages: [{ role: 'user', content: "Topshiriqni tayyorla." }],
@@ -777,6 +874,7 @@ async function handleExamSection(req, res) {
       sendJson(res, 502, { error: "Topshiriqni tayyorlab bo'lmadi, qayta urinib ko'ring." });
       return;
     }
+    if (sharedExam) await pool.add('exam', examKey, content, 8);
     await q.commit();
     sendJson(res, 200, content);
   } catch (err) {
@@ -957,6 +1055,13 @@ const server = http.createServer((req, res) => {
     return;
   }
   // Admin panel sahifasi (qidiruv tizimlariga ko'rsatilmaydi).
+  if (url === '/sitemap.xml' && req.method === 'GET') {
+    const proto = req.headers['x-forwarded-proto'] === 'https' || req.socket.encrypted ? 'https' : 'http';
+    const host = String(req.headers.host || '').replace(/[^a-zA-Z0-9.:-]/g, '');
+    res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
+    res.end(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${proto}://${host}/</loc><changefreq>weekly</changefreq></url></urlset>\n`);
+    return;
+  }
   if (url === '/admin' && (req.method === 'GET' || req.method === 'HEAD')) {
     fs.readFile(path.join(PUBLIC_DIR, 'admin.html'), (err, data) => {
       if (err) return res.writeHead(404).end();

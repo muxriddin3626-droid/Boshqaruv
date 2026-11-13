@@ -56,8 +56,16 @@ async function readJson(req, res, max = 64 * 1024) {
 }
 
 const isPremium = (user) => Boolean(user && user.premiumUntil > Date.now());
+// To'lagan obunachi (sinovda emas).
+const isPaid = (user) => isPremium(user) && !(user.premiumUntil <= user.trialUntil);
 // Faol obuna tarifi (light / standard / pro) yoki null.
-const planOf = (user) => (isPremium(user) ? PLANS.byId(user.plan) || PLANS.byId(PLANS.DEFAULT_PLAN) : null);
+const onTrial = (user) => isPremium(user) && user.premiumUntil <= user.trialUntil;
+// Bepul sinovda — kuniga cheklangan daqiqa (sozlamalarda), qolgani obunadagidek cheksiz.
+const planOf = (user) => {
+  if (!isPremium(user)) return null;
+  if (onTrial(user)) return { id: 'trial', name: 'Sinov', title: 'Bepul sinov', minutes: settings.get().trialMinutes, trial: true };
+  return PLANS.byId(user.plan) || PLANS.byId(PLANS.DEFAULT_PLAN);
+};
 
 async function currentUser(req) {
   const uid = auth.sessionUserId(req);
@@ -96,7 +104,9 @@ function sendVoiceLimit(res, vq) {
     limit: true,
     voice: true,
     loggedIn: true,
-    error: `Bugungi ${vq.plan.minutes} daqiqalik dars vaqtingiz tugadi (${vq.plan.name} tarifi). Ertaga davom eting yoki kattaroq tarifga o'ting. O'yinlar, lug'at va takrorlash cheksiz!`,
+    error: vq.plan.trial
+      ? `Bugungi ${vq.plan.minutes} daqiqalik bepul sinov vaqtingiz tugadi. Ertaga yana ${vq.plan.minutes} daqiqa — yoki obuna bilan kuniga 20-60 daqiqa gaplashing. O'yinlar, lug'at va takrorlash cheksiz!`
+      : `Bugungi ${vq.plan.minutes} daqiqalik dars vaqtingiz tugadi (${vq.plan.name} tarifi). Ertaga davom eting yoki kattaroq tarifga o'ting. O'yinlar, lug'at va takrorlash cheksiz!`,
   });
 }
 
@@ -123,6 +133,7 @@ function publicUser(user) {
     photoUrl: user.photoUrl,
     refCode: user.refCode,
     premiumUntil: user.premiumUntil,
+    trialUntil: user.trialUntil,
     showInRating: user.showInRating,
   };
 }
@@ -147,6 +158,8 @@ function config() {
       ? { number: settings.get().cardNumber, holder: settings.get().cardHolder, bank: settings.get().cardBank }
       : null,
     refBonusDays: settings.get().refBonusDays,
+    trialDays: settings.get().trialDays,
+    trialMinutes: settings.get().trialMinutes,
     announcement: settings.get().announcement,
   };
 }
@@ -157,6 +170,9 @@ async function handleMe(req, res) {
     user: user ? publicUser(user) : null,
     premium: isPremium(user),
     plan: planOf(user),
+    // Sinov: hozir sinovda / sinov tugagan va obuna olinmagan.
+    trial: onTrial(user),
+    trialEnded: Boolean(user && !isPremium(user) && user.trialUntil > 0),
     usage: await usageFor(req, user),
     limits: settings.get().limitsOn ? settings.freeLimits() : null,
   });
@@ -168,6 +184,17 @@ async function finishLogin(req, res, profile, ref, { keepExisting = false } = {}
   const existing = keepExisting && (await db.getUser(profile.id));
   const { user, created } = existing ? { user: existing, created: false } : await db.upsertUser(profile);
   let bonus = 0;
+  // Yangi foydalanuvchiga bepul sinov (bitta IP'dan oyiga 2 tagacha — qayta-qayta ro'yxatdan o'tishga qarshi).
+  let trialDays = 0;
+  if (created && settings.get().trialDays > 0) {
+    const key = `trialip:${clientIp(req)}:${tashkentDay().slice(0, 7)}`;
+    const used = ((await db.cacheGet(key)) || { value: 0 }).value;
+    if (used < 2) {
+      await db.cacheSet(key, used + 1);
+      await db.startTrial(user.id, settings.get().trialDays);
+      trialDays = settings.get().trialDays;
+    }
+  }
   // Taklif havolasi orqali kelgan yangi foydalanuvchi: ikkalasi do'st bo'ladi va bonus oladi.
   if (created && typeof ref === 'string') {
     const inviter = await db.getUserByRef(ref.trim().toUpperCase());
@@ -183,7 +210,7 @@ async function finishLogin(req, res, profile, ref, { keepExisting = false } = {}
     }
   }
   const fresh = await db.getUser(user.id);
-  sendJson(res, 200, { user: publicUser(fresh), premium: isPremium(fresh), created, bonus }, { 'Set-Cookie': auth.sessionCookie(req, user.id) });
+  sendJson(res, 200, { user: publicUser(fresh), premium: isPremium(fresh), created, bonus, trialDays }, { 'Set-Cookie': auth.sessionCookie(req, user.id) });
 }
 
 async function handleTelegramLogin(req, res) {
@@ -428,4 +455,5 @@ module.exports = {
   tashkentDay,
   weekStart,
   isPremium,
+  isPaid,
 };

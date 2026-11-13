@@ -232,6 +232,12 @@
   function tick() {
     const passed = Math.min(lessonSeconds, Math.floor((Date.now() - startedAt) / 1000));
     timerEl.textContent = `${fmt(passed)} / ${fmt(lessonSeconds)}`;
+    // Obuna yoki sinovda: bugungi umumiy vaqt (oldingi darslar + shu dars).
+    if (dayTotal) {
+      const used = Math.min(dayTotal, dayUsed + passed);
+      $('dayTime').textContent = `Bugun: ${fmt(used)} / ${fmt(dayTotal)}`;
+      $('dayTime').classList.toggle('low', dayTotal - used <= 60);
+    }
     if (passed >= lessonSeconds && !timeUp) {
       timeUp = true;
       // Ustoz gapirayotgan yoki o'ylayotgan bo'lsa, gapini tugatgach dars yopiladi.
@@ -513,6 +519,8 @@
   let lessonOpts = {};
   let lessonUnit = null;
   let lessonSeconds = LESSON_SECONDS;
+  let dayTotal = 0; // bugungi dars vaqti chegarasi (soniya), 0 — chegarasiz
+  let dayUsed = 0;
   let goalReached = false;
 
   function startLesson(opts = {}) {
@@ -524,6 +532,9 @@
     lessonSeconds = lessonOpts.scenario ? ROLEPLAY_SECONDS : (Number(settings.length) || 10) * 60;
     // Obunada — tarifdagi bugungi qolgan daqiqalar; bepul rejada — 10 daqiqa.
     const acc = window.AccountUI && window.AccountUI.me();
+    dayTotal = acc && acc.plan ? acc.plan.minutes * 60 : 0;
+    dayUsed = (acc && acc.usage && acc.usage.voice) || 0;
+    $('dayTime').hidden = !dayTotal;
     if (acc && acc.plan) {
       const left = acc.plan.minutes * 60 - ((acc.usage && acc.usage.voice) || 0);
       lessonSeconds = Math.max(60, Math.min(lessonSeconds, left));
