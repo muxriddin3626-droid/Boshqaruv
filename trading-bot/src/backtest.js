@@ -1,6 +1,7 @@
 // Tarixiy shamlarda strategiyani sinash (faqat long, bitta pozitsiya).
 // Signal yopilgan sham narxida bajariladi — jonli bot ham xuddi shunday ishlaydi.
 const { atr } = require('./indicators');
+const mtfLib = require('./mtf');
 
 function backtest(strategy, candles, params, opts = {}) {
   const fee = opts.fee ?? 0.001; // 0.1% har bir tomonga
@@ -9,6 +10,7 @@ function backtest(strategy, candles, params, opts = {}) {
   const to = opts.to ?? candles.length;
   const ind = opts.ind || strategy.prepare(candles, params);
   const atrs = opts.atr || atr(candles, 14);
+  const mtf = params.mtf && params.mtf !== 'off' ? opts.mtf || mtfLib.prepare(candles) : null;
 
   let equity = 1;
   let peak = 1;
@@ -29,7 +31,7 @@ function backtest(strategy, candles, params, opts = {}) {
       close(i, Math.min(c.open, pos.stop), 'stop');
     } else {
       const s = strategy.signal(i, candles, ind, pos, params);
-      if (s === 'buy' && !pos && atrs[i]) {
+      if (s === 'buy' && !pos && atrs[i] && (!mtf || mtfLib.allows(mtf, i, params.mtf))) {
         pos = { entryPrice: c.close, entryIndex: i, stop: c.close - stopAtr * atrs[i] };
       } else if (s === 'sell' && pos) {
         close(i, c.close, 'signal');

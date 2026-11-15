@@ -22,7 +22,11 @@ o'rganadi va hozirgi holatga mos strategiyani tanlaydi.
    balansning ko'pi bilan 1% i xavf ostida; bir juftlikka ko'pi bilan 30%;
    kunlik 5% zarardan keyin o'sha kun savdo to'xtaydi.
 
-5. **O'z xatolaridan o'rganish.** Bir sozlama ketma-ket 3 marta zarar qilsa,
+5. **Katta trend filtri (multi-timeframe).** 1 soatlik shamlardan 4 soatlik
+   va kunlik shamlar yasaladi. Har bir strategiya filtrsiz, "4 soatlik trend
+   o'sishda bo'lsin" va "4 soatlik + kunlik ikkalasi o'sishda bo'lsin"
+   variantlarida sinaladi — filtr faqat tarixda yordam bergan joyda yoqiladi.
+6. **O'z xatolaridan o'rganish.** Bir sozlama ketma-ket 3 marta zarar qilsa,
    u 3 kunga chetlatiladi va bozor darhol qayta o'rganiladi.
 
 ## Sun'iy intellekt va yangiliklar
@@ -88,9 +92,56 @@ chat ID ni aytadi, uni `TELEGRAM_CHAT_ID` ga yozib qayta ishga tushiring.
 |---|---|
 | `/holat` | balans, pozitsiyalar, tanlangan strategiyalar |
 | `/yangiliklar` | oxirgi AI/yangiliklar tahlili |
+| `/hisobot` | shu haftaning hisobotini hozir ko'rish |
 | `/toxtat` / `/davom` | yangi savdolarni to'xtatish / davom ettirish |
 | `/orgat` | bozorni hozir qayta o'rganish |
 | `/hammasini_sot` | barcha pozitsiyalarni yopish |
+
+## Haftalik hisobot
+
+Har yakshanba 20:00 da (Toshkent vaqti) Telegramga keladi:
+
+- balans hafta boshida va oxirida;
+- **"sotib olib kutish" bilan solishtirish** — bot haqiqatan foydalimi;
+- savdolar soni, yutuq foizi, o'rtacha yutuq va zarar, eng yaxshi va eng yomon savdo;
+- himoya (yangilik, manipulyatsiya, katta trend) tufayli o'tkazib yuborilgan xaridlar;
+- boshidan beri natija;
+- bot 4 hafta ketma-ket kutishdan yomon bo'lsa — ogohlantirish.
+
+## Serverga joylashtirish (7/24)
+
+### 1-variant: VPS + Docker (tavsiya etiladi)
+
+Eng ishonchli yo'l. Arzon VPS (Hetzner, Contabo, DigitalOcean — oyiga ~$4–6)
+yoki bepul Oracle Cloud "Always Free". **Server AQShda bo'lmasin** — Binance
+AQSh IP manzillarini bloklaydi (Yevropa yoki Osiyo tanlang).
+
+```bash
+# serverda (Ubuntu)
+curl -fsSL https://get.docker.com | sh
+git clone https://github.com/muxriddin3626-droid/Boshqaruv.git
+cd Boshqaruv/trading-bot
+cp .env.example .env && nano .env       # kalitlarni yozing
+docker compose up -d --build            # ishga tushirish
+docker compose logs -f                  # loglarni ko'rish
+```
+
+Yangilash: `git pull && docker compose up -d --build`. Holat `data/`
+papkasida saqlanadi va yangilashda yo'qolmaydi. Server qayta yoqilsa bot
+o'zi ishga tushadi.
+
+### 2-variant: Render (bepul)
+
+1. Turso'da bepul baza yarating (hisob-bot README'sidagi kabi) — holat shu
+   yerda saqlanadi, chunki Render'ning bepul diski har qayta ishga tushganda
+   tozalanadi.
+2. Render → New → Blueprint → shu repozitoriyni tanlang (`trading-bot/render.yaml`).
+3. Kalitlarni kiriting (`API_KEY`, `TELEGRAM_BOT_TOKEN`, `TURSO_DATABASE_URL` ...).
+4. Bepul xizmat 15 daqiqa so'rov bo'lmasa "uxlab qoladi". Uni uyg'oq ushlash
+   uchun https://uptimerobot.com da bepul monitor qo'shing: har 5 daqiqada
+   Render bergan manzilni tekshirsin.
+
+Bepul variant sinov rejimi uchun yaxshi. Haqiqiy pul bilan VPS ishonchliroq.
 
 ## Muhim ogohlantirish
 

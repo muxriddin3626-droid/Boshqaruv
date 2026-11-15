@@ -10,8 +10,11 @@
 const strategies = require('./strategies');
 const { backtest } = require('./backtest');
 const { atr } = require('./indicators');
+const mtfLib = require('./mtf');
 
 const STOPS = [2, 3, 4];
+// Katta vaqt oralig'i filtri: o'chiq / 4 soatlik trend / 4s + kunlik trend
+const MTF = ['off', '4h', 'both'];
 const keyOf = (strategy, params) => `${strategy}:${JSON.stringify(params)}`;
 
 // Bozor holati: Kaufman samaradorlik koeffitsienti + volatillik
@@ -33,6 +36,7 @@ function learn(candles, { fee = 0.001, minTrades = 3, exclude = [] } = {}) {
   const s1 = Math.floor(n * 0.6);
   const s2 = Math.floor(n * 0.8);
   const atrs = atr(candles, 14);
+  const mtf = mtfLib.prepare(candles);
   const banned = new Set(exclude);
   const results = [];
 
@@ -40,18 +44,19 @@ function learn(candles, { fee = 0.001, minTrades = 3, exclude = [] } = {}) {
     const cands = [];
     for (const base of st.paramGrid()) {
       const ind = st.prepare(candles, base);
-      for (const stopAtr of STOPS) {
-        const params = { ...base, stopAtr };
-        if (banned.has(keyOf(st.name, params))) continue;
-        const train = backtest(st, candles, params, { fee, to: s1, ind, atr: atrs });
-        if (train.trades < minTrades || train.ret <= 0) continue;
-        cands.push({ st, params, ind, train });
-      }
+      for (const stopAtr of STOPS)
+        for (const m of MTF) {
+          const params = { ...base, stopAtr, mtf: m };
+          if (banned.has(keyOf(st.name, params))) continue;
+          const train = backtest(st, candles, params, { fee, to: s1, ind, atr: atrs, mtf });
+          if (train.trades < minTrades || train.ret <= 0) continue;
+          cands.push({ st, params, ind, train });
+        }
     }
     cands.sort((a, b) => b.train.score - a.train.score);
     for (const c of cands.slice(0, 8)) {
-      const v1 = backtest(c.st, candles, c.params, { fee, from: s1, to: s2, ind: c.ind, atr: atrs });
-      const v2 = backtest(c.st, candles, c.params, { fee, from: s2, ind: c.ind, atr: atrs });
+      const v1 = backtest(c.st, candles, c.params, { fee, from: s1, to: s2, ind: c.ind, atr: atrs, mtf });
+      const v2 = backtest(c.st, candles, c.params, { fee, from: s2, ind: c.ind, atr: atrs, mtf });
       const test = {
         ret: (1 + v1.ret) * (1 + v2.ret) - 1,
         maxDD: Math.max(v1.maxDD, v2.maxDD),

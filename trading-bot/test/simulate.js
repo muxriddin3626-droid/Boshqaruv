@@ -101,7 +101,51 @@ const news = require('../src/news');
   assert.strictEqual(r.views['SOL/USDT'].sentiment, -1);
   assert(!r.views['NOPE/USDT']);
   console.log('✓ AI: web qidiruv davomi, javob tekshiruvi');
-})().then(runBot);
+})().then(extraTests).then(runBot);
+
+async function extraTests() {
+  // Haftalik hisobot
+  const { buildReport } = require('../src/report');
+  const day = 86400e3;
+  const r = buildReport({
+    symbols: ['BTC/USDT', 'ETH/USDT'],
+    period: { start: Date.now() - 7 * day, equity: 1000, prices: { 'BTC/USDT': 100, 'ETH/USDT': 10 } },
+    equityNow: 1050, pricesNow: { 'BTC/USDT': 102, 'ETH/USDT': 10.4 },
+    trades: [{ symbol: 'BTC/USDT', pnl: 60, strategy: 'ema-rsi', reason: 'signal' }, { symbol: 'ETH/USDT', pnl: -10, reason: 'stop-loss' }],
+    blocked: { yangiliklar: 2 },
+    history: [{ ret: 0, bench: 0.1 }, { ret: 0, bench: 0.1 }, { ret: 0, bench: 0.1 }],
+    allTime: { start: Date.now() - 30 * day, equity: 1000, prices: { 'BTC/USDT': 90, 'ETH/USDT': 9 } },
+  });
+  assert(Math.abs(r.ret - 0.05) < 1e-9 && Math.abs(r.bench - 0.03) < 1e-9);
+  assert(r.text.includes('yaxshiroq') && r.text.includes('yangiliklar — 2') && !r.text.includes('4 hafta'));
+  console.log('✓ haftalik hisobot');
+
+  // Holat ombori: fayl va Turso (libsql lokal fayl rejimida)
+  const { createStore } = require('../src/store');
+  for (const extra of [{}, { tursoUrl: 'file:' + path.join(os.tmpdir(), `tb-turso-${process.pid}.db`) }]) {
+    const f = path.join(os.tmpdir(), `tb-store-${process.pid}.json`);
+    const st = createStore({ stateFile: f, saveDelayMs: 10, ...extra });
+    st.save({ a: 1 });
+    st.save({ a: 2 });
+    await st.flush();
+    const back = await createStore({ stateFile: f, ...extra }).load();
+    assert.deepStrictEqual(back, { a: 2 });
+    console.log(`✓ holat ombori: ${st.name}`);
+    try { fs.unlinkSync(f); } catch {}
+    if (extra.tursoUrl) try { fs.unlinkSync(extra.tursoUrl.slice(5)); } catch {}
+  }
+
+  // Katta vaqt oralig'i filtri kelajakka qaramaydi
+  const mtf = require('../src/mtf');
+  const c = makeMarket(800, 5, ['up', 'down']);
+  const full = mtf.prepare(c);
+  for (const i of [300, 333, 500, 799]) {
+    const part = mtf.prepare(c.slice(0, i + 1));
+    assert.strictEqual(part.h4[i], full.h4[i]);
+    assert.strictEqual(part.d1[i], full.d1[i]);
+  }
+  console.log('✓ katta vaqt oralig\'i filtri (kelajakka qaramaydi)');
+}
 
 function runBot() {
 // 5) Botning to'liq sikli soxta birja bilan (paper rejim)
@@ -143,5 +187,5 @@ setTimeout(() => {
   assert(buys > 0, 'bot hech savdo qilmadi');
   console.log('\nBarcha sinovlar o\'tdi.');
   process.exit(0);
-}, 6000);
+}, 8000);
 }

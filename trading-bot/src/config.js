@@ -35,4 +35,14 @@ module.exports = {
   orderBookCheck: process.env.ORDERBOOK_CHECK !== 'false',
   lossStreakRelearn: num(process.env.LOSS_STREAK_RELEARN, 3),
   excludeDays: num(process.env.EXCLUDE_DAYS, 3),
+
+  // Haftalik hisobot (standart: yakshanba 20:00, Toshkent vaqti UTC+5)
+  reportDay: num(process.env.REPORT_DAY, 0), // 0=yakshanba ... 6=shanba
+  reportHour: num(process.env.REPORT_HOUR, 20),
+  tzOffset: num(process.env.TZ_OFFSET_HOURS, 5),
+
+  // Server
+  tursoUrl: process.env.TURSO_DATABASE_URL || '',
+  tursoToken: process.env.TURSO_AUTH_TOKEN || '',
+  port: process.env.PORT ? Number(process.env.PORT) : null,
 };

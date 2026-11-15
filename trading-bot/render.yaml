@@ -1,0 +1,34 @@
+# Render.com (bepul web xizmat). Holat Turso bazasida saqlanadi, chunki
+# Render'ning bepul diski har qayta ishga tushganda tozalanadi.
+# MUHIM: region frankfurt — Binance AQSh IP manzillarini bloklaydi.
+services:
+  - type: web
+    name: trading-bot
+    runtime: node
+    region: frankfurt
+    plan: free
+    rootDir: trading-bot
+    buildCommand: npm ci --omit=dev
+    startCommand: node src/bot.js
+    healthCheckPath: /
+    envVars:
+      - key: MODE
+        value: paper
+      - key: EXCHANGE
+        value: binance
+      - key: SYMBOLS
+        value: BTC/USDT,ETH/USDT,SOL/USDT
+      - key: API_KEY
+        sync: false
+      - key: API_SECRET
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
