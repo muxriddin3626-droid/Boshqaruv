@@ -105,7 +105,7 @@ function sendVoiceLimit(res, vq) {
     voice: true,
     loggedIn: true,
     error: vq.plan.trial
-      ? `Bugungi ${vq.plan.minutes} daqiqalik bepul sinov vaqtingiz tugadi. Ertaga yana ${vq.plan.minutes} daqiqa — yoki obuna bilan kuniga 20-60 daqiqa gaplashing. O'yinlar, lug'at va takrorlash cheksiz!`
+      ? `Bugungi ${vq.plan.minutes} daqiqalik bepul sinov vaqtingiz tugadi. Ertaga yana ${vq.plan.minutes} daqiqa — yoki obuna bilan kuniga 10-60 daqiqa gaplashing (oyiga 70 000 so'mdan). O'yinlar, lug'at va takrorlash cheksiz!`
       : `Bugungi ${vq.plan.minutes} daqiqalik dars vaqtingiz tugadi (${vq.plan.name} tarifi). Ertaga davom eting yoki kattaroq tarifga o'ting. O'yinlar, lug'at va takrorlash cheksiz!`,
   });
 }

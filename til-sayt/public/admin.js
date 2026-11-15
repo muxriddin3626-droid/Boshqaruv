@@ -594,7 +594,7 @@
   let costRate = 12800;
   const money = (usd) => `$${usd < 10 ? usd.toFixed(2) : Math.round(usd).toLocaleString('ru-RU')}`;
   const som = (usd) => `${Math.round((usd * costRate) / 1000).toLocaleString('ru-RU').replace(/,/g, ' ')} ming so'm`;
-  const PLAN_NAMES = { light: 'Light', standard: 'Standard', pro: 'Pro' };
+  const PLAN_NAMES = { mini: 'Mini', light: 'Light', standard: 'Standard', pro: 'Pro' };
 
   async function loadCosts() {
     let r;
