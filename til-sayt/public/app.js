@@ -38,6 +38,7 @@
     study: $('studyScreen'),
     plan: $('planScreen'),
     news: $('newsScreen'),
+    drill: $('drillScreen'),
     rating: $('ratingScreen'),
     profList: $('profListScreen'),
     prof: $('profScreen'),
@@ -166,6 +167,7 @@
     window.Vocab.renderCard();
     window.Plan.renderCard();
     window.News.renderCard();
+    if (window.Drill) window.Drill.renderCards();
     show('menu');
   }
 
@@ -315,7 +317,7 @@
         u.lang = LOCALES[seg.lang];
         const voice = pickVoice(seg.lang);
         if (voice) u.voice = voice;
-        u.rate = seg.lang === 'uz' ? 1 : 0.92;
+        u.rate = seg.slow ? 0.6 : seg.lang === 'uz' ? 1 : 0.92;
         u.onend = finish;
         u.onerror = finish;
         tts.speak(u);
@@ -345,7 +347,7 @@
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tutor: lang, lang: seg.lang, text: seg.text }),
+        body: JSON.stringify({ tutor: lang, lang: seg.lang, text: seg.text, slow: seg.slow ? true : undefined }),
       });
       if (res.status === 501) {
         serverVoice = false;

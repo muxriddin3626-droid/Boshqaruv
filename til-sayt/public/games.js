@@ -653,5 +653,5 @@ window.Games = (() => {
     showResult(opts);
   }
 
-  return { start, showResult: showExternalResult };
+  return { start, showResult: showExternalResult, words, matchWords };
 })();

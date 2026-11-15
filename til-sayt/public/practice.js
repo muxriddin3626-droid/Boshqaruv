@@ -314,6 +314,11 @@ window.Practice = (() => {
       $('notebookStats').textContent = notes.length
         ? `Ustoz shu xatolarni eslaydi va darslarda qayta mashq qildiradi.`
         : "Hali xato yozilmagan. Ovozli dars oxiridagi hisobotdan xatolar shu yerga tushadi.";
+      if (notes.length && window.Drill) {
+        const li = el('li', 'note-action');
+        li.appendChild(button('primary', '🔁 Xatolar ustida ishlash', () => window.Drill.openMistakes()));
+        list.appendChild(li);
+      }
       for (const n of notes) {
         const li = el('li', 'note mistake-note');
         const text = el('div', 'note-text');

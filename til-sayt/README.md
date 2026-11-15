@@ -108,6 +108,13 @@ kasbiy kurs). Anketani sozlamalardan qayta to'ldirish mumkin (`public/survey.js`
 - 🗣️ **Talaffuz** — ustoz iborani aytadi, o'quvchi takrorlaydi; sayt nima
   deganini tanib, to'g'ri aytilgan so'zlarni yashil, xatolarini qizil ko'rsatadi
   (80% dan yuqori — o'tdi, 3 urinish).
+- 🔁 **Xatolarim ustida ishlash** — o'quvchining o'z xatolaridan avtomatik mashq
+  (AI'siz, bepul): to'g'ri variantni tanlash → gapni so'zlardan yig'ish → ovoz
+  chiqarib aytish. Har xato 3 marta ketma-ket to'g'ri bajarilsa «yengildi»
+  hisoblanadi; xato qilinsa hisob noldan boshlanadi.
+- 🎧 **Tinglab takrorlash** — o'quvchi o'zi o'rgangan gaplar (lug'at misollari,
+  qoida misollari, xatolarning to'g'risi, daftar) ustoz ovozida o'qiladi, o'quvchi
+  takrorlaydi va har gap uchun talaffuz foizini oladi. 🔊 oddiy va 🐢 sekin tezlik.
 - 🔥 **Kunlik odat** — har mashq uchun XP, kunlik maqsad (20 / 50 / 100 XP),
   ketma-ket kunlar (streak) va haftalik ko'rinish. "⏰ Eslatma" tugmasi telefon
   taqvimiga har kungi eslatma (`.ics` fayl) qo'shadi — server kerak emas.

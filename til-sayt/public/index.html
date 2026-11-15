@@ -190,6 +190,24 @@
       <span class="course-count" id="vocabCount">0/20</span>
     </button>
 
+    <div class="drill-cards">
+      <button type="button" class="big-card drill-card" id="mistakesCard">
+        <span class="act-icon">🔁</span>
+        <span class="act-text">
+          <span class="act-title">Xatolarim ustida ishlash</span>
+          <span class="act-desc" id="mistakesDesc">Darsdagi xatolaringiz shu yerda mashq qilinadi</span>
+        </span>
+        <span class="course-count" id="mistakesBadge" hidden>0</span>
+      </button>
+      <button type="button" class="big-card drill-card" id="shadowCard">
+        <span class="act-icon">🎧</span>
+        <span class="act-text">
+          <span class="act-title">Tinglab takrorlash</span>
+          <span class="act-desc">Ustoz aytadi — siz takrorlaysiz, talaffuz baholanadi</span>
+        </span>
+      </button>
+    </div>
+
     <button type="button" class="big-card news-card-btn" id="newsCard">
       <span class="act-icon">📰</span>
       <span class="act-text">
@@ -736,6 +754,15 @@
     <div class="hangul-body" id="studyBody"></div>
   </main>
 
+  <main id="drillScreen" class="screen hangul-screen" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="drillBack">← Orqaga</button>
+      <span class="game-title" id="drillTitle"></span>
+      <span class="game-score" id="drillScore"></span>
+    </div>
+    <div class="hangul-body" id="drillBody"></div>
+  </main>
+
   <main id="newsScreen" class="screen hangul-screen" hidden>
     <div class="game-bar">
       <button type="button" class="stop-btn" id="newsBack">← Menyu</button>
@@ -955,6 +982,7 @@
   <script src="study.js"></script>
   <script src="plan.js"></script>
   <script src="news.js"></script>
+  <script src="drill.js"></script>
   <script src="share.js"></script>
   <script src="exam.js"></script>
   <script src="cert.js"></script>
