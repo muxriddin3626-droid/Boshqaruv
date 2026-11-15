@@ -1,35 +1,46 @@
 // To'liq avtomatik trading bot.
 // Har bir juftlik uchun: bozorni o'rganadi -> eng yaxshi strategiyani tanlaydi ->
-// yangi sham yopilganda signal tekshiradi -> xavf qoidalari bo'yicha savdo qiladi.
+// yangiliklar va AI tahlilini kuzatadi -> manipulyatsiya belgilarini tekshiradi ->
+// yangi sham yopilganda xavf qoidalari bo'yicha savdo qiladi -> o'z
+// xatolaridan o'rganadi (yutqazgan sozlamalarni vaqtincha chetlatadi).
 const fs = require('fs');
 const cfg = require('./config');
 const strategies = require('./strategies');
-const { learn } = require('./learner');
+const { learn, keyOf } = require('./learner');
 const { atr } = require('./indicators');
 const { createExchange, fetchCandles, Broker } = require('./exchange');
+const { candleFlags, orderBookFlags } = require('./manipulation');
+const news = require('./news');
+const { AiAnalyst } = require('./ai');
 const telegram = require('./telegram');
 
 const byName = Object.fromEntries(strategies.map((s) => [s.name, s]));
 const pct = (x) => `${(x * 100).toFixed(2)}%`;
+const ACTION_UZ = { allow: 'ruxsat', reduce: 'kamaytirilgan summa', block: 'xarid bloklangan', exit: 'chiqish' };
 
 function loadState() {
+  let s = {};
   try {
-    return JSON.parse(fs.readFileSync(cfg.stateFile, 'utf8'));
-  } catch {
-    return { positions: {}, models: {}, lastCandle: {}, paused: false, day: null, dayStartEquity: null, history: [] };
-  }
+    s = JSON.parse(fs.readFileSync(cfg.stateFile, 'utf8'));
+  } catch {}
+  return {
+    positions: {}, models: {}, lastCandle: {}, paused: false, day: null, dayStartEquity: null,
+    history: [], flags: {}, intel: null, lossStreak: {}, excluded: {}, relearnSym: {}, ...s,
+  };
 }
 const state = loadState();
 const save = () => fs.writeFileSync(cfg.stateFile, JSON.stringify(state, null, 2));
 
 const ex = createExchange(cfg);
 const broker = new Broker(ex, cfg, state);
+const ai = new AiAnalyst(cfg);
 const log = (msg) => {
   console.log(new Date().toISOString(), msg);
   telegram.send(msg);
 };
 
 const lastPrices = {};
+const lastCandles = {};
 
 async function equity() {
   let total = await broker.cash(cfg.symbols[0]);
@@ -37,24 +48,87 @@ async function equity() {
   return total;
 }
 
+// ---------- O'rganish ----------
+function activeExclusions(symbol) {
+  const now = Date.now();
+  state.excluded[symbol] = (state.excluded[symbol] || []).filter((x) => x.until > now);
+  return state.excluded[symbol].map((x) => x.key);
+}
+
 async function relearn(symbol, candles) {
-  const r = learn(candles, { fee: cfg.fee });
+  const r = learn(candles, { fee: cfg.fee, exclude: activeExclusions(symbol) });
   state.models[symbol] = r.best
-    ? { strategy: r.best.strategy, params: r.best.params, test: r.best.test, at: Date.now() }
-    : { strategy: null, at: Date.now() };
+    ? { strategy: r.best.strategy, params: r.best.params, key: r.best.key, test: r.best.test, regime: r.regime, at: Date.now() }
+    : { strategy: null, regime: r.regime, at: Date.now() };
+  delete state.relearnSym[symbol];
   save();
   if (r.best) {
     log(
-      `🧠 ${symbol}: bozor o'rganildi (${r.tested} variant sinaldi).\n` +
+      `🧠 ${symbol}: bozor o'rganildi (${r.tested} variant). Holat: ${r.regime}.\n` +
         `Tanlandi: ${r.best.title}\nParametrlar: ${JSON.stringify(r.best.params)}\n` +
-        `Ko'rilmagan davrdagi natija: ${pct(r.best.test.ret)}, maks. tushish ${pct(r.best.test.maxDD)}, ` +
-        `${r.best.test.trades} savdo (shu davrda "sotib olib kutish": ${pct(r.buyHold)})`
+        `Ko'rilmagan 2 davrda: ${r.best.test.folds.map(pct).join(' va ')}, maks. tushish ${pct(r.best.test.maxDD)}, ` +
+        `${r.best.test.trades} savdo ("sotib olib kutish": ${pct(r.buyHold)})`
     );
   } else {
-    log(`🧠 ${symbol}: hech bir strategiya hozirgi bozorda ishonchli foyda ko'rsatmadi — yangi savdo ochilmaydi, kutaman.`);
+    log(`🧠 ${symbol}: holat — ${r.regime}. Hech bir strategiya ikkala tekshiruv davrida ham foyda bermadi — yangi savdo ochilmaydi, kutaman.`);
   }
 }
 
+// ---------- Yangiliklar + AI ----------
+async function refreshIntel() {
+  if (!cfg.newsEnabled && !ai.enabled) return;
+  const due = !state.intel || Date.now() - state.intel.at > cfg.aiEveryMinutes * 60e3;
+  if (!due) return;
+
+  const [headlines, fg] = await Promise.all([cfg.newsEnabled ? news.fetchHeadlines() : [], cfg.newsEnabled ? news.fearGreed() : null]);
+  const market = {};
+  for (const s of cfg.symbols) {
+    const c = lastCandles[s];
+    const m = state.models[s];
+    market[s] = {
+      narx: lastPrices[s],
+      ozgarish_24s: c && c.length > 25 ? pct(c[c.length - 1].close / c[c.length - 25].close - 1) : null,
+      bozor_holati: m?.regime,
+      strategiya: m?.strategy,
+      ochiq_pozitsiya: Boolean(state.positions[s]),
+      manipulyatsiya_belgilari: (state.flags[s] || []).map((f) => f.text),
+    };
+  }
+
+  const prev = state.intel;
+  let intel = await ai.analyze({ symbols: cfg.symbols, headlines, fearGreed: fg, market });
+  let source = 'AI (Claude)';
+  if (!intel) {
+    source = "kalit so'zlar (AI o'chiq yoki javob bermadi)";
+    intel = { marketRisk: fg && (fg.value < 15 || fg.value > 90) ? 'high' : 'medium', summary: '', views: news.keywordView(cfg.symbols, headlines) };
+  }
+  state.intel = { ...intel, source, fearGreed: fg, headlines: headlines.length, at: Date.now() };
+  save();
+
+  const changed = !prev || prev.marketRisk !== intel.marketRisk || cfg.symbols.some((s) => prev.views?.[s]?.action !== intel.views[s]?.action);
+  if (changed) {
+    const lines = [`📰 Yangiliklar tahlili — ${source}`, `Bozor xavfi: ${intel.marketRisk}${fg ? ` | Qo'rquv/ochko'zlik: ${fg.value} (${fg.label})` : ''}`];
+    if (intel.summary) lines.push(intel.summary);
+    for (const s of cfg.symbols) {
+      const v = intel.views[s];
+      if (v) lines.push(`• ${s}: ${ACTION_UZ[v.action]} — ${v.reason}`);
+    }
+    log(lines.join('\n'));
+  }
+}
+
+function intelFor(symbol) {
+  const it = state.intel;
+  if (!it) return { action: 'allow', mult: 1 };
+  const v = it.views?.[symbol] || { action: 'allow' };
+  let action = v.action;
+  if (it.marketRisk === 'extreme' && action !== 'exit') action = 'block';
+  let mult = action === 'reduce' ? 0.5 : 1;
+  if (it.marketRisk === 'high') mult *= 0.5;
+  return { action, mult, reason: v.reason };
+}
+
+// ---------- Savdo ----------
 async function checkDay() {
   const today = new Date().toISOString().slice(0, 10);
   if (state.day !== today) {
@@ -75,45 +149,75 @@ async function closePosition(symbol, price, reason) {
   const p = state.positions[symbol];
   const r = await broker.sell(symbol, p.qty, price);
   const pnl = r.got - p.cost;
-  state.history.push({ symbol, entry: p.entryPrice, exit: r.price, pnl, reason, at: Date.now() });
+  state.history.push({ symbol, entry: p.entryPrice, exit: r.price, pnl, reason, strategy: p.strategy, at: Date.now() });
   delete state.positions[symbol];
-  save();
   log(`${pnl >= 0 ? '✅' : '❌'} SOTILDI ${symbol} @ ${r.price} (${reason}). Natija: ${pnl.toFixed(2)} USDT`);
+
+  // O'z xatolaridan o'rganish: ketma-ket yutqazishlar => sozlama chetlatiladi
+  state.lossStreak[symbol] = pnl < 0 ? (state.lossStreak[symbol] || 0) + 1 : 0;
+  if (state.lossStreak[symbol] >= cfg.lossStreakRelearn && p.key) {
+    (state.excluded[symbol] ||= []).push({ key: p.key, until: Date.now() + cfg.excludeDays * 86400e3 });
+    state.lossStreak[symbol] = 0;
+    state.relearnSym[symbol] = true;
+    log(`📉 ${symbol}: ${cfg.lossStreakRelearn} ta ketma-ket zarar. Bu sozlama ${cfg.excludeDays} kunga chetlatildi, bozor qayta o'rganiladi.`);
+  }
+  save();
+}
+
+function entryIndex(candles, pos) {
+  for (let i = candles.length - 1; i >= 0; i--) if (candles[i].time <= pos.at) return i;
+  return 0;
 }
 
 async function onNewCandle(symbol, candles) {
-  const model = state.models[symbol];
   const i = candles.length - 1;
   const price = candles[i].close;
   const pos = state.positions[symbol];
 
-  if (!model || !model.strategy) {
-    // Model yo'q yoki bozor noqulay: ochiq pozitsiyani faqat stop himoya qiladi
-    return;
+  // Manipulyatsiya belgilari
+  const flags = candleFlags(candles, i);
+  if (cfg.orderBookCheck) {
+    try {
+      flags.push(...orderBookFlags(await ex.fetchOrderBook(symbol, 50), price));
+    } catch {}
   }
+  state.flags[symbol] = flags;
+  const serious = flags.filter((f) => f.severity !== 'info' || f.type === 'stop_hunt_down');
+  if (serious.length) log(`🐋 ${symbol} manipulyatsiya belgilari:\n${serious.map((f) => '• ' + f.text).join('\n')}`);
+
+  const intel = intelFor(symbol);
+  if (pos && intel.action === 'exit') return closePosition(symbol, price, `AI ogohlantirishi: ${intel.reason}`);
+
+  const model = state.models[symbol];
+  if (!model || !model.strategy) return; // ochiq pozitsiyani stop himoya qiladi
+
   const st = byName[model.strategy];
   const ind = st.prepare(candles, model.params);
-  const sig = st.signal(i, candles, ind, pos, model.params);
+  const posView = pos ? { ...pos, entryIndex: entryIndex(candles, pos) } : null;
+  const sig = st.signal(i, candles, ind, posView, model.params);
 
   if (sig === 'sell' && pos) return closePosition(symbol, price, 'strategiya signali');
+  if (sig !== 'buy' || pos || state.paused || state.dailyHalt) return;
 
-  if (sig === 'buy' && !pos && !state.paused && !state.dailyHalt) {
-    const a = atr(candles, 14)[i];
-    if (!a) return;
-    const stop = price - model.params.stopAtr * a;
-    const eq = await equity();
-    const riskAmount = eq * cfg.riskPerTrade;
-    let spend = (riskAmount / (price - stop)) * price;
-    spend = Math.min(spend, eq * cfg.maxPosition, (await broker.cash(symbol)) * 0.99);
-    if (spend < 10) return log(`⚠️ ${symbol}: sotib olish signali bor, lekin mablag' yetarli emas.`);
-    const r = await broker.buy(symbol, spend, price);
-    state.positions[symbol] = { qty: r.qty, entryPrice: r.price, stop, cost: spend, strategy: model.strategy, at: Date.now() };
-    save();
-    log(
-      `🟢 SOTIB OLINDI ${symbol} @ ${r.price}\nSumma: ${spend.toFixed(2)} USDT, stop: ${stop.toFixed(4)} ` +
-        `(${pct((price - stop) / price)} pastda)\nStrategiya: ${st.title}`
-    );
-  }
+  if (intel.action === 'block') return log(`⛔ ${symbol}: xarid signali bor, lekin yangiliklar tahlili bloklad: ${intel.reason}`);
+  const blockFlag = flags.find((f) => f.severity === 'block');
+  if (blockFlag) return log(`⛔ ${symbol}: xarid signali bor, lekin manipulyatsiya xavfi: ${blockFlag.text}`);
+
+  const a = atr(candles, 14)[i];
+  if (!a) return;
+  const stop = price - model.params.stopAtr * a;
+  const eq = await equity();
+  let spend = ((eq * cfg.riskPerTrade) / (price - stop)) * price * intel.mult;
+  spend = Math.min(spend, eq * cfg.maxPosition * intel.mult, (await broker.cash(symbol)) * 0.99);
+  if (spend < 10) return log(`⚠️ ${symbol}: sotib olish signali bor, lekin mablag' yetarli emas.`);
+
+  const r = await broker.buy(symbol, spend, price);
+  state.positions[symbol] = { qty: r.qty, entryPrice: r.price, stop, cost: spend, strategy: model.strategy, key: model.key, at: candles[i].time };
+  save();
+  log(
+    `🟢 SOTIB OLINDI ${symbol} @ ${r.price}\nSumma: ${spend.toFixed(2)} USDT${intel.mult < 1 ? ' (AI tavsiyasi bilan kamaytirildi)' : ''}, ` +
+      `stop: ${stop.toFixed(4)} (${pct((price - stop) / price)} pastda)\nStrategiya: ${st.title}`
+  );
 }
 
 async function tick() {
@@ -123,40 +227,46 @@ async function tick() {
       const ticker = await ex.fetchTicker(symbol);
       lastPrices[symbol] = ticker.last;
       const pos = state.positions[symbol];
-      if (pos && ticker.last <= pos.stop) {
-        await closePosition(symbol, ticker.last, 'stop-loss');
-      }
+      if (pos && ticker.last <= pos.stop) await closePosition(symbol, ticker.last, 'stop-loss');
 
       const candles = await fetchCandles(ex, symbol, cfg.timeframe, cfg.history);
       if (candles.length < 300) continue;
+      lastCandles[symbol] = candles;
       const lastT = candles[candles.length - 1].time;
       if (state.lastCandle[symbol] === lastT) continue; // yangi sham yo'q
       state.lastCandle[symbol] = lastT;
 
       const m = state.models[symbol];
-      if (!m || Date.now() - m.at > cfg.relearnHours * 3600e3 || state.forceRelearn) {
-        await relearn(symbol, candles);
-      }
+      if (!m || Date.now() - m.at > cfg.relearnHours * 3600e3 || state.relearnSym[symbol]) await relearn(symbol, candles);
       await onNewCandle(symbol, candles);
     } catch (e) {
       console.error(symbol, e.message);
     }
   }
-  state.forceRelearn = false;
+  try {
+    await refreshIntel();
+  } catch (e) {
+    console.error('yangiliklar xatosi:', e.message);
+  }
   save();
 }
 
 async function statusText() {
   const eq = await equity();
   const lines = [
-    `📊 Rejim: ${cfg.mode === 'paper' ? 'SINOV (xayoliy pul)' : 'HAQIQIY'} | Birja: ${cfg.exchange}`,
-    `Umumiy balans: ${eq.toFixed(2)} USDT${state.paused ? ' | ⏸ to\'xtatilgan' : ''}${state.dailyHalt ? ' | 🛑 kunlik limit' : ''}`,
+    `📊 Rejim: ${cfg.mode === 'paper' ? 'SINOV (xayoliy pul)' : 'HAQIQIY'} | Birja: ${cfg.exchange} | AI: ${ai.enabled ? cfg.aiModel : "o'chiq"}`,
+    `Umumiy balans: ${eq.toFixed(2)} USDT${state.paused ? " | ⏸ to'xtatilgan" : ''}${state.dailyHalt ? ' | 🛑 kunlik limit' : ''}`,
   ];
+  if (state.intel) lines.push(`Bozor xavfi (${state.intel.source}): ${state.intel.marketRisk}`);
   for (const s of cfg.symbols) {
     const m = state.models[s];
     const p = state.positions[s];
+    const it = intelFor(s);
     lines.push(
       `\n${s}: ${m ? (m.strategy ? byName[m.strategy].title : 'kutmoqda (bozor noqulay)') : "hali o'rganilmagan"}` +
+        (m?.regime ? `\n  Holat: ${m.regime}` : '') +
+        `\n  Yangiliklar: ${ACTION_UZ[it.action]}` +
+        ((state.flags[s] || []).length ? `\n  Belgilar: ${state.flags[s].map((f) => f.type).join(', ')}` : '') +
         (p ? `\n  Pozitsiya: ${p.qty.toFixed(6)} @ ${p.entryPrice}, hozir ${lastPrices[s] ?? '?'}, stop ${p.stop.toFixed(4)}` : '')
     );
   }
@@ -169,16 +279,30 @@ async function statusText() {
   return lines.join('\n');
 }
 
+function newsText() {
+  const it = state.intel;
+  if (!it) return "Hali yangiliklar tahlili qilinmagan.";
+  const lines = [`📰 ${it.source}, ${new Date(it.at).toISOString().slice(0, 16)} UTC`, `Bozor xavfi: ${it.marketRisk}`];
+  if (it.fearGreed) lines.push(`Qo'rquv/ochko'zlik: ${it.fearGreed.value} (${it.fearGreed.label})`);
+  if (it.summary) lines.push(it.summary);
+  for (const s of cfg.symbols) if (it.views?.[s]) lines.push(`• ${s}: ${ACTION_UZ[it.views[s].action]} — ${it.views[s].reason}`);
+  return lines.join('\n');
+}
+
 telegram.start(cfg, {
   status: statusText,
+  news: newsText,
   pause: () => { state.paused = true; save(); },
   resume: () => { state.paused = false; save(); },
-  relearn: () => { state.forceRelearn = true; for (const s of cfg.symbols) delete state.lastCandle[s]; save(); },
+  relearn: () => { for (const s of cfg.symbols) { state.relearnSym[s] = true; delete state.lastCandle[s]; } state.intel = null; save(); },
   sellAll: async () => { for (const s of Object.keys(state.positions)) await closePosition(s, lastPrices[s], "qo'lda"); },
 });
 
 (async () => {
-  log(`🤖 Bot ishga tushdi. Rejim: ${cfg.mode === 'paper' ? 'SINOV (xayoliy pul)' : 'HAQIQIY PUL'}. Juftliklar: ${cfg.symbols.join(', ')}`);
+  log(
+    `🤖 Bot ishga tushdi. Rejim: ${cfg.mode === 'paper' ? 'SINOV (xayoliy pul)' : 'HAQIQIY PUL'}. Juftliklar: ${cfg.symbols.join(', ')}\n` +
+      `AI: ${ai.enabled ? `yoqilgan (${cfg.aiModel})` : "o'chiq — kalit so'z tahlili ishlatiladi"}`
+  );
   for (;;) {
     try {
       await tick();

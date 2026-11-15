@@ -1,1 +1,1 @@
-module.exports = [require('./emaRsi'), require('./grid'), require('./dca')];
+module.exports = [require('./emaRsi'), require('./grid'), require('./dca'), require('./sweep')];

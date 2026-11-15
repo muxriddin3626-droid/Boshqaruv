@@ -22,4 +22,17 @@ module.exports = {
   telegramChatId: process.env.TELEGRAM_CHAT_ID || '',
   stateFile: process.env.STATE_FILE || 'state.json',
   checkSeconds: num(process.env.CHECK_SECONDS, 60),
+
+  // Sun'iy intellekt (Claude). ANTHROPIC_API_KEY bo'lsa avtomatik yoqiladi.
+  aiEnabled: process.env.AI_ENABLED ? process.env.AI_ENABLED === 'true' : Boolean(process.env.ANTHROPIC_API_KEY),
+  aiModel: process.env.AI_MODEL || 'claude-opus-5-5',
+  aiEffort: process.env.AI_EFFORT || 'medium',
+  aiWebSearch: process.env.AI_WEB_SEARCH !== 'false',
+  aiEveryMinutes: num(process.env.AI_EVERY_MINUTES, 60),
+  newsEnabled: process.env.NEWS_ENABLED !== 'false',
+
+  // Manipulyatsiya va o'z xatolaridan o'rganish
+  orderBookCheck: process.env.ORDERBOOK_CHECK !== 'false',
+  lossStreakRelearn: num(process.env.LOSS_STREAK_RELEARN, 3),
+  excludeDays: num(process.env.EXCLUDE_DAYS, 3),
 };

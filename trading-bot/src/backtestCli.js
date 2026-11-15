@@ -13,11 +13,12 @@ async function main() {
     const candles = await fetchCandles(ex, symbol, cfg.timeframe, cfg.history);
     const r = learn(candles, { fee: cfg.fee });
     console.log(`\n=== ${symbol} (${candles.length} ta ${cfg.timeframe} sham) ===`);
+    console.log(`Bozor holati: ${r.regime}`);
     console.log(`Sinalgan variantlar: ${r.tested}. Tekshiruv davrida "sotib olib kutish": ${pct(r.buyHold)}`);
     if (!r.ranking.length) console.log("Hech bir strategiya ko'rilmagan davrda foyda bermadi — bot bu juftlikda savdo qilmaydi.");
     for (const x of r.ranking) {
       console.log(
-        `- ${x.title} ${JSON.stringify(x.params)}\n  o'rganish: ${pct(x.train.ret)} | tekshiruv: ${pct(x.test.ret)}, ` +
+        `- ${x.title} ${JSON.stringify(x.params)}\n  o'rganish: ${pct(x.train.ret)} | tekshiruv: ${x.test.folds.map(pct).join(' / ')}, ` +
           `maks. tushish ${pct(x.test.maxDD)}, ${x.test.trades} savdo, yutuq ${pct(x.test.winRate)}`
       );
     }

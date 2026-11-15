@@ -21,9 +21,10 @@ function start(cfg, h) {
     return next();
   });
   bot.start((ctx) =>
-    ctx.reply('Buyruqlar:\n/holat — balans va pozitsiyalar\n/toxtat — yangi savdolarni to\'xtatish\n/davom — davom ettirish\n/orgat — bozorni hozir qayta o\'rganish\n/hammasini_sot — barcha pozitsiyalarni yopish')
+    ctx.reply('Buyruqlar:\n/holat — balans va pozitsiyalar\n/yangiliklar — AI yangiliklar tahlili\n/toxtat — yangi savdolarni to\'xtatish\n/davom — davom ettirish\n/orgat — bozorni hozir qayta o\'rganish\n/hammasini_sot — barcha pozitsiyalarni yopish')
   );
   bot.command('holat', async (ctx) => ctx.reply(await h.status()));
+  bot.command('yangiliklar', (ctx) => ctx.reply(h.news()));
   bot.command('toxtat', (ctx) => { h.pause(); ctx.reply('⏸ Yangi savdolar to\'xtatildi (ochiq pozitsiyalarni stop himoya qilishda davom etadi).'); });
   bot.command('davom', (ctx) => { h.resume(); ctx.reply('▶️ Savdo davom etmoqda.'); });
   bot.command('orgat', (ctx) => { h.relearn(); ctx.reply('🧠 Keyingi tekshiruvda bozor qayta o\'rganiladi.'); });

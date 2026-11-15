@@ -48,13 +48,70 @@ for (const [name, reg] of [['trend', ['up', 'up', 'range', 'up']], ['flet', ['ra
   if (r.best) assert(r.best.test.ret > 0);
 }
 
-// 3) Botning to'liq sikli soxta birja bilan (paper rejim)
+// 3) Manipulyatsiya detektori
+const { candleFlags, orderBookFlags } = require('../src/manipulation');
+{
+  const c = makeMarket(200, 3, ['range']).map((k) => ({ ...k, volume: 100 }));
+  const i = c.length - 1;
+  let lo = Infinity;
+  for (let j = i - 24; j < i; j++) lo = Math.min(lo, c[j].low);
+  c[i] = { ...c[i], open: lo * 1.01, low: lo * 0.95, close: lo * 1.012, high: lo * 1.02, volume: 500 };
+  assert(candleFlags(c, i).some((f) => f.type === 'stop_hunt_down'), 'stop-ov aniqlanmadi');
+  const p = c.map((k) => ({ ...k }));
+  for (let j = i - 2; j <= i; j++) { const b = p[j - 1].close; p[j] = { ...p[j], open: b, close: b * 1.06, high: b * 1.07, low: b * 0.99, volume: 900 }; }
+  assert(candleFlags(p, i).some((f) => f.type === 'pump'), 'pamp aniqlanmadi');
+  const book = { bids: [[99.9, 1], [99.8, 1.2], [99.5, 60]], asks: [[100.1, 1], [100.2, 1.1], [100.4, 0.9]] };
+  const ob = orderBookFlags(book, 100).map((f) => f.type);
+  assert(ob.includes('spoof_bid') && ob.includes('bid_wall'), 'spoofing aniqlanmadi');
+  console.log('✓ manipulyatsiya: stop-ov, pamp, spoofing devor aniqlandi');
+}
+
+// 4) Yangiliklar (kalit so'zlar) va AI javobini qayta ishlash
+const news = require('../src/news');
+{
+  const rss = '<rss><item><title><![CDATA[Solana exchange hacked, $40M stolen]]></title><pubDate>' + new Date().toUTCString() + '</pubDate></item><item><title>Bitcoin ETF inflows hit record high</title><pubDate>' + new Date().toUTCString() + '</pubDate></item></rss>';
+  const items = news.parseRss(rss);
+  assert.strictEqual(items.length, 2);
+  const v = news.keywordView(['SOL/USDT', 'BTC/USDT', 'ETH/USDT'], items);
+  assert.strictEqual(v['SOL/USDT'].action, 'reduce');
+  assert.strictEqual(v['BTC/USDT'].action, 'allow');
+  assert(v['BTC/USDT'].sentiment > 0);
+  console.log('✓ yangiliklar: RSS o\'qildi, salbiy yangilik aniqlandi');
+}
+(async () => {
+  const { AiAnalyst } = require('../src/ai');
+  const a = new AiAnalyst({ aiEnabled: false });
+  assert.strictEqual(await a.analyze({ symbols: [] }), null);
+  a.enabled = true;
+  a.cfg = { aiModel: 'claude-opus-5-5', aiEffort: 'medium', aiWebSearch: true };
+  const calls = [];
+  a.client = { beta: { messages: { create: async (req) => {
+    calls.push(req);
+    if (calls.length === 1) return { stop_reason: 'pause_turn', content: [{ type: 'server_tool_use', id: 's1', name: 'web_search', input: { query: 'x' } }] };
+    return { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 't1', name: 'report_market_view', input: {
+      market_risk: 'high', summary_uz: 'Bozor xavotirda.',
+      symbols: [{ symbol: 'SOL/USDT', sentiment: -3, action: 'block', reason_uz: 'Birja buzildi' }, { symbol: 'NOPE/USDT', sentiment: 1, action: 'allow', reason_uz: '' }],
+    } }] };
+  } } } };
+  const r = await a.analyze({ symbols: ['SOL/USDT'], headlines: [], fearGreed: null, market: {} });
+  assert.strictEqual(calls.length, 2, 'pause_turn davom ettirilmadi');
+  assert.strictEqual(calls[0].model, 'claude-opus-5-5');
+  assert(calls[0].tools.some((t) => t.type === 'web_search_20260209'));
+  assert.strictEqual(r.views['SOL/USDT'].action, 'block');
+  assert.strictEqual(r.views['SOL/USDT'].sentiment, -1);
+  assert(!r.views['NOPE/USDT']);
+  console.log('✓ AI: web qidiruv davomi, javob tekshiruvi');
+})().then(runBot);
+
+function runBot() {
+// 5) Botning to'liq sikli soxta birja bilan (paper rejim)
 const market = makeMarket(1600, 7, ['range']);
 let cursor = 1200; // har chaqiruvda bir sham oldinga suriladi
 class FakeEx {
   constructor() {}
   setSandboxMode() {}
   parseTimeframe() { return 3600; }
+  async fetchOrderBook() { const p = market[cursor - 1].close; return { bids: [[p * 0.999, 1]], asks: [[p * 1.001, 1]] }; }
   async fetchTicker() { return { last: market[cursor - 1].close }; }
   async fetchOHLCV() {
     cursor = Math.min(cursor + 1, market.length);
@@ -65,7 +122,8 @@ class FakeEx {
 }
 require.cache[require.resolve('ccxt')] = { id: 'ccxt', filename: 'ccxt', loaded: true, exports: { fake: FakeEx } };
 const stateFile = path.join(os.tmpdir(), `tb-state-${process.pid}.json`);
-Object.assign(process.env, { EXCHANGE: 'fake', MODE: 'paper', SYMBOLS: 'FAKE/USDT', CHECK_SECONDS: '0.001', STATE_FILE: stateFile, TELEGRAM_BOT_TOKEN: '', HISTORY: '1000' });
+Object.assign(process.env, { EXCHANGE: 'fake', MODE: 'paper', SYMBOLS: 'FAKE/USDT', CHECK_SECONDS: '0.001', STATE_FILE: stateFile, TELEGRAM_BOT_TOKEN: '', HISTORY: '1000', AI_ENABLED: 'false', AI_EVERY_MINUTES: '0' });
+global.fetch = async (url) => ({ ok: true, text: async () => url.includes('alternative') ? JSON.stringify({ data: [{ value: '40', value_classification: 'Fear' }] }) : '<rss><item><title>Fake coin lawsuit filed</title><pubDate>' + new Date().toUTCString() + '</pubDate></item></rss>' });
 const logs = [];
 const origLog = console.log;
 console.log = (...a) => logs.push(a.join(' '));
@@ -75,6 +133,8 @@ setTimeout(() => {
   const st = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
   fs.unlinkSync(stateFile);
   assert(st.models['FAKE/USDT'], "model o'rganilmadi");
+  assert.strictEqual(st.intel.views['FAKE/USDT'].action, 'reduce', 'yangilik tahlili ishlamadi');
+  assert(logs.some((l) => l.includes('kamaytirildi')), 'AI/yangilik summani kamaytirmadi');
   const buys = logs.filter((l) => l.includes('SOTIB OLINDI')).length;
   const sells = logs.filter((l) => l.includes('SOTILDI')).length;
   const pos = Object.values(st.positions).reduce((a, p) => a + p.qty * market[cursor - 1].close, 0);
@@ -83,4 +143,5 @@ setTimeout(() => {
   assert(buys > 0, 'bot hech savdo qilmadi');
   console.log('\nBarcha sinovlar o\'tdi.');
   process.exit(0);
-}, 4000);
+}, 6000);
+}
