@@ -345,6 +345,7 @@ foydalanuvchilar bo'yicha (kirmaganlarning ma'lumoti faqat ularning telefonida).
 
 | Tarif | Kunlik ovozli dars | 1 oy | 3 oy | 1 yil |
 |---|---|---|---|---|
+| Mini · Boshlang'ich (ustoz o'rta modelda) | 10 daqiqa | 70 000 | 189 000 | 630 000 |
 | Light · Oddiy | 20 daqiqa | 150 000 | 405 000 | 1 350 000 |
 | **Standard · Asosiy** (eng ko'p tanlanadi) | 30 daqiqa | 200 000 | 540 000 | 1 800 000 |
 | Pro · VIP | 1 soat | 400 000 | 1 080 000 | 3 600 000 |

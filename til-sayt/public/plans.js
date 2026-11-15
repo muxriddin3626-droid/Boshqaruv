@@ -2,6 +2,8 @@
 // o'zgartirish mumkin — bu yerdagilar standart qiymatlar. Fayl brauzerda ham, serverda ham ishlatiladi.
 (function (root) {
   const PLANS = [
+    // Mini: eng arzon tarif — ustoz o'rta modelda ishlaydi (xarajat past bo'lishi uchun).
+    { id: 'mini', name: 'Mini', title: 'Boshlang\'ich', minutes: 10, economy: true },
     { id: 'light', name: 'Light', title: 'Oddiy', minutes: 20 },
     { id: 'standard', name: 'Standard', title: 'Asosiy', minutes: 30, popular: true },
     { id: 'pro', name: 'Pro', title: 'VIP', minutes: 60 },
@@ -15,6 +17,7 @@
   ];
 
   const DEFAULT_PRICES = {
+    mini: { 1: 70000, 3: 189000, 12: 630000 },
     light: { 1: 150000, 3: 405000, 12: 1350000 },
     standard: { 1: 200000, 3: 540000, 12: 1800000 },
     pro: { 1: 400000, 3: 1080000, 12: 3600000 },

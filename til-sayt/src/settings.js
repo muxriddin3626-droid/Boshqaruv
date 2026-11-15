@@ -65,7 +65,9 @@ async function load() {
   const saved = await db.getSettings();
   current = { ...DEFAULTS };
   for (const [k, v] of Object.entries(saved)) {
-    if (Object.hasOwn(VALIDATE, k) && VALIDATE[k](v)) current[k] = v;
+    // Narxlar: keyin qo'shilgan tariflar (masalan Mini) uchun saqlanmagan bo'lsa — standart narx.
+    const val = k === 'prices' && v && typeof v === 'object' ? { ...P.DEFAULT_PRICES, ...v } : v;
+    if (Object.hasOwn(VALIDATE, k) && VALIDATE[k](val)) current[k] = val;
   }
   return current;
 }

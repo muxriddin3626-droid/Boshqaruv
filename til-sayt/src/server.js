@@ -278,9 +278,13 @@ const REFUSAL_REPLY = {
 
 // Ovozli dars modeli: obunachilarga asosiy, bepul va sinovdagilarga arzonroq (sozlamalarda o'chiriladi).
 async function lessonModel(req) {
-  if (!appSettings.get().cheapFreeModel) return MODEL;
   const user = await account.currentUser(req);
-  return account.isPaid(user) ? MODEL : FREE_MODEL;
+  const paid = account.isPaid(user);
+  // Tejamkor tarif (Mini) — doim o'rta modelda.
+  const plan = paid && require('../public/plans.js').byId(user.plan);
+  if (plan && plan.economy) return FREE_MODEL;
+  if (!appSettings.get().cheapFreeModel) return MODEL;
+  return paid ? MODEL : FREE_MODEL;
 }
 
 // Ustoz javobi: { mood, segments: [{ lang, text }] }. Brauzer tarixga aynan
