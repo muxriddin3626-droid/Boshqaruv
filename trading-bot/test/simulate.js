@@ -129,6 +129,34 @@ const news = require('../src/news');
 })().then(extraTests).then(runBot);
 
 async function extraTests() {
+  // Shamlar keshi: birjaga keraksiz so'rov yubormaydi
+  {
+    const { CandleCache } = require('../src/exchange');
+    const H = 3600e3;
+    let now = Math.floor(Date.now() / H) * H + 10 * 60e3; // soat boshidan 10 daqiqa o'tgan
+    const base = makeMarket(2000, 9, ['range']).map((k, i) => ({ ...k, time: now - (2000 - i) * H - 10 * 60e3 }));
+    let calls = 0;
+    const fake = { parseTimeframe: () => 3600, async fetchOHLCV(sym, tf, since, limit) {
+      calls++;
+      const rows = base.filter((k) => k.time >= (since || 0) && k.time < now).slice(0, Math.min(limit || 1000, 300));
+      return rows.map((k) => [k.time, k.open, k.high, k.low, k.close, k.volume]);
+    } };
+    const cc = new CandleCache(fake, '1h', 1500);
+    const first = await cc.get('X', now);
+    const fullCalls = calls;
+    assert(first.length >= 1400 && fullCalls >= 5, `birinchi yuklash: ${first.length} sham, ${fullCalls} so'rov`);
+    for (let m = 1; m <= 40; m++) await cc.get('X', now + m * 60e3); // 40 daqiqa, yangi sham yo'q
+    assert.strictEqual(calls, fullCalls, 'yangi sham yo\'q paytda so\'rov yubordi');
+    const lastBefore = first[first.length - 1].time;
+    base.push({ ...base[base.length - 1], time: lastBefore + H }); // yangi sham yopildi
+    now = lastBefore + 2 * H + 60e3;
+    const after = await cc.get('X', now);
+    assert.strictEqual(calls, fullCalls + 1, 'yangi sham uchun bitta so\'rov bo\'lishi kerak');
+    assert.strictEqual(after[after.length - 1].time, lastBefore + H);
+    assert(after.length <= 1500);
+    console.log(`✓ shamlar keshi: birinchi marta ${fullCalls} so'rov, keyin soatiga 1 ta (avval daqiqasiga ${fullCalls})`);
+  }
+
   // Telegram menyusi: tugmalar, buyruqlar ro'yxati, faqat egasi, sotishdan oldin tasdiq
   {
     const { Telegraf, Telegram } = require('telegraf');

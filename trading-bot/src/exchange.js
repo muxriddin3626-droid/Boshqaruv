@@ -61,6 +61,40 @@ async function fetchCandles(ex, symbol, timeframe, total) {
   return all;
 }
 
+// Shamlar keshi: tarix bir marta yuklanadi, keyin faqat yangi yopilgan
+// shamlar qo'shiladi. Yangi sham yopilmagan bo'lsa birjaga umuman so'rov yo'q.
+class CandleCache {
+  constructor(ex, timeframe, total) {
+    this.ex = ex;
+    this.timeframe = timeframe;
+    this.total = total;
+    this.ms = ex.parseTimeframe(timeframe) * 1000;
+    this.data = {};
+  }
+
+  async get(symbol, now = Date.now()) {
+    const cur = this.data[symbol];
+    if (!cur || cur.length < 300) {
+      this.data[symbol] = await fetchCandles(this.ex, symbol, this.timeframe, this.total);
+      return this.data[symbol];
+    }
+    const last = cur[cur.length - 1];
+    if (now < last.time + 2 * this.ms) return cur; // keyingi sham hali yopilmagan
+    const batch = await this.ex.fetchOHLCV(symbol, this.timeframe, last.time + this.ms, 100);
+    let added = 0;
+    for (const [t, o, h, l, c, v] of batch) {
+      if (t > cur[cur.length - 1].time && t + this.ms <= now) {
+        cur.push({ time: t, open: o, high: h, low: l, close: c, volume: v });
+        added++;
+      }
+    }
+    if (cur.length > this.total) cur.splice(0, cur.length - this.total);
+    // uzilish bo'lsa (masalan bot uzoq uxlagan), tarixni qaytadan yuklaymiz
+    if (!added && now > last.time + 4 * this.ms) delete this.data[symbol];
+    return cur;
+  }
+}
+
 class Broker {
   constructor(ex, cfg, state) {
     this.ex = ex;
@@ -106,4 +140,4 @@ class Broker {
   }
 }
 
-module.exports = { createExchange, pickWorkingExchange, fetchCandles, Broker, FALLBACKS };
+module.exports = { createExchange, pickWorkingExchange, fetchCandles, CandleCache, Broker, FALLBACKS };

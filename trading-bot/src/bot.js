@@ -8,7 +8,8 @@ const cfg = require('./config');
 const strategies = require('./strategies');
 const { learn, keyOf } = require('./learner');
 const { atr } = require('./indicators');
-const { createExchange, pickWorkingExchange, fetchCandles, Broker } = require('./exchange');
+const ccxt = require('ccxt');
+const { createExchange, pickWorkingExchange, CandleCache, Broker } = require('./exchange');
 const { candleFlags, orderBookFlags } = require('./manipulation');
 const news = require('./news');
 const { AiAnalyst } = require('./ai');
@@ -29,6 +30,7 @@ const DEFAULT_STATE = {
 };
 let state = null; // main() ichida yuklanadi
 let broker = null;
+let candleCache = null;
 const save = () => store.save(state);
 
 let ex = createExchange(cfg); // main() ichida ishlaydigan birja tanlanadi
@@ -241,6 +243,7 @@ async function onNewCandle(symbol, candles) {
 
 // Birjadan ma'lumot olinmasa Telegramga xabar (har juftlik uchun soatiga ko'pi bilan bir marta)
 const dataErrors = {};
+const transientSince = {}; // vaqtinchalik xatolar (limit, tarmoq) qachondan beri
 function dataProblem(symbol, msg) {
   const prev = dataErrors[symbol];
   if (prev && Date.now() - prev < 3600e3) return;
@@ -261,7 +264,8 @@ async function tick() {
       const pos = state.positions[symbol];
       if (pos && ticker.last <= pos.stop) await closePosition(symbol, ticker.last, 'stop-loss');
 
-      const candles = await fetchCandles(ex, symbol, cfg.timeframe, cfg.history);
+      const candles = await candleCache.get(symbol);
+      transientSince[symbol] = null;
       if (candles.length < 300) {
         dataProblem(symbol, `birja faqat ${candles.length} ta sham berdi (kamida 300 kerak)`);
         continue;
@@ -277,7 +281,13 @@ async function tick() {
       await onNewCandle(symbol, candles);
     } catch (e) {
       console.error(symbol, e.message);
-      dataProblem(symbol, e.message);
+      const transient = e instanceof ccxt.RateLimitExceeded || e instanceof ccxt.DDoSProtection || e instanceof ccxt.RequestTimeout || e instanceof ccxt.NetworkError;
+      if (!transient) dataProblem(symbol, e.message);
+      else {
+        transientSince[symbol] ||= Date.now();
+        if (Date.now() - transientSince[symbol] > 30 * 60e3) dataProblem(symbol, `30 daqiqadan beri: ${e.message}`);
+      }
+      continue;
     }
   }
   try {
@@ -448,6 +458,7 @@ async function shutdown(sig) {
   startTelegram(); // birja tanlash xabarlari ham Telegramga borishi uchun avval
   ex = await pickWorkingExchange(cfg, log);
   broker = new Broker(ex, cfg, state);
+  candleCache = new CandleCache(ex, cfg.timeframe, cfg.history);
   save();
   startHealthServer();
   process.on('SIGTERM', () => shutdown('SIGTERM'));
