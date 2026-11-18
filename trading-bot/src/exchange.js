@@ -10,7 +10,8 @@ function createExchange(cfg) {
     secret: cfg.apiSecret,
     password: cfg.apiPassword || undefined,
     enableRateLimit: true,
-    options: { defaultType: 'spot' },
+    // faqat spot bozorlari yuklanadi (futures so'rovlari kerak emas)
+    options: { defaultType: 'spot', fetchMarkets: { types: ['spot'] } },
   });
   if (cfg.sandbox) ex.setSandboxMode(true);
   return ex;

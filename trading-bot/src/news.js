@@ -8,6 +8,8 @@ const FEEDS = [
 ];
 
 const NEGATIVE = /\b(hack|hacked|exploit|stolen|drain|lawsuit|sues|sec charges|ban|banned|bankrupt|insolvent|delist|halt|crash|plunge|fraud|liquidat|depeg|outage|investigation)\w*/i;
+// Salbiy so'z bor, lekin ma'nosi ijobiy: "clears of fraud", "lawsuit dismissed"
+const EXCULPATORY = /\b(clear(s|ed)?|acquit\w*|dismiss\w*|drop(s|ped)?|recover(s|ed|y)?|settle(s|d|ment)?|wins?|won|overturn\w*|reject(s|ed)? (sec|lawsuit))\b/i;
 const POSITIVE = /\b(approv|etf inflow|partnership|adopt|record high|all-time high|upgrade|listing|surge|rally)\w*/i;
 
 const COIN_NAMES = {
@@ -72,7 +74,7 @@ function keywordView(symbols, headlines) {
     const base = sym.split('/')[0];
     const names = COIN_NAMES[base] || [base.toLowerCase()];
     const rel = headlines.filter((h) => names.some((n) => new RegExp(`\\b${n}\\b`, 'i').test(h.title)));
-    const neg = rel.filter((h) => NEGATIVE.test(h.title));
+    const neg = rel.filter((h) => NEGATIVE.test(h.title) && !EXCULPATORY.test(h.title));
     const pos = rel.filter((h) => POSITIVE.test(h.title));
     const sentiment = rel.length ? (pos.length - neg.length) / rel.length : 0;
     views[sym] = {

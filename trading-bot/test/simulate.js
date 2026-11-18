@@ -76,6 +76,8 @@ const news = require('../src/news');
   assert.strictEqual(v['SOL/USDT'].action, 'reduce');
   assert.strictEqual(v['BTC/USDT'].action, 'allow');
   assert(v['BTC/USDT'].sentiment > 0);
+  const v2 = news.keywordView(['ETH/USDT'], [{ title: "U.S. judge says Ethereum has 'no terms of use,' clears MIT brothers of $25 million fraud" }, { title: 'Ethereum lawsuit dismissed by court' }]);
+  assert.strictEqual(v2['ETH/USDT'].action, 'allow', 'oqlov yangiligi noto\'g\'ri bloklandi');
   console.log('✓ yangiliklar: RSS o\'qildi, salbiy yangilik aniqlandi');
 }
 (async () => {
