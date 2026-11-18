@@ -239,6 +239,19 @@ async function onNewCandle(symbol, candles) {
   );
 }
 
+// Birjadan ma'lumot olinmasa Telegramga xabar (har juftlik uchun soatiga ko'pi bilan bir marta)
+const dataErrors = {};
+function dataProblem(symbol, msg) {
+  const prev = dataErrors[symbol];
+  if (prev && Date.now() - prev < 3600e3) return;
+  dataErrors[symbol] = Date.now();
+  const blocked = /451|403|restricted|location|forbidden|ENOTFOUND|ECONN|timed out|timeout/i.test(msg);
+  log(
+    `⚠️ ${symbol}: ${cfg.exchange} birjasidan ma'lumot olib bo'lmadi.\nSabab: ${String(msg).slice(0, 300)}` +
+      (blocked ? `\nMaslahat: birja server joylashuvini bloklayotgan bo'lishi mumkin. Render'da EXCHANGE qiymatini bybit, okx yoki kucoin ga o'zgartirib ko'ring.` : '')
+  );
+}
+
 async function tick() {
   await checkDay();
   for (const symbol of cfg.symbols) {
@@ -249,7 +262,11 @@ async function tick() {
       if (pos && ticker.last <= pos.stop) await closePosition(symbol, ticker.last, 'stop-loss');
 
       const candles = await fetchCandles(ex, symbol, cfg.timeframe, cfg.history);
-      if (candles.length < 300) continue;
+      if (candles.length < 300) {
+        dataProblem(symbol, `birja faqat ${candles.length} ta sham berdi (kamida 300 kerak)`);
+        continue;
+      }
+      dataErrors[symbol] = null;
       lastCandles[symbol] = candles;
       const lastT = candles[candles.length - 1].time;
       if (state.lastCandle[symbol] === lastT) continue; // yangi sham yo'q
@@ -260,6 +277,7 @@ async function tick() {
       await onNewCandle(symbol, candles);
     } catch (e) {
       console.error(symbol, e.message);
+      dataProblem(symbol, e.message);
     }
   }
   try {
@@ -415,6 +433,11 @@ async function shutdown(sig) {
 
 (async () => {
   state = { ...DEFAULT_STATE, ...((await store.load()) || {}) };
+  if (cfg.mode === 'paper' && !(cfg.paperStart > 0 && cfg.paperStart <= 10_000_000)) {
+    console.error(`PAPER_START_USDT noto'g'ri: ${cfg.paperStart}. 1000 ishlatiladi.`);
+    telegram.send && setTimeout(() => telegram.send(`⚠️ PAPER_START_USDT noto'g'ri (${cfg.paperStart}). Render'da uni masalan 20 qilib qo'ying.`), 5000);
+    cfg.paperStart = 1000;
+  }
   broker = new Broker(ex, cfg, state);
   save();
   startTelegram();
