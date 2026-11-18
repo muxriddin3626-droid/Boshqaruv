@@ -40,6 +40,8 @@ module.exports = {
   reportDay: num(process.env.REPORT_DAY, 0), // 0=yakshanba ... 6=shanba
   reportHour: num(process.env.REPORT_HOUR, 20),
   tzOffset: num(process.env.TZ_OFFSET_HOURS, 5),
+  // Kunlik hisobot soati (mahalliy vaqt). -1 = o'chirish
+  dailyReportHour: num(process.env.DAILY_REPORT_HOUR, 21),
 
   // Server
   tursoUrl: process.env.TURSO_DATABASE_URL || '',

@@ -57,3 +57,37 @@ function buildReport({ symbols, period, equityNow, pricesNow, trades, blocked, h
 }
 
 module.exports = { buildReport };
+
+// Kunlik qisqa hisobot: bugungi savdolar, yutuq/zarar, ochiq pozitsiyalar
+function buildDaily({ equityNow, dayStart, startEquity, trades, positions, prices, mode }) {
+  const L = [`🗓 KUNLIK HISOBOT${mode === 'paper' ? ' (sinov, xayoliy pul)' : ''}`, ''];
+  const total = trades.reduce((a, t) => a + t.pnl, 0);
+  const wins = trades.filter((t) => t.pnl > 0);
+  const losses = trades.filter((t) => t.pnl <= 0);
+  L.push(`🔁 Bugun savdolar: ${trades.length}`);
+  if (trades.length) {
+    L.push(`✅ Yutgan: ${wins.length} ta, ${usd(wins.reduce((a, t) => a + t.pnl, 0))}`);
+    L.push(`❌ Yutqazgan: ${losses.length} ta, ${usd(losses.reduce((a, t) => a + t.pnl, 0))}`);
+    L.push(`📌 Bugungi sof natija: ${usd(total)}`);
+    for (const t of trades) L.push(`  • ${t.symbol}: ${usd(t.pnl)} (${t.reason})`);
+  } else {
+    L.push("Bugun yopilgan savdo yo'q (bot mos signal kutmoqda).");
+  }
+
+  const open = Object.entries(positions);
+  if (open.length) {
+    L.push('', `📂 Ochiq pozitsiyalar: ${open.length}`);
+    for (const [s, p] of open) {
+      const now = prices[s] || p.entryPrice;
+      const val = p.qty * now - p.cost;
+      L.push(`  • ${s}: ${p.cost.toFixed(2)} USDT, hozircha ${usd(val)} (${pct(now / p.entryPrice - 1)})`);
+    }
+  }
+
+  L.push('', `💰 Balans: ${equityNow.toFixed(2)} USDT`);
+  if (dayStart) L.push(`Bugun: ${pct(equityNow / dayStart - 1)}`);
+  if (startEquity) L.push(`Boshidan beri: ${pct(equityNow / startEquity - 1)} (${usd(equityNow - startEquity)})`);
+  return L.join('\n');
+}
+
+module.exports.buildDaily = buildDaily;

@@ -92,6 +92,7 @@ chat ID ni aytadi, uni `TELEGRAM_CHAT_ID` ga yozib qayta ishga tushiring.
 |---|---|
 | `/holat` | balans, pozitsiyalar, tanlangan strategiyalar |
 | `/yangiliklar` | oxirgi AI/yangiliklar tahlili |
+| `/bugun` | bugungi savdolar, yutuq va zarar |
 | `/hisobot` | shu haftaning hisobotini hozir ko'rish |
 | `/toxtat` / `/davom` | yangi savdolarni to'xtatish / davom ettirish |
 | `/orgat` | bozorni hozir qayta o'rganish |

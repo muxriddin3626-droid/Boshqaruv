@@ -121,6 +121,14 @@ async function extraTests() {
   assert(Math.abs(r.ret - 0.05) < 1e-9 && Math.abs(r.bench - 0.03) < 1e-9);
   assert(r.text.includes('yaxshiroq') && r.text.includes('yangiliklar — 2') && !r.text.includes('4 hafta'));
   console.log('✓ haftalik hisobot');
+  const { buildDaily } = require('../src/report');
+  const d = buildDaily({
+    equityNow: 990, dayStart: 1000, startEquity: 1000, mode: 'paper',
+    trades: [{ symbol: 'BTC/USDT', pnl: 5, reason: 'strategiya signali' }, { symbol: 'SOL/USDT', pnl: -15, reason: 'stop-loss' }],
+    positions: { 'ETH/USDT': { qty: 2, entryPrice: 10, cost: 20 } }, prices: { 'ETH/USDT': 11 },
+  });
+  assert(d.includes('Bugun savdolar: 2') && d.includes('Yutgan: 1 ta, +5.00') && d.includes('Yutqazgan: 1 ta, -15.00') && d.includes('-10.00 USDT') && d.includes('+2.00 USDT'));
+  console.log('✓ kunlik hisobot');
 
   // Holat ombori: fayl va Turso (libsql lokal fayl rejimida)
   const { createStore } = require('../src/store');

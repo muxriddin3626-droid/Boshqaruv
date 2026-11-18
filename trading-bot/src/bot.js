@@ -15,7 +15,7 @@ const { AiAnalyst } = require('./ai');
 const telegram = require('./telegram');
 const mtfLib = require('./mtf');
 const { createStore } = require('./store');
-const { buildReport } = require('./report');
+const { buildReport, buildDaily } = require('./report');
 
 const byName = Object.fromEntries(strategies.map((s) => [s.name, s]));
 const pct = (x) => `${(x * 100).toFixed(2)}%`;
@@ -256,6 +256,7 @@ async function tick() {
     }
   }
   try {
+    await maybeDaily();
     await maybeReport();
   } catch (e) {
     console.error('hisobot xatosi:', e.message);
@@ -281,6 +282,36 @@ async function makeReport() {
     symbols: cfg.symbols, period: state.week, equityNow: eq, pricesNow: lastPrices,
     trades, blocked: state.week.blocked, history: state.weekHistory, allTime: state.allTime,
   });
+}
+
+function localDay(t = Date.now()) {
+  return new Date(t + cfg.tzOffset * 3600e3).toISOString().slice(0, 10);
+}
+
+async function makeDaily() {
+  const eq = await equity();
+  const today = localDay();
+  if (!state.dailyStart || state.dailyStart.day !== today) state.dailyStart = { day: today, equity: eq };
+  return buildDaily({
+    equityNow: eq, dayStart: state.dailyStart.equity, startEquity: state.allTime?.equity,
+    trades: state.history.filter((t) => localDay(t.at) === today),
+    positions: state.positions, prices: lastPrices, mode: cfg.mode,
+  });
+}
+
+async function maybeDaily() {
+  if (cfg.dailyReportHour < 0 || cfg.symbols.some((s) => !lastPrices[s])) return;
+  const today = localDay();
+  if (!state.dailyStart || state.dailyStart.day !== today) {
+    // yangi kun boshlandi: kun boshidagi balansni eslab qolamiz
+    state.dailyStart = { day: today, equity: await equity() };
+    save();
+  }
+  const hour = new Date(Date.now() + cfg.tzOffset * 3600e3).getUTCHours();
+  if (hour < cfg.dailyReportHour || state.lastDailyDay === today) return;
+  log(await makeDaily());
+  state.lastDailyDay = today;
+  save();
 }
 
 async function maybeReport() {
@@ -344,6 +375,7 @@ function startTelegram() {
 telegram.start(cfg, {
   status: statusText,
   report: async () => (await makeReport()).text,
+  daily: makeDaily,
   news: newsText,
   pause: () => { state.paused = true; save(); },
   resume: () => { state.paused = false; save(); },
