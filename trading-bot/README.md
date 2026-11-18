@@ -33,7 +33,7 @@ o'rganadi va hozirgi holatga mos strategiyani tanlaydi.
 
 - Har soatda kripto yangiliklar (CoinTelegraph, CoinDesk, Decrypt) va
   "Qo'rquv va ochko'zlik" indeksi yig'iladi.
-- `ANTHROPIC_API_KEY` bo'lsa, **Claude** ularni, bozor holatini va
+- `OPENAI_API_KEY` (OpenAI) yoki `ANTHROPIC_API_KEY` (Claude) bo'lsa, AI ularni, bozor holatini va
   manipulyatsiya belgilarini birga tahlil qiladi, kerak bo'lsa internetdan
   o'zi qo'shimcha yangilik qidiradi va har tanga uchun qaror beradi:
   ruxsat / summani kamaytirish / xaridni bloklash / pozitsiyadan chiqish.
@@ -41,9 +41,16 @@ o'rganadi va hozirgi holatga mos strategiyani tanlaydi.
   oshirmaydi. Bu ataylab shunday: AI yangilikni yaxshi tushunadi, lekin narxni
   bashorat qila olmaydi.
 - Kalit bo'lmasa, oddiy kalit so'z tahlili ishlaydi (hack, lawsuit, delist...).
-- AI xarajati: Opus 5.5 bilan har soatda bitta so'rov — taxminan kuniga
-  $1–3. Arzonroq qilish uchun `AI_MODEL=claude-haiku-5-5` yoki
-  `AI_EVERY_MINUTES=240`.
+- AI xarajati: har soatda bitta so'rov. OpenAI `gpt-5.4-mini` bilan arzon,
+  Claude Opus 5.5 bilan taxminan kuniga $1–3. Model `AI_MODEL` bilan
+  o'zgartiriladi, chastota — `AI_EVERY_MINUTES` bilan.
+
+## Kichik hisob (masalan 20 USDT)
+
+Birjada eng kichik buyurtma ~5 USDT. Kichik hisobda xavf bo'yicha hisoblangan
+summa bundan kam chiqadi, shuning uchun bot uni `MIN_ORDER_USDT` (6) ga
+ko'taradi — lekin faqat stop urilganda yo'qotish balansning 3% idan
+oshmasa. 20 USDT bilan bir vaqtda ko'pi bilan 3 ta pozitsiya ochiladi.
 
 ## Manipulyatsiyani aniqlash ("bank/kit" o'yinlari)
 

@@ -85,7 +85,9 @@ const news = require('../src/news');
   const a = new AiAnalyst({ aiEnabled: false });
   assert.strictEqual(await a.analyze({ symbols: [] }), null);
   a.enabled = true;
-  a.cfg = { aiModel: 'claude-opus-5-5', aiEffort: 'medium', aiWebSearch: true };
+  a.provider = 'anthropic';
+  a.model = 'claude-opus-5-5';
+  a.cfg = { aiEffort: 'medium', aiWebSearch: true };
   const calls = [];
   a.client = { beta: { messages: { create: async (req) => {
     calls.push(req);
@@ -102,7 +104,28 @@ const news = require('../src/news');
   assert.strictEqual(r.views['SOL/USDT'].action, 'block');
   assert.strictEqual(r.views['SOL/USDT'].sentiment, -1);
   assert(!r.views['NOPE/USDT']);
-  console.log('✓ AI: web qidiruv davomi, javob tekshiruvi');
+  console.log('✓ AI (Claude): web qidiruv davomi, javob tekshiruvi');
+
+  // OpenAI provayderi
+  const { pickProvider } = require('../src/ai');
+  const saved = { o: process.env.OPENAI_API_KEY, a: process.env.ANTHROPIC_API_KEY };
+  process.env.OPENAI_API_KEY = 'test'; delete process.env.ANTHROPIC_API_KEY;
+  assert.strictEqual(pickProvider({ aiProvider: 'auto' }), 'openai');
+  const o = new AiAnalyst({ aiProvider: 'auto', aiWebSearch: true });
+  assert.strictEqual(o.provider, 'openai');
+  assert.strictEqual(o.model, 'gpt-5.4-mini');
+  let oreq = null;
+  o.client = { responses: { create: async (req) => { oreq = req; return { output_text: JSON.stringify({ market_risk: 'low', summary_uz: 'Tinch.', symbols: [{ symbol: 'BTC/USDT', sentiment: 0.4, action: 'reduce', reason_uz: 'Aralash' }] }) }; } } };
+  const or = await o.analyze({ symbols: ['BTC/USDT'], headlines: [], fearGreed: null, market: {} });
+  assert.strictEqual(oreq.text.format.type, 'json_schema');
+  assert.strictEqual(oreq.text.format.strict, true);
+  assert.deepStrictEqual(oreq.tools, [{ type: 'web_search' }]);
+  assert.strictEqual(or.views['BTC/USDT'].action, 'reduce');
+  o.client = { responses: { create: async () => { const e = new Error('bad key'); e.status = 401; throw e; } } };
+  assert.strictEqual(await o.analyze({ symbols: ['BTC/USDT'] }), null);
+  if (saved.o === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = saved.o;
+  if (saved.a !== undefined) process.env.ANTHROPIC_API_KEY = saved.a;
+  console.log('✓ AI (OpenAI): JSON sxema, web qidiruv, xatoda xavfsiz');
 })().then(extraTests).then(runBot);
 
 async function extraTests() {
@@ -176,7 +199,7 @@ class FakeEx {
 }
 require.cache[require.resolve('ccxt')] = { id: 'ccxt', filename: 'ccxt', loaded: true, exports: { fake: FakeEx } };
 const stateFile = path.join(os.tmpdir(), `tb-state-${process.pid}.json`);
-Object.assign(process.env, { EXCHANGE: 'fake', MODE: 'paper', SYMBOLS: 'FAKE/USDT', CHECK_SECONDS: '0.001', STATE_FILE: stateFile, TELEGRAM_BOT_TOKEN: '', HISTORY: '1000', AI_ENABLED: 'false', AI_EVERY_MINUTES: '0' });
+Object.assign(process.env, { EXCHANGE: 'fake', MODE: 'paper', SYMBOLS: 'FAKE/USDT', CHECK_SECONDS: '0.001', STATE_FILE: stateFile, TELEGRAM_BOT_TOKEN: '', HISTORY: '1000', PAPER_START_USDT: '20', AI_ENABLED: 'false', AI_EVERY_MINUTES: '0' });
 global.fetch = async (url) => ({ ok: true, text: async () => url.includes('alternative') ? JSON.stringify({ data: [{ value: '40', value_classification: 'Fear' }] }) : '<rss><item><title>Fake coin lawsuit filed</title><pubDate>' + new Date().toUTCString() + '</pubDate></item></rss>' });
 const logs = [];
 const origLog = console.log;
@@ -192,7 +215,7 @@ setTimeout(() => {
   const buys = logs.filter((l) => l.includes('SOTIB OLINDI')).length;
   const sells = logs.filter((l) => l.includes('SOTILDI')).length;
   const pos = Object.values(st.positions).reduce((a, p) => a + p.qty * market[cursor - 1].close, 0);
-  console.log(`✓ bot sikli: ${cursor - 1200} sham o'tdi, ${buys} xarid, ${sells} sotuv, balans ${(st.paperCash + pos).toFixed(2)} USDT (boshida 1000)`);
+  console.log(`✓ bot sikli: ${cursor - 1200} sham o'tdi, ${buys} xarid, ${sells} sotuv, balans ${(st.paperCash + pos).toFixed(2)} USDT (boshida 20)`);
   assert(st.paperCash >= 0, 'balans manfiy');
   assert(buys > 0, 'bot hech savdo qilmadi');
   console.log('\nBarcha sinovlar o\'tdi.');

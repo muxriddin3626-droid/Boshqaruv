@@ -18,14 +18,17 @@ module.exports = {
   maxPosition: num(process.env.MAX_POSITION_PCT, 30) / 100,
   dailyLossLimit: num(process.env.DAILY_LOSS_LIMIT_PCT, 5) / 100,
   paperStart: num(process.env.PAPER_START_USDT, 1000),
+  // Birjaning eng kichik buyurtmasi (Binance ~5 USDT). Kichik hisobda summa shunga ko'tariladi
+  minOrder: num(process.env.MIN_ORDER_USDT, 6),
   telegramToken: process.env.TELEGRAM_BOT_TOKEN || '',
   telegramChatId: process.env.TELEGRAM_CHAT_ID || '',
   stateFile: process.env.STATE_FILE || 'state.json',
   checkSeconds: num(process.env.CHECK_SECONDS, 60),
 
-  // Sun'iy intellekt (Claude). ANTHROPIC_API_KEY bo'lsa avtomatik yoqiladi.
-  aiEnabled: process.env.AI_ENABLED ? process.env.AI_ENABLED === 'true' : Boolean(process.env.ANTHROPIC_API_KEY),
-  aiModel: process.env.AI_MODEL || 'claude-opus-5-5',
+  // Sun'iy intellekt: OPENAI_API_KEY yoki ANTHROPIC_API_KEY bo'lsa avtomatik yoqiladi.
+  aiEnabled: process.env.AI_ENABLED ? process.env.AI_ENABLED === 'true' : undefined,
+  aiProvider: process.env.AI_PROVIDER || 'auto', // auto | openai | anthropic
+  aiModel: process.env.AI_MODEL || '', // bo'sh: openai -> gpt-5.4-mini, anthropic -> claude-opus-5-5
   aiEffort: process.env.AI_EFFORT || 'medium',
   aiWebSearch: process.env.AI_WEB_SEARCH !== 'false',
   aiEveryMinutes: num(process.env.AI_EVERY_MINUTES, 60),

@@ -96,7 +96,7 @@ async function refreshIntel() {
 
   const prev = state.intel;
   let intel = await ai.analyze({ symbols: cfg.symbols, headlines, fearGreed: fg, market });
-  let source = 'AI (Claude)';
+  let source = `AI ${ai.label}`;
   if (!intel) {
     source = "kalit so'zlar (AI o'chiq yoki javob bermadi)";
     intel = { marketRisk: fg && (fg.value < 15 || fg.value > 90) ? 'high' : 'medium', summary: '', views: news.keywordView(cfg.symbols, headlines) };
@@ -220,8 +220,15 @@ async function onNewCandle(symbol, candles) {
   const stop = price - model.params.stopAtr * a;
   const eq = await equity();
   let spend = ((eq * cfg.riskPerTrade) / (price - stop)) * price * intel.mult;
-  spend = Math.min(spend, eq * cfg.maxPosition * intel.mult, (await broker.cash(symbol)) * 0.99);
-  if (spend < 10) return log(`⚠️ ${symbol}: sotib olish signali bor, lekin mablag' yetarli emas.`);
+  const cash = (await broker.cash(symbol)) * 0.99;
+  spend = Math.min(spend, eq * cfg.maxPosition * intel.mult, cash);
+  if (spend < cfg.minOrder) {
+    // Kichik hisob (masalan 20 USDT): xavf bo'yicha summa birja minimumidan kam chiqadi.
+    // Minimal buyurtmaga ko'taramiz, lekin stopda yo'qotish balansning 3% idan oshmasin.
+    const lossAtStop = cfg.minOrder * ((price - stop) / price);
+    if (cash >= cfg.minOrder && lossAtStop <= eq * cfg.riskPerTrade * 3) spend = cfg.minOrder;
+    else return log(`⚠️ ${symbol}: sotib olish signali bor, lekin mablag' yetarli emas (kerak: ${cfg.minOrder} USDT, stopda xavf ${lossAtStop.toFixed(2)} USDT).`);
+  }
 
   const r = await broker.buy(symbol, spend, price);
   state.positions[symbol] = { qty: r.qty, entryPrice: r.price, stop, cost: spend, strategy: model.strategy, key: model.key, at: candles[i].time };
@@ -335,7 +342,7 @@ async function maybeReport() {
 async function statusText() {
   const eq = await equity();
   const lines = [
-    `📊 Rejim: ${cfg.mode === 'paper' ? 'SINOV (xayoliy pul)' : 'HAQIQIY'} | Birja: ${cfg.exchange} | AI: ${ai.enabled ? cfg.aiModel : "o'chiq"}`,
+    `📊 Rejim: ${cfg.mode === 'paper' ? 'SINOV (xayoliy pul)' : 'HAQIQIY'} | Birja: ${cfg.exchange} | AI: ${ai.label}`,
     `Umumiy balans: ${eq.toFixed(2)} USDT${state.paused ? " | ⏸ to'xtatilgan" : ''}${state.dailyHalt ? ' | 🛑 kunlik limit' : ''}`,
   ];
   if (state.intel) lines.push(`Bozor xavfi (${state.intel.source}): ${state.intel.marketRisk}`);
@@ -417,7 +424,7 @@ async function shutdown(sig) {
   console.log(`Holat ombori: ${store.name}`);
   log(
     `🤖 Bot ishga tushdi. Rejim: ${cfg.mode === 'paper' ? 'SINOV (xayoliy pul)' : 'HAQIQIY PUL'}. Juftliklar: ${cfg.symbols.join(', ')}\n` +
-      `AI: ${ai.enabled ? `yoqilgan (${cfg.aiModel})` : "o'chiq — kalit so'z tahlili ishlatiladi"}`
+      `AI: ${ai.enabled ? `yoqilgan — ${ai.label}` : "o'chiq — kalit so'z tahlili ishlatiladi"}`
   );
   for (;;) {
     try {
