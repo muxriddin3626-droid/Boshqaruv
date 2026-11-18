@@ -217,6 +217,28 @@ async function extraTests() {
     assert.strictEqual(exLive.id, 'binance', "haqiqiy rejimda birja almashtirilmasligi kerak");
     Object.assign(ccxtReal, saved);
     console.log('✓ birja bloklansa (sinov rejimi) boshqasiga o\'tadi, haqiqiy rejimda o\'tmaydi');
+
+    // Ish paytida almashtirish: 30 daqiqa uzluksiz xato bo'lsagina
+    const { ExchangeHealth, findAlternative } = require('../src/exchange');
+    const hlth = new ExchangeHealth(30 * 60e3);
+    const t0 = 1e12, M = 60e3;
+    hlth.record(false, t0);
+    assert(!hlth.shouldSwitch(t0 + 29 * M), '30 daqiqadan oldin almashtirdi');
+    hlth.record(true, t0 + 10 * M); // oraliqda ishladi -> hisob qaytadan
+    hlth.record(false, t0 + 20 * M);
+    assert(!hlth.shouldSwitch(t0 + 45 * M));
+    assert(hlth.shouldSwitch(t0 + 50 * M));
+    hlth.attempted(t0 + 50 * M);
+    assert(!hlth.shouldSwitch(t0 + 60 * M), 'urinishlar orasida kutish yo\'q');
+    assert(hlth.shouldSwitch(t0 + 80 * M));
+    ccxtReal.okx = make('okx', true); ccxtReal.bybit = make('bybit', true); ccxtReal.binance = make('binance', false);
+    const alt = await findAlternative({ exchange: 'binance', symbols: ['BTC/USDT'] }, 'okx');
+    assert.strictEqual(alt.id, 'bybit', 'joriy birjani yana tanladi');
+    ccxtReal.bybit = make('bybit', false);
+    for (const id of ['kucoin', 'gateio', 'kraken']) { saved[id] = ccxtReal[id]; ccxtReal[id] = make(id, false); }
+    assert.strictEqual(await findAlternative({ exchange: 'binance', symbols: ['BTC/USDT'] }, 'okx'), null);
+    Object.assign(ccxtReal, saved);
+    console.log('✓ ish paytida birja almashtirish (30 daqiqa uzluksiz xatodan keyin)');
   }
 
   // Haftalik hisobot

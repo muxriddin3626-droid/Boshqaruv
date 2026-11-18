@@ -43,6 +43,44 @@ async function pickWorkingExchange(cfg, log = console.log) {
   return first;
 }
 
+// Ish paytida zaxira birjani topish (joriy birjadan tashqari). Topilmasa null.
+async function findAlternative(cfg, currentId) {
+  const ids = [cfg.exchange, ...FALLBACKS].filter((id, i, a) => id !== currentId && a.indexOf(id) === i);
+  for (const id of ids) {
+    const ex = createExchange({ ...cfg, exchange: id, apiKey: '', apiSecret: '', apiPassword: '' });
+    try {
+      await ex.loadMarkets();
+      if (cfg.symbols.some((s) => !ex.markets[s])) continue;
+      await ex.fetchTicker(cfg.symbols[0]);
+      return ex;
+    } catch {}
+  }
+  return null;
+}
+
+// Birja "sog'ligi": bir tekshiruvda hech bir juftlik uchun ma'lumot olinmasa —
+// muvaffaqiyatsiz. Uzluksiz `limitMs` davom etsa, almashtirish vaqti keldi.
+class ExchangeHealth {
+  constructor(limitMs = 30 * 60e3) {
+    this.limitMs = limitMs;
+    this.failSince = null;
+    this.lastAttempt = 0;
+  }
+  record(anyOk, now = Date.now()) {
+    if (anyOk) this.failSince = null;
+    else this.failSince ||= now;
+  }
+  shouldSwitch(now = Date.now()) {
+    return this.failSince != null && now - this.failSince >= this.limitMs && now - this.lastAttempt >= this.limitMs;
+  }
+  attempted(now = Date.now()) {
+    this.lastAttempt = now;
+  }
+  reset() {
+    this.failSince = null;
+  }
+}
+
 async function fetchCandles(ex, symbol, timeframe, total) {
   const ms = ex.parseTimeframe(timeframe) * 1000;
   let since = Date.now() - total * ms;
@@ -140,4 +178,4 @@ class Broker {
   }
 }
 
-module.exports = { createExchange, pickWorkingExchange, fetchCandles, CandleCache, Broker, FALLBACKS };
+module.exports = { createExchange, pickWorkingExchange, findAlternative, ExchangeHealth, fetchCandles, CandleCache, Broker, FALLBACKS };

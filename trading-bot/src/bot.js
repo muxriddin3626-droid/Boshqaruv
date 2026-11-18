@@ -9,7 +9,7 @@ const strategies = require('./strategies');
 const { learn, keyOf } = require('./learner');
 const { atr } = require('./indicators');
 const ccxt = require('ccxt');
-const { createExchange, pickWorkingExchange, CandleCache, Broker } = require('./exchange');
+const { createExchange, pickWorkingExchange, findAlternative, ExchangeHealth, CandleCache, Broker } = require('./exchange');
 const { candleFlags, orderBookFlags } = require('./manipulation');
 const news = require('./news');
 const { AiAnalyst } = require('./ai');
@@ -244,6 +244,7 @@ async function onNewCandle(symbol, candles) {
 // Birjadan ma'lumot olinmasa Telegramga xabar (har juftlik uchun soatiga ko'pi bilan bir marta)
 const dataErrors = {};
 const transientSince = {}; // vaqtinchalik xatolar (limit, tarmoq) qachondan beri
+const exHealth = new ExchangeHealth(30 * 60e3);
 function dataProblem(symbol, msg) {
   const prev = dataErrors[symbol];
   if (prev && Date.now() - prev < 3600e3) return;
@@ -251,12 +252,37 @@ function dataProblem(symbol, msg) {
   const blocked = /451|403|restricted|location|forbidden|ENOTFOUND|ECONN|timed out|timeout/i.test(msg);
   log(
     `⚠️ ${symbol}: ${ex.id} birjasidan ma'lumot olib bo'lmadi.\nSabab: ${String(msg).slice(0, 300)}` +
-      (blocked ? `\nMaslahat: birja server joylashuvini bloklayotgan bo'lishi mumkin. Render'da EXCHANGE qiymatini bybit, okx yoki kucoin ga o'zgartirib ko'ring.` : '')
+      (cfg.mode === 'paper'
+        ? "\nMuammo 30 daqiqa davom etsa, bot o'zi boshqa birjaga o'tadi."
+        : blocked ? "\nMaslahat: birja server joylashuvini bloklayotgan bo'lishi mumkin. Server boshqa mamlakatda bo'lishi kerak." : '')
   );
+}
+
+// Joriy birja uzoq ishlamasa (sinov rejimida) zaxira birjaga o'tish
+async function maybeSwitchExchange() {
+  if (!exHealth.shouldSwitch()) return;
+  exHealth.attempted();
+  const old = ex.id;
+  if (cfg.mode !== 'paper') {
+    log(`🚨 ${old} birjasi 30 daqiqadan beri javob bermayapti. Haqiqiy rejimda birja avtomatik almashtirilmaydi — tekshirib ko'ring.`);
+    return;
+  }
+  const alt = await findAlternative(cfg, old);
+  if (!alt) {
+    log(`🚨 ${old} 30 daqiqadan beri ishlamayapti va zaxira birjalarning hech biri javob bermadi. Bot urinishda davom etadi.`);
+    return;
+  }
+  ex = alt;
+  broker.ex = alt;
+  candleCache = new CandleCache(alt, cfg.timeframe, cfg.history);
+  exHealth.reset();
+  for (const s of cfg.symbols) { dataErrors[s] = null; transientSince[s] = null; }
+  log(`🔄 ${old} 30 daqiqadan beri ishlamayapti — narxlar endi ${alt.id} birjasidan olinadi (sinov rejimi).`);
 }
 
 async function tick() {
   await checkDay();
+  let anyOk = false;
   for (const symbol of cfg.symbols) {
     try {
       const ticker = await ex.fetchTicker(symbol);
@@ -266,6 +292,7 @@ async function tick() {
 
       const candles = await candleCache.get(symbol);
       transientSince[symbol] = null;
+      anyOk = true;
       if (candles.length < 300) {
         dataProblem(symbol, `birja faqat ${candles.length} ta sham berdi (kamida 300 kerak)`);
         continue;
@@ -289,6 +316,12 @@ async function tick() {
       }
       continue;
     }
+  }
+  exHealth.record(anyOk);
+  try {
+    await maybeSwitchExchange();
+  } catch (e) {
+    console.error('birja almashtirish xatosi:', e.message);
   }
   try {
     await maybeDaily();
