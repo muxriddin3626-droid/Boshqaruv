@@ -405,7 +405,14 @@ telegram.start(cfg, {
   pause: () => { state.paused = true; save(); },
   resume: () => { state.paused = false; save(); },
   relearn: () => { for (const s of cfg.symbols) { state.relearnSym[s] = true; delete state.lastCandle[s]; } state.intel = null; save(); },
-  sellAll: async () => { for (const s of Object.keys(state.positions)) await closePosition(s, lastPrices[s], "qo'lda"); },
+  sellAll: async () => {
+    const syms = Object.keys(state.positions);
+    for (const s of syms) {
+      const price = lastPrices[s] || (await ex.fetchTicker(s)).last;
+      await closePosition(s, price, "qo'lda");
+    }
+    return syms.length;
+  },
 });
 }
 

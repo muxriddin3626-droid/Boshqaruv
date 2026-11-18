@@ -129,6 +129,49 @@ const news = require('../src/news');
 })().then(extraTests).then(runBot);
 
 async function extraTests() {
+  // Telegram menyusi: tugmalar, buyruqlar ro'yxati, faqat egasi, sotishdan oldin tasdiq
+  {
+    const { Telegraf, Telegram } = require('telegraf');
+    const calls = [];
+    const origCall = Telegram.prototype.callApi;
+    const origLaunch = Telegraf.prototype.launch;
+    Telegram.prototype.callApi = async function (method, payload) { calls.push({ method, payload }); return method === 'getMe' ? { id: 1, is_bot: true, username: 'test_bot' } : true; };
+    Telegraf.prototype.launch = async function () {};
+    const tg = require('../src/telegram');
+    let sold = 0, paused = false;
+    tg.start({ telegramToken: '1:x', telegramChatId: '42' }, {
+      status: async () => 'HOLAT_OK', daily: async () => 'BUGUN_OK', news: () => 'NEWS_OK', report: async () => 'REPORT_OK',
+      pause: () => { paused = true; }, resume: () => { paused = false; }, relearn: () => {}, sellAll: async () => { sold++; return 2; },
+    });
+    const bot = tg._bot();
+    bot.botInfo = { id: 1, is_bot: true, username: 'test_bot' };
+    let uid = 1;
+    const msg = (text, chat = 42) => bot.handleUpdate({ update_id: uid++, message: { message_id: uid, date: 0, text, ...(text.startsWith('/') ? { entities: [{ type: 'bot_command', offset: 0, length: text.split(' ')[0].length }] } : {}), chat: { id: chat, type: 'private' }, from: { id: chat, is_bot: false, first_name: 'a' } } });
+    const lastText = () => calls.filter((c) => c.method === 'sendMessage').slice(-1)[0]?.payload;
+    await new Promise((r) => setTimeout(r, 10));
+    assert(calls.some((c) => c.method === 'setMyCommands' && c.payload.commands.length >= 8), 'menyu buyruqlari o\'rnatilmadi');
+    await msg('/start');
+    assert(lastText().text.startsWith('Assalomu alaykum'), '/start javobi noto\'g\'ri');
+    assert(lastText().reply_markup.keyboard.flat().map((b) => b.text || b).includes('📊 Holat'), 'tugmali menyu yo\'q');
+    await msg('📊 Holat'); assert.strictEqual(lastText().text, 'HOLAT_OK');
+    await msg('🗓 Bugun'); assert.strictEqual(lastText().text, 'BUGUN_OK');
+    await msg('📰 Yangiliklar'); assert.strictEqual(lastText().text, 'NEWS_OK');
+    await msg('/hisobot'); assert.strictEqual(lastText().text, 'REPORT_OK');
+    await msg("⏸ To'xtatish"); assert(paused);
+    await msg('▶️ Davom ettirish'); assert(!paused);
+    await msg('🔴 Hammasini sotish');
+    assert.strictEqual(sold, 0, 'tasdiqsiz sotib yubordi');
+    assert(lastText().reply_markup.inline_keyboard, 'tasdiq tugmalari yo\'q');
+    await bot.handleUpdate({ update_id: uid++, callback_query: { id: 'c1', data: 'sellall_yes', chat_instance: 'x', from: { id: 42, is_bot: false, first_name: 'a' }, message: { message_id: 5, date: 0, chat: { id: 42, type: 'private' }, text: 'q' } } });
+    assert.strictEqual(sold, 1);
+    const before = calls.length;
+    await msg('📊 Holat', 999); // begona odam
+    assert.strictEqual(calls.length, before, 'begona odamga javob berdi');
+    Telegram.prototype.callApi = origCall;
+    Telegraf.prototype.launch = origLaunch;
+    console.log('✓ Telegram menyusi: tugmalar, / ro\'yxati, tasdiq, faqat egasi');
+  }
+
   // Birja bloklansa sinov rejimida boshqasiga o'tish
   {
     const ccxtReal = require('ccxt');
