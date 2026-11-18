@@ -8,7 +8,7 @@ const cfg = require('./config');
 const strategies = require('./strategies');
 const { learn, keyOf } = require('./learner');
 const { atr } = require('./indicators');
-const { createExchange, fetchCandles, Broker } = require('./exchange');
+const { createExchange, pickWorkingExchange, fetchCandles, Broker } = require('./exchange');
 const { candleFlags, orderBookFlags } = require('./manipulation');
 const news = require('./news');
 const { AiAnalyst } = require('./ai');
@@ -31,7 +31,7 @@ let state = null; // main() ichida yuklanadi
 let broker = null;
 const save = () => store.save(state);
 
-const ex = createExchange(cfg);
+let ex = createExchange(cfg); // main() ichida ishlaydigan birja tanlanadi
 const ai = new AiAnalyst(cfg);
 const log = (msg) => {
   console.log(new Date().toISOString(), msg);
@@ -247,7 +247,7 @@ function dataProblem(symbol, msg) {
   dataErrors[symbol] = Date.now();
   const blocked = /451|403|restricted|location|forbidden|ENOTFOUND|ECONN|timed out|timeout/i.test(msg);
   log(
-    `⚠️ ${symbol}: ${cfg.exchange} birjasidan ma'lumot olib bo'lmadi.\nSabab: ${String(msg).slice(0, 300)}` +
+    `⚠️ ${symbol}: ${ex.id} birjasidan ma'lumot olib bo'lmadi.\nSabab: ${String(msg).slice(0, 300)}` +
       (blocked ? `\nMaslahat: birja server joylashuvini bloklayotgan bo'lishi mumkin. Render'da EXCHANGE qiymatini bybit, okx yoki kucoin ga o'zgartirib ko'ring.` : '')
   );
 }
@@ -360,7 +360,7 @@ async function maybeReport() {
 async function statusText() {
   const eq = await equity();
   const lines = [
-    `📊 Rejim: ${cfg.mode === 'paper' ? 'SINOV (xayoliy pul)' : 'HAQIQIY'} | Birja: ${cfg.exchange} | AI: ${ai.label}`,
+    `📊 Rejim: ${cfg.mode === 'paper' ? 'SINOV (xayoliy pul)' : 'HAQIQIY'} | Birja: ${ex.id} | AI: ${ai.label}`,
     `Umumiy balans: ${eq.toFixed(2)} USDT${state.paused ? " | ⏸ to'xtatilgan" : ''}${state.dailyHalt ? ' | 🛑 kunlik limit' : ''}`,
   ];
   if (state.intel) lines.push(`Bozor xavfi (${state.intel.source}): ${state.intel.marketRisk}`);
@@ -438,9 +438,10 @@ async function shutdown(sig) {
     telegram.send && setTimeout(() => telegram.send(`⚠️ PAPER_START_USDT noto'g'ri (${cfg.paperStart}). Render'da uni masalan 20 qilib qo'ying.`), 5000);
     cfg.paperStart = 1000;
   }
+  startTelegram(); // birja tanlash xabarlari ham Telegramga borishi uchun avval
+  ex = await pickWorkingExchange(cfg, log);
   broker = new Broker(ex, cfg, state);
   save();
-  startTelegram();
   startHealthServer();
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));

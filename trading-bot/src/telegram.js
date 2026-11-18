@@ -5,7 +5,7 @@ let bot = null;
 let chatId = null;
 
 function send(text) {
-  if (bot && chatId) bot.telegram.sendMessage(chatId, text).catch((e) => console.error('telegram:', e.message));
+  if (bot && chatId) bot.telegram.sendMessage(chatId, String(text).slice(0, 4000), { link_preview_options: { is_disabled: true } }).catch((e) => console.error('telegram:', e.message));
 }
 
 function start(cfg, h) {

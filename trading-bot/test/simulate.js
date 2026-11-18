@@ -129,6 +129,25 @@ const news = require('../src/news');
 })().then(extraTests).then(runBot);
 
 async function extraTests() {
+  // Birja bloklansa sinov rejimida boshqasiga o'tish
+  {
+    const ccxtReal = require('ccxt');
+    const { pickWorkingExchange } = require('../src/exchange');
+    const make = (id, ok) => class { constructor() { this.id = id; } setSandboxMode() {}
+      async loadMarkets() { if (!ok) throw new Error('451 Unavailable For Legal Reasons'); this.markets = { 'BTC/USDT': {} }; }
+      async fetchTicker() { return { last: 1 }; } };
+    const saved = { binance: ccxtReal.binance, bybit: ccxtReal.bybit, okx: ccxtReal.okx };
+    ccxtReal.binance = make('binance', false); ccxtReal.bybit = make('bybit', false); ccxtReal.okx = make('okx', true);
+    const msgs = [];
+    const exPaper = await pickWorkingExchange({ exchange: 'binance', mode: 'paper', symbols: ['BTC/USDT'] }, (m) => msgs.push(m));
+    assert.strictEqual(exPaper.id, 'okx');
+    assert(msgs[0].includes('okx'));
+    const exLive = await pickWorkingExchange({ exchange: 'binance', mode: 'live', symbols: ['BTC/USDT'] }, () => {});
+    assert.strictEqual(exLive.id, 'binance', "haqiqiy rejimda birja almashtirilmasligi kerak");
+    Object.assign(ccxtReal, saved);
+    console.log('✓ birja bloklansa (sinov rejimi) boshqasiga o\'tadi, haqiqiy rejimda o\'tmaydi');
+  }
+
   // Haftalik hisobot
   const { buildReport } = require('../src/report');
   const day = 86400e3;
@@ -185,7 +204,8 @@ function runBot() {
 const market = makeMarket(1600, 7, ['range']);
 let cursor = 1200; // har chaqiruvda bir sham oldinga suriladi
 class FakeEx {
-  constructor() {}
+  constructor() { this.id = 'fake'; }
+  async loadMarkets() { this.markets = { 'FAKE/USDT': {} }; return this.markets; }
   setSandboxMode() {}
   parseTimeframe() { return 3600; }
   async fetchOrderBook() { const p = market[cursor - 1].close; return { bids: [[p * 0.999, 1]], asks: [[p * 1.001, 1]] }; }
@@ -197,7 +217,7 @@ class FakeEx {
     return market.slice(0, cursor).map((k) => [k.time + shift, k.open, k.high, k.low, k.close, 1]);
   }
 }
-require.cache[require.resolve('ccxt')] = { id: 'ccxt', filename: 'ccxt', loaded: true, exports: { fake: FakeEx } };
+require('ccxt').fake = FakeEx; // soxta birjani ccxt ro'yxatiga qo'shamiz
 const stateFile = path.join(os.tmpdir(), `tb-state-${process.pid}.json`);
 Object.assign(process.env, { EXCHANGE: 'fake', MODE: 'paper', SYMBOLS: 'FAKE/USDT', CHECK_SECONDS: '0.001', STATE_FILE: stateFile, TELEGRAM_BOT_TOKEN: '', HISTORY: '1000', PAPER_START_USDT: '20', AI_ENABLED: 'false', AI_EVERY_MINUTES: '0' });
 global.fetch = async (url) => ({ ok: true, text: async () => url.includes('alternative') ? JSON.stringify({ data: [{ value: '40', value_classification: 'Fear' }] }) : '<rss><item><title>Fake coin lawsuit filed</title><pubDate>' + new Date().toUTCString() + '</pubDate></item></rss>' });

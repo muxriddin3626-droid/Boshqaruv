@@ -17,6 +17,32 @@ function createExchange(cfg) {
   return ex;
 }
 
+// Sinov rejimida: tanlangan birja server joylashuvini bloklasa (451/403),
+// narxlarni boshqa birjadan oladi. Haqiqiy rejimda almashtirilmaydi —
+// u yerda API kalitlar aynan tanlangan birjaga tegishli.
+const FALLBACKS = ['bybit', 'okx', 'kucoin', 'gateio', 'kraken'];
+
+async function pickWorkingExchange(cfg, log = console.log) {
+  const first = createExchange(cfg);
+  if (cfg.mode !== 'paper') return first;
+  const tried = [];
+  for (const id of [cfg.exchange, ...FALLBACKS.filter((x) => x !== cfg.exchange)]) {
+    const ex = id === cfg.exchange ? first : createExchange({ ...cfg, exchange: id, apiKey: '', apiSecret: '', apiPassword: '' });
+    try {
+      await ex.loadMarkets();
+      const missing = cfg.symbols.filter((s) => !ex.markets[s]);
+      if (missing.length) throw new Error(`juftliklar yo'q: ${missing.join(', ')}`);
+      await ex.fetchTicker(cfg.symbols[0]);
+      if (id !== cfg.exchange) log(`🔄 ${cfg.exchange} ishlamadi, narxlar ${id} birjasidan olinadi (sinov rejimi).`);
+      return ex;
+    } catch (e) {
+      tried.push(`${id}: ${String(e.message).split('\n')[0].slice(0, 120)}`);
+    }
+  }
+  log(`⚠️ Hech bir birjaga ulanib bo'lmadi:\n${tried.join('\n')}`);
+  return first;
+}
+
 async function fetchCandles(ex, symbol, timeframe, total) {
   const ms = ex.parseTimeframe(timeframe) * 1000;
   let since = Date.now() - total * ms;
@@ -80,4 +106,4 @@ class Broker {
   }
 }
 
-module.exports = { createExchange, fetchCandles, Broker };
+module.exports = { createExchange, pickWorkingExchange, fetchCandles, Broker, FALLBACKS };
