@@ -607,3 +607,28 @@ input[type="text"], input[type="tel"], input[type="password"], input[type="numbe
 .lesson-bar { flex-wrap: wrap; row-gap: 6px; }
 .lesson-bar .day-time { order: 9; flex-basis: 100%; text-align: center; padding: 5px 10px; font-size: 13px; }
 @media (min-width: 521px) { .land-price strong { font-size: clamp(12px, 2vw, 15px); } }
+
+/* ---------- Xatolar ustida ishlash / Tinglab takrorlash ---------- */
+.drill-cards { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.drill-cards .big-card { margin: 0; min-width: 0; }
+@media (max-width: 560px) { .drill-cards { grid-template-columns: 1fr; } }
+.dr-dots { letter-spacing: 3px; color: var(--accent); font-size: 13px; }
+.vc-word.mastered { opacity: 0.6; }
+.vc-word.mastered .dr-dots { color: #2fb36d; }
+.vc-word s { opacity: 0.65; }
+.dr-wrong { margin: 0; text-align: left; text-decoration: line-through; opacity: 0.7; }
+.dr-hint { margin: 0; text-align: left; font-size: 14px; opacity: 0.8; }
+.dr-correct { margin: 6px 0; font-size: 19px; font-weight: 700; }
+.dr-answer {
+  min-height: 62px; padding: 10px; border-radius: 16px; border: 2px dashed rgba(127, 127, 127, 0.45);
+  display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start;
+}
+.dr-pool { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 48px; }
+.dr-tile {
+  padding: 9px 14px; border-radius: 12px; font: inherit; font-size: 17px; font-weight: 600; cursor: pointer;
+  background: var(--surface); color: var(--text); border: 2px solid var(--border);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.14); transition: transform 0.08s, box-shadow 0.08s;
+}
+.dr-tile:active { transform: translateY(3px); box-shadow: none; }
+.dr-legend { text-align: center; font-size: 13px; opacity: 0.7; }
+.note-action { list-style: none; display: flex; justify-content: center; padding: 6px 0 10px; }

@@ -960,7 +960,8 @@ async function handleTts(req, res) {
   }
 
   // O'quvchi uchun o'rganilayotgan tilni biroz sekinroq o'qiymiz.
-  const rate = lang === 'uz' ? '0%' : '-8%';
+  // «Tinglab takrorlash»dagi 🐢 tugmasi — ancha sekin.
+  const rate = body.slow === true ? '-35%' : lang === 'uz' ? '0%' : '-8%';
   const ssml =
     `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${VOICE_LOCALES[lang]}">` +
     `<voice name="${VOICES[tutor][lang]}"><prosody rate="${rate}">${escapeXml(text)}</prosody></voice></speak>`;
