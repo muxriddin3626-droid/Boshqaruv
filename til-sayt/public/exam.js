@@ -279,6 +279,12 @@ window.Exam = (() => {
   }
 
   function renderSpeaking(section, content, body) {
+    if (exam.id === 'ielts' && window.Ielts) {
+      const tip = el('section', 'passage');
+      tip.appendChild(el('p', 'exam-q', "🎤 To'liq IELTS Speaking mock: imtihonchi ovozda so'raydi, cue card bilan, 4 mezon bo'yicha band ball."));
+      tip.appendChild(button('secondary', 'Mock imtihonga o\'tish', () => window.Ielts.open()));
+      body.appendChild(tip);
+    }
     const areas = [];
     let active = null;
 

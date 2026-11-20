@@ -13,6 +13,7 @@ const costs = require('./costs');
 const pool = require('./pool');
 const appSettings = require('./settings');
 const auth = require('./auth');
+const ielts = require('./ielts');
 const {
   TUTOR_PROMPT,
   LANGUAGES,
@@ -886,6 +887,123 @@ async function handleExamSection(req, res) {
   }
 }
 
+// ---------- IELTS Speaking sinov imtihoni ----------
+
+// Savollar to'plami: umumiy ombordan (20 tagacha variant), shunda ko'pchilik uchun AI chaqirilmaydi.
+async function handleIeltsTest(req, res) {
+  if (rateLimited('chat', clientIp(req))) {
+    sendJson(res, 429, { error: "So'rovlar juda ko'p. Bir daqiqadan keyin yana urinib ko'ring." });
+    return;
+  }
+  const body = await readJson(req, res);
+  if (!body) return;
+  const q = await account.quota(req, 'exam');
+  if (!q.ok) {
+    account.sendLimit(res, q);
+    return;
+  }
+  const seen = Array.isArray(body.seen) ? body.seen.map((x) => str(x, 120)).slice(0, 40) : [];
+  try {
+    const hit = await pool.take('ielts', 'en', { target: 20, accept: (it) => !seen.includes(it.data.part2.task) });
+    if (hit) {
+      await q.commit();
+      sendJson(res, 200, hit.data);
+      return;
+    }
+    const raw = await askJson({
+      system: ielts.TEST_PROMPT,
+      messages: [{ role: 'user', content: seen.length ? `Savollar to'plamini tayyorla. Bu cue card'lar bo'lmasin: ${seen.slice(0, 10).join('; ')}` : "Savollar to'plamini tayyorla." }],
+      schema: ielts.TEST_SCHEMA,
+      fast: true,
+    });
+    const list = (v, n) => (Array.isArray(v) ? v.map((x) => str(x, 300)).filter(Boolean).slice(0, n) : []);
+    const test = raw && {
+      part1: { topic: str(raw.part1 && raw.part1.topic, 80), questions: list(raw.part1 && raw.part1.questions, 5) },
+      part2: {
+        task: str(raw.part2 && raw.part2.task, 200),
+        task_uz: str(raw.part2 && raw.part2.task_uz, 300),
+        bullets: list(raw.part2 && raw.part2.bullets, 4),
+        followup: str(raw.part2 && raw.part2.followup, 200),
+      },
+      part3: { topic: str(raw.part3 && raw.part3.topic, 80), questions: list(raw.part3 && raw.part3.questions, 5) },
+    };
+    if (!test || test.part1.questions.length < 3 || !test.part2.task || test.part2.bullets.length < 3 || test.part3.questions.length < 3) {
+      sendJson(res, 502, { error: "Savollarni tayyorlab bo'lmadi, qayta urinib ko'ring." });
+      return;
+    }
+    await pool.add('ielts', 'en', test, 20);
+    await q.commit();
+    sendJson(res, 200, test);
+  } catch (err) {
+    sendClaudeError(res, err);
+  }
+}
+
+// Javoblarni 4 mezon bo'yicha baholaydi. Umumiy band — rasmiy qoida bo'yicha serverda hisoblanadi.
+async function handleIeltsGrade(req, res) {
+  if (rateLimited('chat', clientIp(req))) {
+    sendJson(res, 429, { error: "So'rovlar juda ko'p." });
+    return;
+  }
+  const body = await readJson(req, res);
+  if (!body) return;
+  const answers = Array.isArray(body.answers) ? body.answers.slice(0, 14) : [];
+  if (!answers.length) {
+    sendJson(res, 400, { error: "Noto'g'ri so'rov." });
+    return;
+  }
+  const num = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
+  const content = answers
+    .map((a, i) => {
+      const m = a && typeof a === 'object' ? a : {};
+      const sec = num(m.seconds, 600);
+      const words = num(m.words, 2000);
+      const stats = `${sec} soniya, ${words} so'z, ${sec ? Math.round((words / sec) * 60) : 0} WPM, uzun to'xtashlar: ${num(m.pauses, 99)}, to'ldiruvchi so'zlar: ${num(m.fillers, 99)}, tanish ishonchi: ${Math.round((Number(m.confidence) || 0) * 100)}%`;
+      return `Part ${num(m.part, 3)} — savol ${i + 1}: ${str(m.question, 400)}\n[${stats}]\n<answer>\n${str(m.text, 3000) || '(javob berilmagan)'}\n</answer>`;
+    })
+    .join('\n\n');
+  try {
+    const g = await askJson({
+      system: ielts.GRADE_PROMPT,
+      messages: [{ role: 'user', content }],
+      schema: ielts.GRADE_SCHEMA,
+    });
+    if (!g) {
+      sendJson(res, 502, { error: "Baholab bo'lmadi, qayta urinib ko'ring." });
+      return;
+    }
+    const crit = (c) => ({ band: ielts.clampBand(c && c.band), comment: str(c && c.comment, 500) });
+    const criteria = {
+      fluency: crit(g.fluency),
+      lexical: crit(g.lexical),
+      grammar: crit(g.grammar),
+      pronunciation: crit(g.pronunciation),
+    };
+    const list = (v) => (Array.isArray(v) ? v.map((x) => str(x, 300)).filter(Boolean).slice(0, 5) : []);
+    const pairs = (v, a, b, n) =>
+      (Array.isArray(v) ? v : [])
+        .filter((x) => x && typeof x === 'object')
+        .map((x) => ({ [a]: str(x[a], 300), [b]: str(x[b], 300) }))
+        .filter((x) => x[a] && x[b])
+        .slice(0, n);
+    sendJson(res, 200, {
+      overall: ielts.overallBand(Object.values(criteria).map((c) => c.band)),
+      criteria,
+      summary: str(g.summary, 800),
+      tips: list(g.tips),
+      mistakes: (Array.isArray(g.mistakes) ? g.mistakes : [])
+        .filter((x) => x && typeof x === 'object')
+        .map((x) => ({ wrong: str(x.wrong, 300), correct: str(x.correct, 300), explanation: str(x.explanation, 300) }))
+        .filter((x) => x.wrong && x.correct)
+        .slice(0, 6),
+      better: { question: str(g.better && g.better.question, 400), answer: str(g.better && g.better.answer, 1500) },
+      vocab: pairs(g.vocab, 'word', 'translation', 6),
+    });
+  } catch (err) {
+    sendClaudeError(res, err);
+  }
+}
+
 async function handleExamGrade(req, res) {
   if (rateLimited('chat', clientIp(req))) {
     sendJson(res, 429, { error: "So'rovlar juda ko'p." });
@@ -1004,6 +1122,8 @@ const ROUTES = {
   '/api/placement': handlePlacement,
   '/api/exam/section': handleExamSection,
   '/api/exam/grade': handleExamGrade,
+  '/api/ielts/test': handleIeltsTest,
+  '/api/ielts/grade': handleIeltsGrade,
   '/api/tts': handleTts,
 };
 
@@ -1017,11 +1137,13 @@ const AI_KINDS = {
   '/api/placement': 'placement',
   '/api/exam/section': 'exam',
   '/api/exam/grade': 'exam-grade',
+  '/api/ielts/test': 'exam',
+  '/api/ielts/grade': 'ielts-grade',
   '/api/news': 'news',
   '/api/payments': 'receipt',
 };
 // Kunlik chegara tekshiriladigan (o'quvchi bosib ishlatadigan) yo'llar.
-const BUDGETED = new Set(['/api/chat', '/api/game', '/api/vocab', '/api/grammar', '/api/placement', '/api/exam/section', '/api/exam/grade']);
+const BUDGETED = new Set(['/api/chat', '/api/game', '/api/vocab', '/api/grammar', '/api/placement', '/api/exam/section', '/api/exam/grade', '/api/ielts/test', '/api/ielts/grade']);
 
 async function guarded(route, url, req, res) {
   if (BUDGETED.has(url)) {

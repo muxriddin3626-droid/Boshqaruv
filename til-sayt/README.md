@@ -108,6 +108,15 @@ kasbiy kurs). Anketani sozlamalardan qayta to'ldirish mumkin (`public/survey.js`
 - 🗣️ **Talaffuz** — ustoz iborani aytadi, o'quvchi takrorlaydi; sayt nima
   deganini tanib, to'g'ri aytilgan so'zlarni yashil, xatolarini qizil ko'rsatadi
   (80% dan yuqori — o'tdi, 3 urinish).
+- 🎤 **IELTS Speaking sinov imtihoni** (ingliz tili) — imtihonchi savollarni ovozda
+  beradi: Part 1 (4 savol), Part 2 cue card (1 daqiqa tayyorgarlik + 2 daqiqa nutq,
+  qo'shimcha savol), Part 3 (4 savol). Sayt har javobning davomiyligi, daqiqasiga
+  so'z, uzun to'xtashlar va «um/uh» sonini o'lchaydi. AI 4 rasmiy mezon (Fluency,
+  Lexical, Grammar, Pronunciation — taxminiy) bo'yicha band beradi, umumiy band
+  rasmiy qoida bilan hisoblanadi. Natijada xatolar («Xatolarim»ga tushadi),
+  7.5+ namunaviy javob, foydali iboralar, band tarixi va ulashish kartasi bor.
+  Savollar umumiy ombordan (20 variant) olinadi, kunlik bepul limitda imtihon bo'limi
+  sifatida hisoblanadi.
 - 🔁 **Xatolarim ustida ishlash** — o'quvchining o'z xatolaridan avtomatik mashq
   (AI'siz, bepul): to'g'ri variantni tanlash → gapni so'zlardan yig'ish → ovoz
   chiqarib aytish. Har xato 3 marta ketma-ket to'g'ri bajarilsa «yengildi»

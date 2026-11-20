@@ -190,6 +190,15 @@
       <span class="course-count" id="vocabCount">0/20</span>
     </button>
 
+    <button type="button" class="big-card ielts-card" id="ieltsCard" hidden>
+      <span class="act-icon">🎤</span>
+      <span class="act-text">
+        <span class="act-title">IELTS Speaking — sinov imtihoni</span>
+        <span class="act-desc" id="ieltsDesc">Imtihonchi bilan 3 qismli sinov — band ball va xatolar tahlili</span>
+      </span>
+      <span class="course-count">band</span>
+    </button>
+
     <div class="drill-cards">
       <button type="button" class="big-card drill-card" id="mistakesCard">
         <span class="act-icon">🔁</span>
@@ -763,6 +772,15 @@
     <div class="hangul-body" id="drillBody"></div>
   </main>
 
+  <main id="ieltsScreen" class="screen hangul-screen" hidden>
+    <div class="game-bar">
+      <button type="button" class="stop-btn" id="ieltsBack">← Orqaga</button>
+      <span class="game-title">🎤 IELTS Speaking</span>
+      <span class="game-score" id="ieltsScore"></span>
+    </div>
+    <div class="hangul-body" id="ieltsBody"></div>
+  </main>
+
   <main id="newsScreen" class="screen hangul-screen" hidden>
     <div class="game-bar">
       <button type="button" class="stop-btn" id="newsBack">← Menyu</button>
@@ -983,6 +1001,7 @@
   <script src="plan.js"></script>
   <script src="news.js"></script>
   <script src="drill.js"></script>
+  <script src="ielts.js"></script>
   <script src="share.js"></script>
   <script src="exam.js"></script>
   <script src="cert.js"></script>
