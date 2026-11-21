@@ -100,7 +100,18 @@
       <h2 class="land-h">Narxlar</h2>
       <p class="land-free">Boshlash <b>bepul</b>: har kuni 2 ta ovozli dars va o'yinlar. <span id="landTrial"></span></p>
       <div class="land-prices" id="landPrices"></div>
+      <p class="land-guarantee" id="landGuarantee" hidden></p>
       <p class="hint">3 oylik obunada −10%, yillikda −25%. Repetitor bilan bir soatlik dars narxiga — butun oy.</p>
+
+      <h2 class="land-h">Bepul vositalar</h2>
+      <p class="land-free">Ro'yxatdan o'tmasdan: ball kalkulyatorlari va imtihon mavzulari.</p>
+      <div class="land-tools">
+        <a class="pill" href="/tools.html#ielts">🇬🇧 IELTS band kalkulyatori</a>
+        <a class="pill" href="/tools.html#topik">🇰🇷 TOPIK daraja</a>
+        <a class="pill" href="/tools.html#goethe">🇩🇪 Goethe o'tish balli</a>
+        <a class="pill" href="/tools.html#trki">🇷🇺 ТРКИ o'tish balli</a>
+        <a class="pill" href="/tools.html#topics">💡 Speaking / Writing mavzulari</a>
+      </div>
 
       <h2 class="land-h">Ko'p beriladigan savollar</h2>
       <div class="land-faq">
@@ -108,6 +119,7 @@
         <details><summary>Telefonda ishlaydimi?</summary><p>Ha, Android va iPhone'da. Chrome brauzerida ochib, bosh ekranga ilova qilib o'rnatish mumkin.</p></details>
         <details><summary>Mikrofonsiz ham bo'ladimi?</summary><p>Bo'ladi — klaviaturada yozib yuborishingiz mumkin. Lekin gapirib o'rganish ancha tez natija beradi.</p></details>
         <details><summary>To'lov qanday qilinadi?</summary><p>Tarifni tanlaysiz, kartaga o'tkazasiz va chek rasmini yuklaysiz. Chek bir necha soniyada tekshiriladi va obuna yoqiladi.</p></details>
+        <details><summary>Yoqmasa pulni qaytarasizmi?</summary><p>Ha. To'lovdan keyin bir necha kun ichida (muddati narxlar ostida yozilgan) «Akkaunt» bo'limidagi «Pulni qaytarish» tugmasini bosasiz — pul kartangizga to'liq qaytariladi.</p></details>
         <details><summary>Sertifikat beriladimi?</summary><p>Kurs darajalarini tugatganingizda Til Ustoz yutuq sertifikati beriladi. U rasmiy til sertifikati (IELTS, TOPIK va b.) o'rnini bosmaydi, lekin ularga tayyorlaydi.</p></details>
       </div>
 
@@ -190,13 +202,13 @@
       <span class="course-count" id="vocabCount">0/20</span>
     </button>
 
-    <button type="button" class="big-card ielts-card" id="ieltsCard" hidden>
-      <span class="act-icon">🎤</span>
+    <button type="button" class="big-card ielts-card" id="prepCard">
+      <span class="act-icon">🎓</span>
       <span class="act-text">
-        <span class="act-title">IELTS Speaking — sinov imtihoni</span>
-        <span class="act-desc" id="ieltsDesc">Imtihonchi bilan 3 qismli sinov — band ball va xatolar tahlili</span>
+        <span class="act-title" id="prepCardTitle">Imtihonga tayyorgarlik</span>
+        <span class="act-desc" id="prepDesc">Og'zaki sinov, yozma ish tekshiruvi, maqsad sanasi</span>
       </span>
-      <span class="course-count">band</span>
+      <span class="course-count" id="prepBadge"></span>
     </button>
 
     <div class="drill-cards">
@@ -772,13 +784,13 @@
     <div class="hangul-body" id="drillBody"></div>
   </main>
 
-  <main id="ieltsScreen" class="screen hangul-screen" hidden>
+  <main id="prepScreen" class="screen hangul-screen" hidden>
     <div class="game-bar">
-      <button type="button" class="stop-btn" id="ieltsBack">← Orqaga</button>
-      <span class="game-title">🎤 IELTS Speaking</span>
-      <span class="game-score" id="ieltsScore"></span>
+      <button type="button" class="stop-btn" id="prepBack">← Orqaga</button>
+      <span class="game-title" id="prepTitle"></span>
+      <span class="game-score" id="prepScore"></span>
     </div>
-    <div class="hangul-body" id="ieltsBody"></div>
+    <div class="hangul-body" id="prepBody"></div>
   </main>
 
   <main id="newsScreen" class="screen hangul-screen" hidden>
@@ -931,11 +943,29 @@
         <span id="payFileText">📎 Chekni tanlash (rasm yoki PDF)</span>
       </label>
       <img class="pay-preview" id="payPreview" alt="" hidden>
+      <p class="pay-guarantee" id="payGuarantee" hidden></p>
       <p class="form-error" id="payError" role="alert" hidden></p>
       <div class="end-actions">
         <button type="submit" class="primary" id="paySubmit" disabled>Chekni yuborish</button>
         <button type="button" class="secondary" id="payCancel">Bekor qilish</button>
       </div>
+    </form>
+  </dialog>
+
+  <dialog class="sheet" id="goalDialog">
+    <form id="goalForm" novalidate>
+      <h2>🎯 Imtihon maqsadi</h2>
+      <label class="field-label" for="goalExam">Qaysi imtihon</label>
+      <select id="goalExam" class="ie-select"></select>
+      <label class="field-label" for="goalDate">Imtihon sanasi</label>
+      <input type="date" id="goalDate" required>
+      <label class="field-label" for="goalTarget">Kerakli natija (ixtiyoriy)</label>
+      <input type="text" id="goalTarget" maxlength="20">
+      <div class="end-actions">
+        <button type="submit" class="primary">Saqlash</button>
+        <button type="button" class="secondary" id="goalCancel">Bekor qilish</button>
+      </div>
+      <button type="button" class="link-btn" id="goalClear" hidden>Maqsadni o'chirish</button>
     </form>
   </dialog>
 
@@ -998,10 +1028,11 @@
   <script src="themes.js"></script>
   <script src="vocab.js"></script>
   <script src="study.js"></script>
+  <script src="prep-data.js"></script>
+  <script src="prep.js"></script>
   <script src="plan.js"></script>
   <script src="news.js"></script>
   <script src="drill.js"></script>
-  <script src="ielts.js"></script>
   <script src="share.js"></script>
   <script src="exam.js"></script>
   <script src="cert.js"></script>

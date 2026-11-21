@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4ede2">
+  <title>Bepul vositalar — IELTS, TOPIK, Goethe, ТРКИ ball kalkulyatori | Til Ustoz</title>
+  <meta name="description" content="Bepul: IELTS band kalkulyatori (Listening, Reading, umumiy ball), TOPIK daraja hisoblagich, Goethe va ТРКИ o'tish balli, Speaking va Writing mavzu generatori. Ro'yxatdan o'tmasdan.">
+  <meta name="keywords" content="IELTS band kalkulyator, IELTS ball hisoblash, TOPIK ball, Goethe o'tish balli, ТРКИ ball, IELTS speaking mavzulari, IELTS writing mavzulari">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Til Ustoz">
+  <meta property="og:title" content="Bepul imtihon vositalari — Til Ustoz">
+  <meta property="og:description" content="IELTS band kalkulyatori, TOPIK, Goethe, ТРКИ ball hisoblagich va mavzu generatori — bepul.">
+  <meta property="og:image" content="/icon-512.png">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="theme.css">
+</head>
+<body class="tools-page">
+  <header class="topbar">
+    <a class="brand" href="/">tilustoz</a>
+    <button type="button" class="icon-btn" id="themeBtn" aria-label="Rangni almashtirish">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.8"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></g></svg>
+    </button>
+    <a class="tl-start" href="/">Bepul boshlash →</a>
+  </header>
+
+  <main class="tools">
+    <h1>Bepul imtihon vositalari</h1>
+    <p class="hint">Ro'yxatdan o'tmasdan. Ballar rasmiy jadvallarga yaqin, lekin taxminiy — aniq natijani faqat imtihon markazi beradi.</p>
+
+    <nav class="tl-tabs" role="tablist">
+      <button type="button" class="pill active" data-tab="ielts">🇬🇧 IELTS</button>
+      <button type="button" class="pill" data-tab="topik">🇰🇷 TOPIK</button>
+      <button type="button" class="pill" data-tab="goethe">🇩🇪 Goethe</button>
+      <button type="button" class="pill" data-tab="trki">🇷🇺 ТРКИ</button>
+      <button type="button" class="pill" data-tab="topics">💡 Mavzu generatori</button>
+    </nav>
+
+    <!-- IELTS -->
+    <section class="tl-panel" data-panel="ielts">
+      <h2>IELTS band kalkulyatori</h2>
+      <div class="tl-card">
+        <h3>🎧 Listening</h3>
+        <label class="field-label" for="ieL">To'g'ri javoblar (40 tadan)</label>
+        <input type="number" id="ieL" min="0" max="40" inputmode="numeric" placeholder="masalan 30">
+        <p class="tl-out" id="ieLOut">—</p>
+      </div>
+      <div class="tl-card">
+        <h3>📖 Reading</h3>
+        <div class="tl-seg" id="ieRType">
+          <button type="button" class="pill active" data-v="ac">Academic</button>
+          <button type="button" class="pill" data-v="gt">General Training</button>
+        </div>
+        <label class="field-label" for="ieR">To'g'ri javoblar (40 tadan)</label>
+        <input type="number" id="ieR" min="0" max="40" inputmode="numeric" placeholder="masalan 30">
+        <p class="tl-out" id="ieROut">—</p>
+      </div>
+      <div class="tl-card">
+        <h3>✍️ Writing va 🎤 Speaking</h3>
+        <div class="tl-row">
+          <div><label class="field-label" for="ieW">Writing band</label><select id="ieW"></select></div>
+          <div><label class="field-label" for="ieS">Speaking band</label><select id="ieS"></select></div>
+        </div>
+        <p class="hint-left">Bilmasangiz — Til Ustoz'da og'zaki sinov va yozma ish tekshiruvidan o'tib bandingizni bilib oling.</p>
+      </div>
+      <div class="tl-total">
+        <span>Umumiy band (Overall)</span>
+        <b id="ieTotal">—</b>
+        <small id="ieTotalNote">4 ta bo'limni to'ldiring</small>
+      </div>
+      <details class="tl-more"><summary>Umumiy band qanday hisoblanadi?</summary>
+        <p>4 bo'lim balining o'rtachasi eng yaqin 0.5 ga yaxlitlanadi: o'rtacha .25 bo'lsa — yuqoriga .5 ga, .75 bo'lsa — keyingi butun songa. Masalan 6 + 6.5 + 5.5 + 6 = 24 → 6.0; 6.5 + 6.5 + 5.5 + 6 = 24.5 → 6.125 → 6.0; 7 + 7 + 6.5 + 6.5 → 6.75 → 7.0.</p>
+      </details>
+    </section>
+
+    <!-- TOPIK -->
+    <section class="tl-panel" data-panel="topik" hidden>
+      <h2>TOPIK ball → daraja</h2>
+      <div class="tl-seg" id="tpType">
+        <button type="button" class="pill active" data-v="1">TOPIK I (1-2 daraja)</button>
+        <button type="button" class="pill" data-v="2">TOPIK II (3-6 daraja)</button>
+      </div>
+      <div class="tl-card" id="tpInputs"></div>
+      <div class="tl-total"><span>Natija</span><b id="tpTotal">—</b><small id="tpNote"></small></div>
+      <details class="tl-more"><summary>Chegaralar</summary>
+        <p>TOPIK I (200 ball): 80+ — 1-daraja, 140+ — 2-daraja. TOPIK II (300 ball): 120+ — 3, 150+ — 4, 190+ — 5, 230+ — 6-daraja. EPS-TOPIK (ishchi viza) — alohida test, unda o'tish balli har yili belgilanadi.</p>
+      </details>
+    </section>
+
+    <!-- Goethe -->
+    <section class="tl-panel" data-panel="goethe" hidden>
+      <h2>Goethe-Zertifikat: o'tdimmi?</h2>
+      <div class="tl-seg" id="gtLevel">
+        <button type="button" class="pill active" data-v="a1">A1 / A2</button>
+        <button type="button" class="pill" data-v="b1">B1 / B2 (modulli)</button>
+      </div>
+      <div class="tl-card" id="gtInputs"></div>
+      <div class="tl-total"><span>Natija</span><b id="gtTotal">—</b><small id="gtNote"></small></div>
+      <details class="tl-more"><summary>Qoidalar</summary>
+        <p>A1/A2: jami 100 ballning kamida 60 tasi (60%) kerak. B1 va B2: har bir modul (Lesen, Hören, Schreiben, Sprechen) alohida baholanadi — har birida kamida 60%. Baho: 90-100 — sehr gut, 80-89 — gut, 70-79 — befriedigend, 60-69 — ausreichend.</p>
+      </details>
+    </section>
+
+    <!-- ТРКИ -->
+    <section class="tl-panel" data-panel="trki" hidden>
+      <h2>ТРКИ: o'tdimmi?</h2>
+      <p class="hint-left">Har bir qism uchun to'plagan foizingizni kiriting (0-100%).</p>
+      <div class="tl-card" id="trInputs"></div>
+      <div class="tl-total"><span>Natija</span><b id="trTotal">—</b><small id="trNote"></small></div>
+      <details class="tl-more"><summary>Qoidalar</summary>
+        <p>ТРКИ'da har bir qism (Лексика/Грамматика, Чтение, Аудирование, Письмо, Говорение) alohida baholanadi: o'tish uchun har birida kamida 66%. Bitta qism 60-65% bo'lsa, ko'pincha faqat shu qismni qayta topshirish mumkin.</p>
+      </details>
+    </section>
+
+    <!-- Mavzu generatori -->
+    <section class="tl-panel" data-panel="topics" hidden>
+      <h2>💡 Speaking va Writing mavzulari</h2>
+      <div class="tl-seg" id="tcLang">
+        <button type="button" class="pill active" data-v="en">🇬🇧 Ingliz</button>
+        <button type="button" class="pill" data-v="ru">🇷🇺 Rus</button>
+        <button type="button" class="pill" data-v="de">🇩🇪 Nemis</button>
+        <button type="button" class="pill" data-v="ko">🇰🇷 Koreys</button>
+      </div>
+      <div class="tl-seg" id="tcType">
+        <button type="button" class="pill active" data-v="speak">🎤 Speaking</button>
+        <button type="button" class="pill" data-v="write">✍️ Writing</button>
+      </div>
+      <div class="tl-card tl-topic" id="tcCard"><p class="hint-left">Mavzu yuklanmoqda...</p></div>
+      <div class="end-actions">
+        <button type="button" class="primary" id="tcNext">🎲 Boshqa mavzu</button>
+        <a class="secondary tl-link" href="/">🎙️ Ustoz bilan mashq qilish</a>
+      </div>
+    </section>
+
+    <section class="tl-cta">
+      <h2>Bandingizni bilmoqchimisiz?</h2>
+      <p>Til Ustoz'da imtihonchi bilan og'zaki sinovdan o'ting yoki inshoingizni tekshirting — AI 4 rasmiy mezon bo'yicha baholaydi va xatolarni o'zbekcha tushuntiradi.</p>
+      <a class="primary big tl-link" href="/">Bepul sinab ko'rish →</a>
+    </section>
+  </main>
+
+  <script src="tools.js"></script>
+</body>
+</html>

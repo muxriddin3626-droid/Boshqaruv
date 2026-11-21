@@ -19,6 +19,8 @@ const DEFAULTS = {
   cardHolder: process.env.PAYMENT_CARD_HOLDER || '',
   cardBank: process.env.PAYMENT_CARD_BANK || '',
   autoApprove: process.env.PAYMENT_AUTO_APPROVE !== 'off',
+  // Pulni qaytarish kafolati: to'lovdan keyin shuncha kun ichida so'rash mumkin (0 — o'chiq).
+  guaranteeDays: Number(process.env.GUARANTEE_DAYS || 7),
   cheapFreeModel: process.env.FREE_CHEAP_MODEL !== 'off',
   usdRate: Number(process.env.USD_RATE || 12800),
   costAlertUsd: Number(process.env.COST_ALERT_USD || 1),
@@ -52,6 +54,7 @@ const VALIDATE = {
   cardHolder: (v) => typeof v === 'string' && v.length <= 80,
   cardBank: (v) => typeof v === 'string' && v.length <= 80,
   autoApprove: (v) => typeof v === 'boolean',
+  guaranteeDays: (v) => Number.isInteger(v) && v >= 0 && v <= 60,
   cheapFreeModel: (v) => typeof v === 'boolean',
   usdRate: (v) => typeof v === 'number' && v >= 1000 && v <= 100000,
   costAlertUsd: (v) => typeof v === 'number' && v >= 0 && v <= 1000,

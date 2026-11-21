@@ -278,3 +278,4 @@
 .cost-alerts p { margin: 4px 0 0; }
 .cost-kinds .dist-row { grid-template-columns: 13em 1fr 4.5em; }
 .cost-val { font-weight: 700; }
+.pay-badge-refunded, .pay-badge-refund { background: color-mix(in srgb, var(--plum, #7b5cd6) 16%, var(--surface)); }

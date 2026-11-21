@@ -299,7 +299,7 @@ window.AccountUI = (() => {
 
   // ---------- Karta orqali to'lov va chek ----------
 
-  const PAY_STATUS = { pending: '⏳ Tekshirilmoqda', approved: '✅ Tasdiqlandi', rejected: '❌ Rad etildi' };
+  const PAY_STATUS = { pending: '⏳ Tekshirilmoqda', approved: '✅ Tasdiqlandi', rejected: '❌ Rad etildi', refunded: '💸 Pul qaytarildi' };
   let pay = null; // { plan, per, price, file }
 
   function payError(text) {
@@ -315,6 +315,8 @@ window.AccountUI = (() => {
     $('payBank').textContent = c.bank || 'Karta';
     $('payNumber').textContent = String(c.number).replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ');
     $('payHolder').textContent = c.holder || '';
+    $('payGuarantee').hidden = !config.guaranteeDays;
+    $('payGuarantee').textContent = `🛡️ ${config.guaranteeDays} kun ichida yoqmasa — «Akkaunt» bo'limidan pulni qaytarishni so'raysiz, to'liq qaytariladi.`;
     $('payFile').value = '';
     $('payFileText').textContent = '📎 Chekni tanlash (rasm yoki PDF)';
     $('payPreview').hidden = true;
@@ -426,9 +428,32 @@ window.AccountUI = (() => {
       const period = (window.PLANS.PERIODS.find((x) => x.months === p.months) || {}).label || '';
       info.textContent = `${plan}, ${period} · ${window.PLANS.fmt(p.amount)} · ${fmtDate(p.createdAt)}${p.status === 'rejected' && p.note ? ` — ${p.note}` : ''}`;
       li.append(head, info);
+      if (p.refund === 'requested') li.appendChild(Object.assign(document.createElement('span'), { className: 'pay-refund-note', textContent: "💸 Qaytarish so'rovi yuborildi — 1-3 ish kunida ko'rib chiqiladi" }));
+      else if (p.refund === 'declined') li.appendChild(Object.assign(document.createElement('span'), { className: 'pay-refund-note', textContent: `Qaytarish so'rovi rad etildi${p.note ? `: ${p.note}` : ''}` }));
+      else if (p.refundUntil > Date.now()) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'link-btn pay-refund-btn';
+        b.textContent = `Yoqmadimi? Pulni qaytarish (${fmtDate(p.refundUntil)} gacha)`;
+        b.addEventListener('click', () => askRefund(p));
+        li.appendChild(b);
+      }
       box.appendChild(li);
     }
     box.hidden = !list.length;
+  }
+
+  // Kafolat: muddat ichida pulni qaytarishni so'rash.
+  async function askRefund(p) {
+    const reason = prompt("Nima yoqmadi? Qisqacha yozing — bu xizmatni yaxshilashga yordam beradi:", '');
+    if (reason === null) return;
+    try {
+      await App.postJson('/api/payments/refund', { id: p.id, reason: reason.trim() || 'Sabab yozilmadi' });
+      window.Practice.toast("💸 So'rov yuborildi — pul 1-3 ish kunida kartangizga qaytariladi");
+      loadPayments();
+    } catch (err) {
+      window.Practice.toast(err.message);
+    }
   }
 
   function renderPlans() {
@@ -496,6 +521,9 @@ window.AccountUI = (() => {
     const mins = config.trialMinutes || 10;
     pill.textContent = `🎁 Ro'yxatdan o'ting — ${days} kun bepul sinov, kuniga ${mins} daqiqa`;
     $('landTrial').textContent = days && loginOn() ? `Ro'yxatdan o'tsangiz — ${days} kun bepul sinov: har kuni ${mins} daqiqa ustoz bilan, cheksiz o'yin va lug'at.` : '';
+    const g = config.guaranteeDays || 0;
+    $('landGuarantee').hidden = !g;
+    $('landGuarantee').textContent = `🛡️ Kafolat: ${g} kun ichida yoqmasa — pulingizni to'liq qaytaramiz. Savolsiz.`;
     const box = $('landPrices');
     if (box.dataset.done || !config.prices) return;
     box.dataset.done = '1';

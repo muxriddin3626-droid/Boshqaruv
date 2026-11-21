@@ -13,7 +13,7 @@ const costs = require('./costs');
 const pool = require('./pool');
 const appSettings = require('./settings');
 const auth = require('./auth');
-const ielts = require('./ielts');
+const prep = require('./prep');
 const {
   TUTOR_PROMPT,
   LANGUAGES,
@@ -524,7 +524,7 @@ function cleanProfile(raw) {
   };
 }
 
-const strList = (v, n, max) => (Array.isArray(v) ? v.map((x) => str(x, max)).filter(Boolean).slice(0, n) : []);
+const strList = (v, n, max = 300) => (Array.isArray(v) ? v.map((x) => str(x, max)).filter(Boolean).slice(0, n) : []);
 
 function cleanMemory(raw) {
   const m = raw || {};
@@ -887,51 +887,74 @@ async function handleExamSection(req, res) {
   }
 }
 
-// ---------- IELTS Speaking sinov imtihoni ----------
+// ---------- Imtihonga tayyorgarlik: og'zaki sinov va yozma ish (4 til) ----------
 
-// Savollar to'plami: umumiy ombordan (20 tagacha variant), shunda ko'pchilik uchun AI chaqirilmaydi.
-async function handleIeltsTest(req, res) {
+const PREP_LANGS = Object.keys(prep.PREP.EXAMS);
+const numIn = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
+
+// Umumiy ombordan oladi yoki yangi variant tuzadi. seenKey — takrorlanmasligi uchun solishtiriladigan maydon.
+async function pooled(kind, key, target, seen, seenOf, build) {
+  const hit = await pool.take(kind, key, { target, accept: (it) => !seen.includes(seenOf(it.data)) });
+  if (hit) return hit.data;
+  const fresh = await build();
+  if (fresh) await pool.add(kind, key, fresh, target);
+  return fresh;
+}
+
+const seenList = (v) => (Array.isArray(v) ? v.map((x) => str(x, 160)).slice(0, 40) : []);
+
+async function buildSpeakTest(lang, level, seen) {
+  const raw = await askJson({
+    system: prep.speakTestPrompt(lang, level),
+    messages: [{ role: 'user', content: seen.length ? `Savollar to'plamini tayyorla. Bu mavzular bo'lmasin: ${seen.slice(0, 10).join('; ')}` : "Savollar to'plamini tayyorla." }],
+    schema: prep.SPEAK_TEST_SCHEMA,
+    fast: true,
+  });
+  if (!raw) return null;
+  const part = (p, n) => {
+    const questions = strList(p && p.questions, n);
+    const uz = strList(p && p.questions_uz, n);
+    return { topic: str(p && p.topic, 80), questions, questions_uz: questions.map((_, i) => uz[i] || '') };
+  };
+  const test = {
+    part1: part(raw.part1, 5),
+    part2: {
+      task: str(raw.part2 && raw.part2.task, 200),
+      task_uz: str(raw.part2 && raw.part2.task_uz, 300),
+      bullets: strList(raw.part2 && raw.part2.bullets, 4),
+      followup: str(raw.part2 && raw.part2.followup, 200),
+    },
+    part3: part(raw.part3, 5),
+  };
+  const ok = test.part1.questions.length >= 3 && test.part2.task && test.part2.bullets.length >= 3 && test.part3.questions.length >= 3;
+  return ok ? test : null;
+}
+
+async function handleSpeakTest(req, res) {
   if (rateLimited('chat', clientIp(req))) {
     sendJson(res, 429, { error: "So'rovlar juda ko'p. Bir daqiqadan keyin yana urinib ko'ring." });
     return;
   }
   const body = await readJson(req, res);
   if (!body) return;
+  if (!PREP_LANGS.includes(body.lang)) {
+    sendJson(res, 400, { error: "Noto'g'ri so'rov." });
+    return;
+  }
   const q = await account.quota(req, 'exam');
   if (!q.ok) {
     account.sendLimit(res, q);
     return;
   }
-  const seen = Array.isArray(body.seen) ? body.seen.map((x) => str(x, 120)).slice(0, 40) : [];
+  const level = prep.levelOf(body.level);
+  const key = body.lang === 'en' ? 'en' : `${body.lang}|${level}`;
+  const seen = seenList(body.seen);
   try {
-    const hit = await pool.take('ielts', 'en', { target: 20, accept: (it) => !seen.includes(it.data.part2.task) });
-    if (hit) {
-      await q.commit();
-      sendJson(res, 200, hit.data);
-      return;
-    }
-    const raw = await askJson({
-      system: ielts.TEST_PROMPT,
-      messages: [{ role: 'user', content: seen.length ? `Savollar to'plamini tayyorla. Bu cue card'lar bo'lmasin: ${seen.slice(0, 10).join('; ')}` : "Savollar to'plamini tayyorla." }],
-      schema: ielts.TEST_SCHEMA,
-      fast: true,
-    });
-    const list = (v, n) => (Array.isArray(v) ? v.map((x) => str(x, 300)).filter(Boolean).slice(0, n) : []);
-    const test = raw && {
-      part1: { topic: str(raw.part1 && raw.part1.topic, 80), questions: list(raw.part1 && raw.part1.questions, 5) },
-      part2: {
-        task: str(raw.part2 && raw.part2.task, 200),
-        task_uz: str(raw.part2 && raw.part2.task_uz, 300),
-        bullets: list(raw.part2 && raw.part2.bullets, 4),
-        followup: str(raw.part2 && raw.part2.followup, 200),
-      },
-      part3: { topic: str(raw.part3 && raw.part3.topic, 80), questions: list(raw.part3 && raw.part3.questions, 5) },
-    };
-    if (!test || test.part1.questions.length < 3 || !test.part2.task || test.part2.bullets.length < 3 || test.part3.questions.length < 3) {
+    const test = await pooled('speak', key, 20, seen, (d) => d.part2.task, () => buildSpeakTest(body.lang, level, seen));
+    if (!test) {
       sendJson(res, 502, { error: "Savollarni tayyorlab bo'lmadi, qayta urinib ko'ring." });
       return;
     }
-    await pool.add('ielts', 'en', test, 20);
     await q.commit();
     sendJson(res, 200, test);
   } catch (err) {
@@ -939,8 +962,28 @@ async function handleIeltsTest(req, res) {
   }
 }
 
-// Javoblarni 4 mezon bo'yicha baholaydi. Umumiy band — rasmiy qoida bo'yicha serverda hisoblanadi.
-async function handleIeltsGrade(req, res) {
+// AI baholashini tozalaydi; umumiy baho — rasmiy yaxlitlash qoidasi bilan serverda.
+function cleanGrade(g, scale, keys) {
+  const criteria = {};
+  for (const k of keys) criteria[k] = { band: prep.clamp(scale, g[k] && g[k].band), comment: str(g[k] && g[k].comment, 500) };
+  const pairs = (v, a, b, n, c) =>
+    (Array.isArray(v) ? v : [])
+      .filter((x) => x && typeof x === 'object')
+      .map((x) => ({ [a]: str(x[a], 300), [b]: str(x[b], 300), ...(c ? { [c]: str(x[c], 300) } : {}) }))
+      .filter((x) => x[a] && x[b])
+      .slice(0, n);
+  return {
+    scale,
+    overall: prep.PREP.overall(keys.map((k) => criteria[k].band)),
+    criteria,
+    summary: str(g.summary, 800),
+    tips: strList(g.tips, 5),
+    mistakes: pairs(g.mistakes, 'wrong', 'correct', 8, 'explanation'),
+    vocab: pairs(g.vocab, 'word', 'translation', 6),
+  };
+}
+
+async function handleSpeakGrade(req, res) {
   if (rateLimited('chat', clientIp(req))) {
     sendJson(res, 429, { error: "So'rovlar juda ko'p." });
     return;
@@ -948,60 +991,138 @@ async function handleIeltsGrade(req, res) {
   const body = await readJson(req, res);
   if (!body) return;
   const answers = Array.isArray(body.answers) ? body.answers.slice(0, 14) : [];
-  if (!answers.length) {
+  if (!PREP_LANGS.includes(body.lang) || !answers.length) {
     sendJson(res, 400, { error: "Noto'g'ri so'rov." });
     return;
   }
-  const num = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
   const content = answers
     .map((a, i) => {
       const m = a && typeof a === 'object' ? a : {};
-      const sec = num(m.seconds, 600);
-      const words = num(m.words, 2000);
-      const stats = `${sec} soniya, ${words} so'z, ${sec ? Math.round((words / sec) * 60) : 0} WPM, uzun to'xtashlar: ${num(m.pauses, 99)}, to'ldiruvchi so'zlar: ${num(m.fillers, 99)}, tanish ishonchi: ${Math.round((Number(m.confidence) || 0) * 100)}%`;
-      return `Part ${num(m.part, 3)} — savol ${i + 1}: ${str(m.question, 400)}\n[${stats}]\n<answer>\n${str(m.text, 3000) || '(javob berilmagan)'}\n</answer>`;
+      const sec = numIn(m.seconds, 600);
+      const words = numIn(m.words, 2000);
+      const stats = `${sec} soniya, ${words} so'z, ${sec ? Math.round((words / sec) * 60) : 0} WPM, uzun to'xtashlar: ${numIn(m.pauses, 99)}, to'ldiruvchi so'zlar: ${numIn(m.fillers, 99)}, tanish ishonchi: ${Math.round((Number(m.confidence) || 0) * 100)}%`;
+      return `${numIn(m.part, 3)}-qism — savol ${i + 1}: ${str(m.question, 400)}\n[${stats}]\n<answer>\n${str(m.text, 3000) || '(javob berilmagan)'}\n</answer>`;
     })
     .join('\n\n');
+  const scale = prep.PREP.EXAMS[body.lang].scale;
   try {
     const g = await askJson({
-      system: ielts.GRADE_PROMPT,
+      system: prep.speakGradePrompt(body.lang, body.level),
       messages: [{ role: 'user', content }],
-      schema: ielts.GRADE_SCHEMA,
+      schema: prep.SPEAK_GRADE_SCHEMA,
     });
     if (!g) {
       sendJson(res, 502, { error: "Baholab bo'lmadi, qayta urinib ko'ring." });
       return;
     }
-    const crit = (c) => ({ band: ielts.clampBand(c && c.band), comment: str(c && c.comment, 500) });
-    const criteria = {
-      fluency: crit(g.fluency),
-      lexical: crit(g.lexical),
-      grammar: crit(g.grammar),
-      pronunciation: crit(g.pronunciation),
-    };
-    const list = (v) => (Array.isArray(v) ? v.map((x) => str(x, 300)).filter(Boolean).slice(0, 5) : []);
-    const pairs = (v, a, b, n) =>
-      (Array.isArray(v) ? v : [])
-        .filter((x) => x && typeof x === 'object')
-        .map((x) => ({ [a]: str(x[a], 300), [b]: str(x[b], 300) }))
-        .filter((x) => x[a] && x[b])
-        .slice(0, n);
     sendJson(res, 200, {
-      overall: ielts.overallBand(Object.values(criteria).map((c) => c.band)),
-      criteria,
-      summary: str(g.summary, 800),
-      tips: list(g.tips),
-      mistakes: (Array.isArray(g.mistakes) ? g.mistakes : [])
-        .filter((x) => x && typeof x === 'object')
-        .map((x) => ({ wrong: str(x.wrong, 300), correct: str(x.correct, 300), explanation: str(x.explanation, 300) }))
-        .filter((x) => x.wrong && x.correct)
-        .slice(0, 6),
+      ...cleanGrade(g, scale, ['fluency', 'lexical', 'grammar', 'pronunciation']),
       better: { question: str(g.better && g.better.question, 400), answer: str(g.better && g.better.answer, 1500) },
-      vocab: pairs(g.vocab, 'word', 'translation', 6),
     });
   } catch (err) {
     sendClaudeError(res, err);
   }
+}
+
+async function buildWriteTask(lang, level, kind, seen) {
+  const raw = await askJson({
+    system: prep.writeTaskPrompt(lang, level, kind),
+    messages: [{ role: 'user', content: seen.length ? `Topshiriqni tayyorla. Bu mavzular bo'lmasin: ${seen.slice(0, 10).join('; ')}` : 'Topshiriqni tayyorla.' }],
+    schema: prep.WRITE_TASK_SCHEMA,
+    fast: true,
+  });
+  const task = raw && { task: str(raw.task, 1200), task_uz: str(raw.task_uz, 1200), points: strList(raw.points, 4, 200) };
+  return task && task.task ? task : null;
+}
+
+// Yozma topshiriq. Bepul vositalar sahifasidagi mavzu generatori ham shundan foydalanadi (limitsiz, faqat ombordan).
+async function handleWriteTask(req, res) {
+  if (rateLimited('chat', clientIp(req))) {
+    sendJson(res, 429, { error: "So'rovlar juda ko'p. Bir daqiqadan keyin yana urinib ko'ring." });
+    return;
+  }
+  const body = await readJson(req, res);
+  if (!body) return;
+  if (!PREP_LANGS.includes(body.lang)) {
+    sendJson(res, 400, { error: "Noto'g'ri so'rov." });
+    return;
+  }
+  const kind = prep.writeKind(body.lang, body.kind);
+  const level = prep.levelOf(body.level);
+  const key = `${body.lang}|${kind.id}|${body.lang === 'en' ? 'all' : level}`;
+  const seen = seenList(body.seen);
+  try {
+    const task = await pooled('write', key, 15, seen, (d) => d.task.slice(0, 160), () => buildWriteTask(body.lang, level, kind.id, seen));
+    if (!task) {
+      sendJson(res, 502, { error: "Topshiriqni tayyorlab bo'lmadi, qayta urinib ko'ring." });
+      return;
+    }
+    sendJson(res, 200, { ...task, kind: kind.id, minWords: kind.minWords, minutes: kind.minutes });
+  } catch (err) {
+    sendClaudeError(res, err);
+  }
+}
+
+async function handleWriteGrade(req, res) {
+  if (rateLimited('chat', clientIp(req))) {
+    sendJson(res, 429, { error: "So'rovlar juda ko'p." });
+    return;
+  }
+  const body = await readJson(req, res);
+  if (!body) return;
+  const text = str(body.text, 6000);
+  const task = str(body.task, 1500);
+  if (!PREP_LANGS.includes(body.lang) || !task || text.split(/\s+/).filter(Boolean).length < 5) {
+    sendJson(res, 400, { error: "Avval topshiriqni tanlang va kamida bir necha gap yozing." });
+    return;
+  }
+  const q = await account.quota(req, 'exam');
+  if (!q.ok) {
+    account.sendLimit(res, q);
+    return;
+  }
+  const kind = prep.writeKind(body.lang, body.kind);
+  const words = text.split(/\s+/).filter(Boolean).length;
+  const scale = prep.PREP.EXAMS[body.lang].scale;
+  try {
+    const g = await askJson({
+      system: prep.writeGradePrompt(body.lang, body.level, kind.id),
+      messages: [{ role: 'user', content: `Topshiriq:\n${task}\n\nO'quvchi ${numIn(body.minutes, 300)} daqiqada yozdi, ${words} so'z.\n\n<answer>\n${text}\n</answer>` }],
+      schema: prep.WRITE_GRADE_SCHEMA,
+    });
+    if (!g) {
+      sendJson(res, 502, { error: "Baholab bo'lmadi, qayta urinib ko'ring." });
+      return;
+    }
+    await q.commit();
+    sendJson(res, 200, { ...cleanGrade(g, scale, ['task', 'coherence', 'lexical', 'grammar']), corrected: str(g.corrected, 6000), words });
+  } catch (err) {
+    sendClaudeError(res, err);
+  }
+}
+
+// Bepul vositalar: og'zaki mavzu (cue card) generatori — faqat ombordan, AI chaqirilmaydi.
+async function handleToolTopic(req, res) {
+  const u = new URL(req.url, 'http://x');
+  const lang = u.searchParams.get('lang');
+  const type = u.searchParams.get('type');
+  if (!PREP_LANGS.includes(lang) || !['speak', 'write'].includes(type)) {
+    sendJson(res, 400, { error: "Noto'g'ri so'rov." });
+    return;
+  }
+  const items = [];
+  if (type === 'speak') {
+    for (const key of lang === 'en' ? ['en'] : prep.PREP.LEVELS.map((l) => `${lang}|${l}`)) {
+      for (const it of await pool.list('speak', key)) items.push({ task: it.data.part2.task, task_uz: it.data.part2.task_uz, points: it.data.part2.bullets, level: key.split('|')[1] || '' });
+    }
+  } else {
+    for (const k of prep.PREP.EXAMS[lang].writing) {
+      for (const key of lang === 'en' ? [`${lang}|${k.id}|all`] : prep.PREP.LEVELS.map((l) => `${lang}|${k.id}|${l}`)) {
+        for (const it of await pool.list('write', key)) items.push({ ...it.data, kindTitle: k.title, level: key.split('|')[2] === 'all' ? '' : key.split('|')[2] });
+      }
+    }
+  }
+  sendJson(res, 200, { topics: items.sort(() => Math.random() - 0.5).slice(0, 12) });
 }
 
 async function handleExamGrade(req, res) {
@@ -1111,6 +1232,7 @@ async function handleTts(req, res) {
 
 const GET_ROUTES = {
   '/api/news': handleNews,
+  '/api/tools/topics': handleToolTopic,
 };
 
 const ROUTES = {
@@ -1122,8 +1244,10 @@ const ROUTES = {
   '/api/placement': handlePlacement,
   '/api/exam/section': handleExamSection,
   '/api/exam/grade': handleExamGrade,
-  '/api/ielts/test': handleIeltsTest,
-  '/api/ielts/grade': handleIeltsGrade,
+  '/api/prep/speak-test': handleSpeakTest,
+  '/api/prep/speak-grade': handleSpeakGrade,
+  '/api/prep/write-task': handleWriteTask,
+  '/api/prep/write-grade': handleWriteGrade,
   '/api/tts': handleTts,
 };
 
@@ -1137,13 +1261,15 @@ const AI_KINDS = {
   '/api/placement': 'placement',
   '/api/exam/section': 'exam',
   '/api/exam/grade': 'exam-grade',
-  '/api/ielts/test': 'exam',
-  '/api/ielts/grade': 'ielts-grade',
+  '/api/prep/speak-test': 'exam',
+  '/api/prep/speak-grade': 'speak-grade',
+  '/api/prep/write-task': 'exam',
+  '/api/prep/write-grade': 'write-grade',
   '/api/news': 'news',
   '/api/payments': 'receipt',
 };
 // Kunlik chegara tekshiriladigan (o'quvchi bosib ishlatadigan) yo'llar.
-const BUDGETED = new Set(['/api/chat', '/api/game', '/api/vocab', '/api/grammar', '/api/placement', '/api/exam/section', '/api/exam/grade', '/api/ielts/test', '/api/ielts/grade']);
+const BUDGETED = new Set(['/api/chat', '/api/game', '/api/vocab', '/api/grammar', '/api/placement', '/api/exam/section', '/api/exam/grade', '/api/prep/speak-test', '/api/prep/speak-grade', '/api/prep/write-task', '/api/prep/write-grade']);
 
 async function guarded(route, url, req, res) {
   if (BUDGETED.has(url)) {
@@ -1186,7 +1312,7 @@ const server = http.createServer((req, res) => {
     const proto = req.headers['x-forwarded-proto'] === 'https' || req.socket.encrypted ? 'https' : 'http';
     const host = String(req.headers.host || '').replace(/[^a-zA-Z0-9.:-]/g, '');
     res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
-    res.end(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${proto}://${host}/</loc><changefreq>weekly</changefreq></url></urlset>\n`);
+    res.end(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${proto}://${host}/</loc><changefreq>weekly</changefreq></url><url><loc>${proto}://${host}/tools.html</loc><changefreq>weekly</changefreq></url></urlset>\n`);
     return;
   }
   if (url === '/admin' && (req.method === 'GET' || req.method === 'HEAD')) {

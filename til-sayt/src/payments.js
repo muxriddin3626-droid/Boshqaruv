@@ -130,6 +130,9 @@ const publicPayment = (p) => ({
   note: p.note,
   createdAt: p.createdAt,
   decidedAt: p.decidedAt,
+  refund: p.refund,
+  // Kafolat muddati tugaguncha qaytarish so'rash mumkin.
+  refundUntil: p.status === 'approved' && !p.refund && settings.get().guaranteeDays > 0 ? (p.decidedAt || p.createdAt) + settings.get().guaranteeDays * DAY : 0,
 });
 
 // ---------- Foydalanuvchi ----------
@@ -169,6 +172,23 @@ async function handleCreate(req, res) {
   sendJson(res, 200, { ok: true, auto: check.auto, payment: publicPayment(await db.getPayment(id)) });
 }
 
+// Kafolat bo'yicha pulni qaytarishni so'rash. Admin «To'lovlar → Qaytarish so'rovlari»da ko'rib chiqadi.
+async function handleRefund(req, res) {
+  const user = await currentUser(req);
+  if (!user) return sendJson(res, 401, { error: 'Avval kiring.' });
+  const body = await readJson(req, res);
+  if (!body) return;
+  const days = settings.get().guaranteeDays;
+  const id = parseInt(body.id, 10);
+  const reason = String(body.reason || '').trim().slice(0, 500);
+  if (!days) return sendJson(res, 400, { error: "Pulni qaytarish hozir mavjud emas." });
+  if (!Number.isInteger(id) || reason.length < 3) return sendJson(res, 400, { error: 'Sababini qisqacha yozing.' });
+  const ok = await db.requestRefund(id, user.id, reason, Date.now() - days * DAY);
+  if (!ok) return sendJson(res, 409, { error: `Bu to'lov uchun qaytarish so'rab bo'lmaydi (${days} kunlik muddat o'tgan yoki allaqachon so'ralgan).` });
+  console.log(`Qaytarish so'rovi: to'lov #${id}, ${user.id}`);
+  sendJson(res, 200, { ok: true });
+}
+
 async function handleMine(req, res) {
   const user = await currentUser(req);
   if (!user) return sendJson(res, 200, { payments: [] });
@@ -181,10 +201,14 @@ async function handleMine(req, res) {
 async function handleAdminList(req, res) {
   if (!(await guard(req, res))) return;
   const status = String(new URL(req.url, 'http://x').searchParams.get('status') || '');
-  const valid = ['pending', 'approved', 'rejected'].includes(status) ? status : '';
-  const valid2 = status === 'review' ? 'review' : valid;
-  const payments = await db.listPayments({ status: valid2, limit: 200 });
-  sendJson(res, 200, { payments, pending: await db.countPayments('pending'), review: await db.countPaymentsToReview() });
+  const valid = ['pending', 'approved', 'rejected', 'refunded', 'review', 'refund'].includes(status) ? status : '';
+  const payments = await db.listPayments({ status: valid, limit: 200 });
+  sendJson(res, 200, {
+    payments,
+    pending: await db.countPayments('pending'),
+    review: await db.countPaymentsToReview(),
+    refunds: await db.countRefundRequests(),
+  });
 }
 
 async function handleAdminFile(req, res) {
@@ -225,6 +249,14 @@ async function handleAdminDecide(req, res) {
     await db.removePremiumDays(pay.userId, pay.days);
     return sendJson(res, 200, { ok: true });
   }
+  // Kafolat: pul qaytarildi — obuna kunlari olib tashlanadi; yoki so'rov rad etiladi.
+  if (body.action === 'refund' || body.action === 'refund-decline') {
+    const refunded = body.action === 'refund';
+    const note = String(body.note || '').trim().slice(0, 200) || (refunded ? 'Pul qaytarildi' : "So'rov rad etildi");
+    if (!(await db.decideRefund(id, refunded, note))) return sendJson(res, 409, { error: "Bu so'rov allaqachon ko'rib chiqilgan." });
+    if (refunded) await db.removePremiumDays(pay.userId, pay.days);
+    return sendJson(res, 200, { ok: true });
+  }
   if (body.action === 'reject') {
     const note = String(body.note || '').trim().slice(0, 200) || "Chek tasdiqlanmadi";
     if (!(await db.decidePayment(id, 'rejected', note))) return sendJson(res, 409, { error: "Bu to'lov allaqachon ko'rib chiqilgan." });
@@ -243,6 +275,7 @@ module.exports = {
   },
   POST_ROUTES: {
     '/api/payments': handleCreate,
+    '/api/payments/refund': handleRefund,
     '/api/admin/payment': handleAdminDecide,
   },
 };

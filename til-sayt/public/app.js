@@ -39,7 +39,7 @@
     plan: $('planScreen'),
     news: $('newsScreen'),
     drill: $('drillScreen'),
-    ielts: $('ieltsScreen'),
+    prep: $('prepScreen'),
     rating: $('ratingScreen'),
     profList: $('profListScreen'),
     prof: $('profScreen'),
@@ -169,7 +169,7 @@
     window.Plan.renderCard();
     window.News.renderCard();
     if (window.Drill) window.Drill.renderCards();
-    if (window.Ielts) window.Ielts.renderCard();
+    if (window.Prep) window.Prep.renderCard();
     show('menu');
   }
 

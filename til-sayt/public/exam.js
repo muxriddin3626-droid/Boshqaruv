@@ -279,10 +279,10 @@ window.Exam = (() => {
   }
 
   function renderSpeaking(section, content, body) {
-    if (exam.id === 'ielts' && window.Ielts) {
+    if (window.Prep) {
       const tip = el('section', 'passage');
-      tip.appendChild(el('p', 'exam-q', "🎤 To'liq IELTS Speaking mock: imtihonchi ovozda so'raydi, cue card bilan, 4 mezon bo'yicha band ball."));
-      tip.appendChild(button('secondary', 'Mock imtihonga o\'tish', () => window.Ielts.open()));
+      tip.appendChild(el('p', 'exam-q', "🎤 To'liq og'zaki sinov: imtihonchi ovozda so'raydi, 3 qism, 4 mezon bo'yicha baho va ravonlik tahlili."));
+      tip.appendChild(button('secondary', "Og'zaki sinovga o'tish", () => window.Prep.openSpeak()));
       body.appendChild(tip);
     }
     const areas = [];

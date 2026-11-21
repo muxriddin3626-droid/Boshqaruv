@@ -689,3 +689,72 @@ input[type="text"], input[type="tel"], input[type="password"], input[type="numbe
 .ie-ans summary { cursor: pointer; font-weight: 600; }
 .ie-ans p { margin: 8px 0 4px; line-height: 1.5; }
 .ie-ans small { color: var(--muted); }
+
+/* ---------- Imtihonga tayyorgarlik: maqsad, yozma ish ---------- */
+#goalDialog input, .ie-select {
+  display: block; width: 100%; margin-bottom: 12px; padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--text);
+  font: inherit; font-size: 17px;
+}
+#goalDialog .link-btn { display: block; margin: 12px auto 0; }
+.field-label { display: block; text-align: left; font-size: 13px; font-weight: 700; color: var(--muted); margin: 0 0 4px; }
+.ie-goal {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+  padding: 16px; border-radius: 20px; background: var(--surface); border: 2px solid var(--teal); box-shadow: 0 4px 0 var(--edge);
+}
+.ie-goal p { margin: 0; color: var(--muted); }
+.ie-goal button { margin-top: 8px; }
+.ie-goal-big { font: 700 24px Unbounded, 'Onest', sans-serif; }
+.ie-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; width: 100%; }
+.ie-tiles .big-card { margin: 0; min-width: 0; }
+@media (max-width: 560px) { .ie-tiles { grid-template-columns: 1fr; } }
+.ie-task { margin: 6px 0 0; font-size: 17px; line-height: 1.5; white-space: pre-line; }
+.ie-bullets.small { font-size: 15px; margin-top: 8px; }
+.ie-write-info { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.ie-words { font-weight: 700; color: var(--muted); }
+.ie-words.ok { color: var(--teal); }
+.ie-clock.small { font-size: 18px; }
+.ie-essay { min-height: 300px; font-size: 17px; line-height: 1.6; }
+
+/* ---------- Bepul vositalar sahifasi ---------- */
+.tools-page .topbar a.brand { color: inherit; text-decoration: none; }
+.tl-start { justify-self: end; font-weight: 700; color: var(--accent); text-decoration: none; font-size: 14px; }
+.tools { width: 100%; max-width: 640px; margin: 0 auto; padding: 8px 16px 60px; display: flex; flex-direction: column; gap: 14px; }
+.tools h1 { margin: 10px 0 0; font-size: clamp(24px, 6vw, 34px); text-align: center; }
+.tools h2 { margin: 8px 0 0; font-size: 20px; }
+.tools h3 { margin: 0 0 8px; font-size: 16px; }
+.tl-tabs, .tl-seg { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.tl-seg { justify-content: flex-start; margin-bottom: 4px; }
+.tl-panel { display: flex; flex-direction: column; gap: 12px; }
+.tl-panel[hidden] { display: none; }
+.tl-card { padding: 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border); box-shadow: 0 4px 0 var(--edge); display: grid; gap: 4px; text-align: left; }
+.tl-card input, .tl-card select {
+  width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--bg); color: var(--text); font: inherit; font-size: 18px; margin-bottom: 8px;
+}
+#tpInputs, #gtInputs, #trInputs { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 12px; }
+.tl-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tl-out { margin: 0; font: 700 20px Unbounded, 'Onest', sans-serif; color: var(--teal); }
+.tl-total { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 18px; border-radius: 20px; background: var(--teal); color: #fff; box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18); text-align: center; }
+.tl-total span { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.85; }
+.tl-total b { font: 800 44px/1.1 Unbounded, 'Onest', sans-serif; }
+.tl-total small { font-size: 14px; opacity: 0.9; }
+.tl-more { text-align: left; padding: 10px 14px; border-radius: 14px; background: var(--surface-2); }
+.tl-more summary { cursor: pointer; font-weight: 600; }
+.tl-more p { margin: 8px 0 0; color: var(--muted); line-height: 1.5; font-size: 14px; }
+.tl-topic { min-height: 140px; }
+.tl-link { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.tl-cta { margin-top: 20px; padding: 20px; border-radius: 22px; background: var(--surface); border: 2px solid var(--accent); text-align: center; display: grid; gap: 10px; justify-items: center; }
+.tl-cta p { margin: 0; color: var(--muted); line-height: 1.5; }
+.land-tools { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.land-tools a { text-decoration: none; }
+
+/* ---------- Kafolat ---------- */
+.land-guarantee, .pay-guarantee {
+  margin: 12px 0 0; padding: 12px 14px; border-radius: 14px; font-weight: 600; line-height: 1.45; text-align: left;
+  background: color-mix(in srgb, var(--leaf, #2fb36d) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--leaf, #2fb36d) 40%, var(--border));
+  color: var(--text);
+}
+.sheet .pay-guarantee { margin: 0 0 12px; font-size: 14px; color: var(--text); }
+.pay-refund-btn { display: block; margin-top: 4px; font-size: 13px; text-align: left; }
+.pay-refund-note { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); }
