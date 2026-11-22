@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Toza Ekran</string>
+    <string name="service_desc">Toza Ekran ekrandagi matn va rasmlarni telefonning o\'zida tekshiradi va 18+ kontent chiqsa uni darhol yopadi. Hech qanday ma\'lumot internetga yuborilmaydi.</string>
+    <string name="admin_desc">Ilovani PIN-kodsiz o\'chirib yuborishdan himoya qiladi.</string>
+</resources>

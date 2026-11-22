@@ -1,0 +1,39 @@
+name: Toza Ekran APK
+
+on:
+  push:
+    paths:
+      - "toza-ekran/**"
+      - ".github/workflows/toza-ekran.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: toza-ekran
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+
+      - name: APK yig'ish
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Nomini o'zgartirish
+        run: cp app/build/outputs/apk/debug/app-debug.apk TozaEkran.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TozaEkran-apk
+          path: toza-ekran/TozaEkran.apk
