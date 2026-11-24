@@ -146,6 +146,9 @@ const ready = (async () => {
     "ALTER TABLE payments ADD COLUMN check_json TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE payments ADD COLUMN file_hash TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE payments ADD COLUMN txn_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE payments ADD COLUMN refund TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE payments ADD COLUMN refund_reason TEXT NOT NULL DEFAULT ''",
+    'ALTER TABLE payments ADD COLUMN refund_at INTEGER NOT NULL DEFAULT 0',
   ]) {
     await client.execute(sql).catch(() => {});
   }
@@ -525,6 +528,10 @@ const rowToPayment = (x) =>
     decidedAt: x.decided_at == null ? null : Number(x.decided_at),
     auto: Number(x.auto || 0) === 1,
     reviewed: Number(x.reviewed || 0) === 1,
+    // Pulni qaytarish: '' / requested / refunded / declined.
+    refund: String(x.refund || ''),
+    refundReason: String(x.refund_reason || ''),
+    refundAt: Number(x.refund_at || 0),
     check: (() => {
       try {
         return x.check_json ? JSON.parse(String(x.check_json)) : null;
@@ -545,10 +552,19 @@ async function createPayment({ userId, plan, months, days, amount, fileMime, fil
 }
 
 const PAY_COLS = `p.id, p.user_id, p.plan, p.months, p.days, p.amount, p.status, p.file_mime, p.note, p.created_at, p.decided_at,
-                 p.auto, p.reviewed, p.check_json, u.first_name, u.last_name`;
+                 p.auto, p.reviewed, p.check_json, p.refund, p.refund_reason, p.refund_at, u.first_name, u.last_name`;
 
-// Ro'yxat (chek faylisiz). status: pending / approved / rejected / review (avtomatik tasdiqlangan, ko'rilmagan).
+// Ro'yxat (chek faylisiz). status: pending / approved / rejected / refunded / review (avtomatik tasdiqlangan,
+// ko'rilmagan) / refund (pulni qaytarish so'ralgan).
 async function listPayments({ status = '', userId = '', limit = 100 } = {}) {
+  if (status === 'refund') {
+    const r = await client.execute({
+      sql: `SELECT ${PAY_COLS} FROM payments p LEFT JOIN users u ON u.id = p.user_id
+            WHERE p.refund = 'requested' ORDER BY p.refund_at DESC LIMIT ?`,
+      args: [limit],
+    });
+    return r.rows.map(rowToPayment);
+  }
   const review = status === 'review' ? 1 : 0;
   const st = review ? '' : status;
   const r = await client.execute({
@@ -640,6 +656,32 @@ async function countPayments(status, userId = '') {
 
 async function countPaymentsToReview() {
   const r = await client.execute("SELECT COUNT(*) AS n FROM payments WHERE status = 'approved' AND auto = 1 AND reviewed = 0");
+  return Number(r.rows[0].n);
+}
+
+// Kafolat: o'quvchi tasdiqlangan to'lovi uchun pulni qaytarishni so'raydi (muddat ichida, bir marta).
+async function requestRefund(id, userId, reason, since) {
+  const r = await client.execute({
+    sql: `UPDATE payments SET refund = 'requested', refund_reason = ?, refund_at = ?
+          WHERE id = ? AND user_id = ? AND status = 'approved' AND refund = '' AND COALESCE(decided_at, created_at) >= ? RETURNING id`,
+    args: [reason, Date.now(), id, userId, since],
+  });
+  return r.rows.length > 0;
+}
+
+// Admin qarori: pul qaytarildi (obuna o'chadi) yoki rad etildi.
+async function decideRefund(id, refunded, note = '') {
+  const r = await client.execute({
+    sql: refunded
+      ? "UPDATE payments SET refund = 'refunded', status = 'refunded', note = ?, decided_at = ? WHERE id = ? AND refund = 'requested' RETURNING id"
+      : "UPDATE payments SET refund = 'declined', note = ? WHERE id = ? AND refund = 'requested' RETURNING id",
+    args: refunded ? [note, Date.now(), id] : [note, id],
+  });
+  return r.rows.length > 0;
+}
+
+async function countRefundRequests() {
+  const r = await client.execute("SELECT COUNT(*) AS n FROM payments WHERE refund = 'requested'");
   return Number(r.rows[0].n);
 }
 
@@ -896,6 +938,9 @@ module.exports = {
   autoApprovePayment,
   markPaymentReviewed,
   revokePayment,
+  requestRefund,
+  decideRefund,
+  countRefundRequests,
   removePremiumDays,
   savePushSub,
   getPushSub,

@@ -279,6 +279,12 @@ window.Exam = (() => {
   }
 
   function renderSpeaking(section, content, body) {
+    if (window.Prep) {
+      const tip = el('section', 'passage');
+      tip.appendChild(el('p', 'exam-q', "🎤 To'liq og'zaki sinov: imtihonchi ovozda so'raydi, 3 qism, 4 mezon bo'yicha baho va ravonlik tahlili."));
+      tip.appendChild(button('secondary', "Og'zaki sinovga o'tish", () => window.Prep.openSpeak()));
+      body.appendChild(tip);
+    }
     const areas = [];
     let active = null;
 

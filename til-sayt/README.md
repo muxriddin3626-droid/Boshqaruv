@@ -108,6 +108,29 @@ kasbiy kurs). Anketani sozlamalardan qayta to'ldirish mumkin (`public/survey.js`
 - 🗣️ **Talaffuz** — ustoz iborani aytadi, o'quvchi takrorlaydi; sayt nima
   deganini tanib, to'g'ri aytilgan so'zlarni yashil, xatolarini qizil ko'rsatadi
   (80% dan yuqori — o'tdi, 3 urinish).
+- 🎓 **Imtihonga tayyorgarlik** (4 til) — menyuda «IELTS / ТРКИ / Goethe / TOPIK'ga
+  tayyorgarlik» kartasi. Ichida:
+  - 🎯 **Maqsad**: imtihon, sana va kerakli natija. Menyu va «Bugungi dars» kartasida necha
+    kun qolgani ko'rinadi, rejaga har kuni sinov qadami (og'zaki / yozma navbatma-navbat) qo'shiladi.
+  - 🎤 **Og'zaki sinov** — imtihonchi savollarni o'rganilayotgan tilda ovozda beradi:
+    1-qism (4 savol), 2-qism — mavzu kartasi (1 daqiqa tayyorgarlik + 2 daqiqa nutq,
+    qo'shimcha savol), 3-qism (4 savol). Savol ostida o'zbekcha tarjimasi. Sayt har javob
+    davomiyligi, daqiqasiga so'z, uzun to'xtashlar va to'ldiruvchi so'zlarni (um, э, äh, 음…)
+    o'lchaydi. AI 4 mezon bo'yicha baholaydi: ingliz tilida IELTS band (0-9), boshqalarida
+    CEFR daraja (A1-C2, «+» bilan); umumiy baho rasmiy yaxlitlash qoidasi bilan serverda.
+    Savollar o'quvchi darajasiga moslanadi (daraja testi → sozlamalar → anketa).
+  - ✍️ **Yozma ish tekshiruvi** — har tilda 2 tur (IELTS Task 2 / GT xat; Письмо / Сочинение;
+    E-Mail / Meinung; 짧은 글 / 의견 글) yoki o'z topshirig'ingiz. So'z hisoblagich, mo'ljal
+    vaqti, avtomatik saqlanadigan qoralama. AI 4 mezon bo'yicha (Task, Coherence, Lexical,
+    Grammar) baholaydi, xatolar va to'liq tuzatilgan variantni beradi.
+  - Natijada: baho tarixi grafigi, xatolar («Xatolarim»ga tushadi), namunaviy javob /
+    tuzatilgan matn, foydali iboralar (bir bosishda daftarga), ulashish kartasi.
+  Savol va topshiriqlar umumiy ombordan olinadi (og'zaki — 20, yozma — 15 variant har
+  til/daraja uchun); kunlik bepul limitda «imtihon bo'limi» sifatida hisoblanadi.
+- 🧮 **Bepul vositalar** (`/tools.html`, ro'yxatdan o'tmasdan, Google uchun sitemap'da):
+  IELTS band kalkulyatori (Listening, Academic/GT Reading jadvallari + umumiy band),
+  TOPIK I/II ball → daraja, Goethe A1-A2 / B1-B2 modullari va ТРКИ qismlari bo'yicha
+  «o'tdimmi?», Speaking va Writing mavzu generatori (ombordagi topshiriqlardan, AI'siz).
 - 🔁 **Xatolarim ustida ishlash** — o'quvchining o'z xatolaridan avtomatik mashq
   (AI'siz, bepul): to'g'ri variantni tanlash → gapni so'zlardan yig'ish → ovoz
   chiqarib aytish. Har xato 3 marta ketma-ket to'g'ri bajarilsa «yengildi»
@@ -381,6 +404,14 @@ ko'rib chiqing» bo'limiga tushadi: bank ilovangizda pul tushganini tekshirib «
 narsa mos kelmasa — chek «Kutilmoqda»da qoladi va qaysi tekshiruv o'tmagani ko'rsatiladi.
 Sozlamalarda o'chirish mumkin (yoki `PAYMENT_AUTO_APPROVE=off`). Eslatma: AI soxta chekni
 har doim ham taniy olmaydi — shuning uchun keyingi ko'rib chiqish muhim.
+
+**🛡️ Pulni qaytarish kafolati** (standart 7 kun, admin «Sozlamalar»da yoki `GUARANTEE_DAYS`,
+0 — o'chiq): bosh sahifada, narxlar ostida va to'lov oynasida kafolat yozuvi chiqadi.
+Tasdiqlangan to'lovdan keyin shu muddat ichida o'quvchi akkaunt sahifasidagi «Pulni
+qaytarish» tugmasini bosib sababini yozadi. So'rov admin «To'lovlar → 💸 Qaytarish
+so'rovlari»ga tushadi: pulni kartasiga qaytarib «💸 Pul qaytarildi» bosiladi — obuna kunlari
+olib tashlanadi, to'lov «qaytarilgan» bo'ladi (daromad hisobiga kirmaydi); yoki sabab bilan
+rad etiladi. Har to'lov uchun bir marta so'rash mumkin.
 
 Fayl turi mazmunidan tekshiriladi (JPG, PNG, WEBP, PDF; 4 MB gacha), rasmlar yuklashdan oldin
 kichraytiriladi; chekni faqat admin ko'ra oladi. Bir vaqtda 3 tagacha kutilayotgan chek.

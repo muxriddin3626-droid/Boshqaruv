@@ -248,6 +248,8 @@ const KIND_LABELS = {
   placement: '📊 Daraja testi',
   exam: '🎓 Imtihon topshiriqlari',
   'exam-grade': '✍️ Imtihon baholash',
+  'speak-grade': '🎤 Og\'zaki sinov baholash',
+  'write-grade': '✍️ Yozma ish baholash',
   news: '📰 Yangiliklar',
   rules: '🌐 Qoidalarni yangilash',
   receipt: '💳 Chek tekshiruvi',

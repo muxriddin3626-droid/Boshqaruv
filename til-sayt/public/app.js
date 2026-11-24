@@ -39,6 +39,7 @@
     plan: $('planScreen'),
     news: $('newsScreen'),
     drill: $('drillScreen'),
+    prep: $('prepScreen'),
     rating: $('ratingScreen'),
     profList: $('profListScreen'),
     prof: $('profScreen'),
@@ -168,6 +169,7 @@
     window.Plan.renderCard();
     window.News.renderCard();
     if (window.Drill) window.Drill.renderCards();
+    if (window.Prep) window.Prep.renderCard();
     show('menu');
   }
 

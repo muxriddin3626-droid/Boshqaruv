@@ -160,6 +160,7 @@ function config() {
     refBonusDays: settings.get().refBonusDays,
     trialDays: settings.get().trialDays,
     trialMinutes: settings.get().trialMinutes,
+    guaranteeDays: settings.get().guaranteeDays,
     announcement: settings.get().announcement,
   };
 }

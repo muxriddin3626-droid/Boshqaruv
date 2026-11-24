@@ -74,6 +74,7 @@
       <button type="button" class="chip selected" data-status="pending">⏳ Kutilmoqda</button>
       <button type="button" class="chip" data-status="review">🤖 Avto-tasdiqlangan — ko'rib chiqing</button>
       <button type="button" class="chip" data-status="approved">✅ Tasdiqlangan</button>
+      <button type="button" class="chip" data-status="refund">💸 Qaytarish so'rovlari</button>
       <button type="button" class="chip" data-status="rejected">❌ Rad etilgan</button>
       <button type="button" class="chip" data-status="">Hammasi</button>
     </div>
@@ -192,6 +193,10 @@
       <div class="prices-grid" id="pricesGrid"></div>
 
       <h2>💳 To'lov kartasi</h2>
+      <div class="field-row">
+        <label>Pulni qaytarish kafolati, kun (0 — o'chiq) <input type="number" id="setGuaranteeDays" min="0" max="60" step="1"></label>
+      </div>
+      <p class="hint-left">Shuncha kun ichida o'quvchi «Pulni qaytarish»ni so'rashi mumkin — so'rov «To'lovlar → Qaytarish so'rovlari»ga tushadi. Bosh sahifada va to'lov oynasida kafolat yozuvi ko'rinadi.</p>
       <label class="toggle"><input type="checkbox" id="setAutoApprove"> <span>Chekni avtomatik tekshirib, mos kelsa obunani darhol yoqish (keyin «To'lovlar»da ko'rib chiqasiz)</span></label>
       <p class="hint-left">Foydalanuvchi shu kartaga pul o'tkazib, chekni yuklaydi. Karta raqami bo'sh bo'lsa — eski usul (Telegram orqali yozish) ishlaydi.</p>
       <div class="field-row">

@@ -7,7 +7,7 @@ window.Plan = (() => {
   const $ = (id) => document.getElementById(id);
   const BONUS_XP = 30;
   // Hodisa turi → reja qadami
-  const KIND_STEP = { review: 'review', words: 'words', grammar: 'grammar', game: 'game', lesson: 'talk', placement: 'placement', hangul: 'hangul' };
+  const KIND_STEP = { review: 'review', words: 'words', grammar: 'grammar', game: 'game', lesson: 'talk', placement: 'placement', hangul: 'hangul', speakmock: 'exam', writing: 'exam' };
 
   const key = (lang) => `tu-plan-${lang}`;
   const today = () => new Date().toLocaleDateString('sv-SE');
@@ -36,6 +36,19 @@ window.Plan = (() => {
     if (!hangul) {
       if (!progress.grammar) steps.push({ id: 'grammar', icon: '📘', title: 'Qoida', desc: `${unit.icon} ${unit.title}`, min: 5, unit: unit.id });
       else steps.push({ id: 'game', icon: '🎮', title: 'Test o\'yini', desc: `${unit.icon} ${unit.title}`, min: 3, unit: unit.id });
+    }
+    const goal = window.Prep && window.Prep.goal(lang);
+    const left = goal ? window.Prep.daysLeft(goal) : null;
+    if (left != null && left >= 0) {
+      const speak = new Date().getDate() % 2 === 0;
+      steps.push({
+        id: 'exam',
+        icon: speak ? '🎤' : '✍️',
+        title: speak ? "Og'zaki sinov" : 'Yozma ish',
+        desc: `🎯 Imtihongacha ${left} kun`,
+        min: speak ? 14 : 25,
+        mode: speak ? 'speak' : 'write',
+      });
     }
     steps.push({
       id: 'talk',
@@ -69,6 +82,7 @@ window.Plan = (() => {
     else if (step.id === 'words') window.Vocab.planWords(10);
     else if (step.id === 'grammar') window.Study.openGrammar(step.unit);
     else if (step.id === 'game') window.Games.start('quiz', { unit: step.unit });
+    else if (step.id === 'exam') (step.mode === 'speak' ? window.Prep.openSpeak : window.Prep.openWrite)();
     else if (step.id === 'talk') App.startLesson(step.unit ? { unit: step.unit } : { topic: 'hangul' });
   }
 
@@ -179,9 +193,18 @@ window.Plan = (() => {
     renderCard();
   });
 
+  // Maqsad o'zgarganda bugungi rejani yangilaymiz (bajarilgan qadamlar saqlanadi).
+  function rebuild(lang = App.lang()) {
+    const p = get(lang);
+    const fresh = build(lang).steps.filter((s) => !p.done[s.id]);
+    p.steps = [...p.steps.filter((s) => p.done[s.id]), ...fresh];
+    App.store(key(lang), p);
+    renderCard();
+  }
+
   $('planCard').addEventListener('click', open);
   $('planBarGo').addEventListener('click', open);
   $('planBack').addEventListener('click', () => App.openMenu());
 
-  return { open, renderCard, get };
+  return { open, renderCard, get, rebuild };
 })();
