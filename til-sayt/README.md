@@ -452,6 +452,33 @@ bir kishiga kunlik chegara (oshsa — bugun AI ishlamaydi); butun sayt kunlik by
 o'zgaruvchilari (ixtiyoriy, admin paneldan ham): `USD_RATE`, `COST_ALERT_USD`,
 `USER_DAILY_CAP_USD`, `DAILY_BUDGET_USD`. Azure ovozi bu hisobga kirmaydi.
 
+## Xavfsizlik
+
+- **Haqiqiy IP**: `X-Forwarded-For`ning foydalanuvchi o'zi yozishi mumkin bo'lgan boshi emas, ishonchli
+  proksi qo'shgan oxirgi qiymat olinadi (`TRUST_PROXY` — proksilar soni; Render'da avtomatik 1,
+  Cloudflare + Render bo'lsa 2, lokalda 0). Shunda limitlar (parol, bepul darslar, sinov muddati,
+  ro'yxatdan o'tish) IP'ni soxtalashtirib chetlab o'tilmaydi.
+- **Himoya sarlavhalari** har javobda: Content-Security-Policy (faqat o'z skriptlari va Telegram/Google
+  kirish tugmalari; boshqa saytga ramkada qo'yib bo'lmaydi), HSTS, `nosniff`, `X-Frame-Options: DENY`,
+  Referrer-Policy, Permissions-Policy (mikrofon — faqat shu sayt).
+- **CSRF**: boshqa saytdan yuborilgan POST so'rovlari (`Origin`/`Sec-Fetch-Site` bo'yicha) rad etiladi;
+  sessiya cookie — `HttpOnly; SameSite=Lax; Secure`, admin cookie — `SameSite=Strict`.
+- **Parollar**: scrypt + tuz, asinxron (server bloklanmaydi), mavjud bo'lmagan raqam uchun ham xesh
+  hisoblanadi (javob vaqtidan bilib bo'lmaydi). Telefon bo'yicha 15 daqiqada 8 ta, IP'dan 20 ta xato;
+  bir IP'dan soatiga 5 ta ro'yxatdan o'tish.
+- **Sessiyalarni bekor qilish**: akkauntda «🔒 Barcha qurilmalardan chiqish»; admin parolni tiklasa ham
+  eski sessiyalar avtomatik bekor bo'ladi.
+- **Admin**: `ADMIN_SECRET` kamida 12 belgi (qisqa bo'lsa parol bilan kirish o'chadi); IP'dan daqiqasiga
+  5 urinish, 15 daqiqada 10 xato, hamma IP'lardan jami 30 xato — kirish vaqtincha yopiladi; xato urinishlar
+  logga yoziladi. `ADMIN_SECRET` o'zgartirilsa, barcha admin sessiyalari chiqib ketadi.
+- **Boshqalar**: chek rasmlari «qum quti» (CSP sandbox) bilan ochiladi; push manzillari faqat haqiqiy
+  brauzer xizmatlariga (SSRF'dan himoya); profil rasmi faqat `https://`; sinxronlanadigan ma'lumot
+  500 kalit / 4 MB gacha; sekin ulanishlarga vaqt chegarasi; `npm audit` — 0 zaiflik.
+
+Sizdan talab qilinadi: Render, GitHub, Turso va Telegram akkauntlaringizda ikki bosqichli tasdiqni
+(2FA) yoqing; `ADMIN_SECRET`, `SESSION_SECRET`, `TURSO_AUTH_TOKEN`, `ANTHROPIC_API_KEY`ni hech kimga
+bermang. Soxta chekni AI har doim taniy olmaydi — «Avto-tasdiqlangan» to'lovlarni bankda tekshiring.
+
 ## Internetga joylashtirish (Render)
 
 1. https://render.com da "New +" → "Blueprint" ni tanlang va shu repo'ni ulang

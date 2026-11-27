@@ -673,6 +673,21 @@ window.AccountUI = (() => {
     window.Practice.toast("Akkauntdan chiqdingiz. Natijalar shu telefonda qoladi.");
   });
 
+  // Telefon yo'qolsa yoki parol boshqaga ma'lum bo'lsa: boshqa barcha qurilmalardagi kirishlar bekor qilinadi.
+  $('logoutAllBtn').addEventListener('click', async () => {
+    if (!confirm("Barcha telefon va kompyuterlardagi kirishlar bekor qilinadi. Davom etasizmi?")) return;
+    try {
+      await App.postJson('/api/auth/logout-all', {});
+    } catch (err) {
+      window.Practice.toast(err.message);
+      return;
+    }
+    window.Store.setLoggedIn(false);
+    await refresh();
+    renderLoginButtons();
+    window.Practice.toast('🔒 Barcha qurilmalardan chiqildi. Qaytadan kiring.');
+  });
+
   $('ratingToggle').addEventListener('change', async (e) => {
     try {
       await App.postJson('/api/rating/visibility', { show: e.target.checked });

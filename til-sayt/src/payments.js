@@ -221,7 +221,9 @@ async function handleAdminFile(req, res) {
     'Content-Length': file.data.length,
     'Content-Disposition': `inline; filename="chek-${id}.${file.mime === 'application/pdf' ? 'pdf' : file.mime.split('/')[1]}"`,
     'X-Content-Type-Options': 'nosniff',
-    'Cache-Control': 'private, max-age=3600',
+    // Rasm — «qum quti»da (hech qanday skript ishlamaydi). PDF'ni brauzerning alohida ko'ruvchisi ochadi.
+    ...(file.mime === 'application/pdf' ? {} : { 'Content-Security-Policy': "sandbox; default-src 'none'; img-src 'self'" }),
+    'Cache-Control': 'private, no-store',
   });
   res.end(file.data);
 }

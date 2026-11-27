@@ -9,7 +9,11 @@ const PLANS = require('../public/plans.js');
 const fresh = require('./fresh');
 const account = require('./account');
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET || '';
+// Juda qisqa parol bilan admin kirishi o'chiq (taxmin qilib topishdan himoya).
+const MIN_ADMIN_SECRET = 12;
+const RAW_SECRET = process.env.ADMIN_SECRET || '';
+const ADMIN_SECRET = RAW_SECRET.length >= MIN_ADMIN_SECRET ? RAW_SECRET : '';
+if (RAW_SECRET && !ADMIN_SECRET) console.warn(`Diqqat: ADMIN_SECRET ${MIN_ADMIN_SECRET} belgidan qisqa — parol bilan admin kirishi o'chirildi.`);
 const ADMIN_IDS = new Set(
   `${process.env.ADMIN_USER_IDS || ''},${process.env.ADMIN_TELEGRAM_IDS || ''}`
     .split(',')
@@ -19,15 +23,23 @@ const ADMIN_IDS = new Set(
 const DAY = 86400000;
 const { sendJson, readJson, clientIp, tashkentDay, weekStart } = account;
 
-// Parolni taxmin qilishga urinishlarni cheklaymiz: bir IP'dan daqiqasiga 5 ta.
+// Parolni taxmin qilishdan himoya: bir IP'dan daqiqasiga 5 ta urinish va 15 daqiqada 10 ta xato;
+// hamma IP'lardan jami 15 daqiqada 30 ta xato bo'lsa — parol bilan kirish vaqtincha yopiladi.
 const attempts = new Map();
+const LOCK_MS = 15 * 60000;
+const recentOf = (key, ms) => (attempts.get(key) || []).filter((t) => Date.now() - t < ms);
 function tooManyAttempts(ip) {
-  const now = Date.now();
-  const recent = (attempts.get(ip) || []).filter((t) => now - t < 60000);
-  recent.push(now);
-  attempts.set(ip, recent);
-  return recent.length > 5;
+  const minute = recentOf(`try:${ip}`, 60000);
+  minute.push(Date.now());
+  attempts.set(`try:${ip}`, minute);
+  return minute.length > 5 || recentOf(`fail:${ip}`, LOCK_MS).length >= 10 || recentOf('fail:*', LOCK_MS).length >= 30;
 }
+function addAdminFailure(ip) {
+  for (const key of [`fail:${ip}`, 'fail:*']) attempts.set(key, [...recentOf(key, LOCK_MS), Date.now()]);
+}
+setInterval(() => {
+  for (const key of attempts.keys()) if (!recentOf(key, LOCK_MS).length) attempts.delete(key);
+}, 60000).unref();
 
 function secretOk(given) {
   const a = Buffer.from(String(given || ''));
@@ -36,9 +48,10 @@ function secretOk(given) {
 }
 
 async function isAdmin(req) {
-  if (auth.hasAdminCookie(req)) return true;
-  const uid = auth.sessionUserId(req);
-  return Boolean(uid && ADMIN_IDS.has(uid));
+  if (ADMIN_SECRET && auth.hasAdminCookie(req)) return true;
+  if (!ADMIN_IDS.size) return false;
+  const user = await account.currentUser(req);
+  return Boolean(user && ADMIN_IDS.has(user.id));
 }
 
 // Admin bo'lmasa 403 qaytaradi va false beradi.
@@ -58,6 +71,8 @@ async function handleLogin(req, res) {
   const body = await readJson(req, res);
   if (!body) return;
   if (!secretOk(body.secret)) {
+    addAdminFailure(clientIp(req));
+    console.warn(`Admin paroli noto'g'ri: ${clientIp(req)}`);
     sendJson(res, 401, { error: ADMIN_SECRET ? "Parol noto'g'ri." : "ADMIN_SECRET sozlanmagan." });
     return;
   }
@@ -233,7 +248,9 @@ async function handlePassword(req, res) {
     return;
   }
   const password = String(crypto.randomInt(10000000, 100000000));
-  await db.setPassword(user.id, auth.hashPassword(password));
+  await db.setPassword(user.id, await auth.hashPassword(password));
+  // Eski parol bilan kirgan barcha qurilmalar chiqib ketadi.
+  await db.bumpTokenGen(user.id);
   sendJson(res, 200, { ok: true, password });
 }
 

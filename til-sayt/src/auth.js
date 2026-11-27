@@ -1,5 +1,9 @@
 // Kirish (Telegram, Google, telefon va parol) va imzolangan tokenlar (sessiya, dars).
 const crypto = require('crypto');
+const { promisify } = require('util');
+const security = require('./security');
+
+const scrypt = promisify(crypto.scrypt);
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const BOT_USERNAME = (process.env.TELEGRAM_BOT_USERNAME || '').replace(/^@/, '');
@@ -32,9 +36,12 @@ function verifyTelegram(data) {
     id: String(data.id),
     firstName: String(data.first_name || '').slice(0, 64),
     lastName: String(data.last_name || '').slice(0, 64),
-    photoUrl: String(data.photo_url || '').slice(0, 300),
+    photoUrl: safeUrl(data.photo_url),
   };
 }
+
+// Profil rasmi: faqat https manzil (javascript: va boshqalar qabul qilinmaydi).
+const safeUrl = (u) => (/^https:\/\/[^\s"'<>]+$/.test(String(u || '')) ? String(u).slice(0, 300) : '');
 
 // ---------- Google ----------
 
@@ -86,25 +93,28 @@ async function verifyGoogle(idToken) {
     id: `g:${claims.sub}`,
     firstName: String(first || '').slice(0, 64),
     lastName: String(claims.family_name || '').slice(0, 64),
-    photoUrl: String(claims.picture || '').slice(0, 300),
+    photoUrl: safeUrl(claims.picture),
   };
 }
 
 // ---------- Telefon raqam + parol ----------
 
-// Parolni scrypt bilan (tuz qo'shib) saqlaymiz: "scrypt$tuz$xesh".
-function hashPassword(password) {
+// Parolni scrypt bilan (tuz qo'shib) saqlaymiz: "scrypt$tuz$xesh". Asinxron — server boshqa so'rovlarni kutib qolmaydi.
+async function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.scryptSync(String(password), salt, 32).toString('hex');
+  const hash = (await scrypt(String(password), salt, 32)).toString('hex');
   return `scrypt$${salt}$${hash}`;
 }
 
-function checkPassword(password, stored) {
-  const [kind, salt, hash] = String(stored || '').split('$');
+// Bunday hisob bo'lmasa ham xesh hisoblanadi — javob vaqtidan raqam ro'yxatdan o'tganini bilib bo'lmaydi.
+const DUMMY = 'scrypt$00000000000000000000000000000000$' + '0'.repeat(64);
+
+async function checkPassword(password, stored) {
+  const [kind, salt, hash] = String(stored || DUMMY).split('$');
   if (kind !== 'scrypt' || !salt || !hash) return false;
-  const got = crypto.scryptSync(String(password), salt, 32);
+  const got = await scrypt(String(password), salt, 32);
   const want = Buffer.from(hash, 'hex');
-  return got.length === want.length && crypto.timingSafeEqual(got, want);
+  return Boolean(stored) && got.length === want.length && crypto.timingSafeEqual(got, want);
 }
 
 const b64 = (s) => Buffer.from(s).toString('base64url');
@@ -136,22 +146,29 @@ function parseCookies(req) {
   const out = {};
   for (const part of String(req.headers.cookie || '').split(';')) {
     const i = part.indexOf('=');
-    if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+    if (i <= 0) continue;
+    try {
+      out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+    } catch {}
   }
   return out;
 }
 
-function sessionUserId(req) {
+function sessionPayload(req) {
   const payload = verify(parseCookies(req)[SESSION_COOKIE]);
-  return payload && payload.kind === 'session' ? payload.uid : null;
+  return payload && payload.kind === 'session' && typeof payload.uid === 'string' ? payload : null;
 }
 
-function isHttps(req) {
-  return req.headers['x-forwarded-proto'] === 'https' || Boolean(req.socket.encrypted);
+function sessionUserId(req) {
+  const p = sessionPayload(req);
+  return p ? p.uid : null;
 }
 
-function sessionCookie(req, userId) {
-  const token = sign({ kind: 'session', uid: userId, exp: Date.now() + SESSION_DAYS * 86400000 });
+const isHttps = security.isHttps;
+
+// gen — foydalanuvchining sessiya avlodi (users.token_gen): oshirilsa, oldingi barcha sessiyalar yaroqsiz bo'ladi.
+function sessionCookie(req, userId, gen = 0) {
+  const token = sign({ kind: 'session', uid: userId, gen, exp: Date.now() + SESSION_DAYS * 86400000 });
   return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_DAYS * 86400}${isHttps(req) ? '; Secure' : ''}`;
 }
 
@@ -178,8 +195,11 @@ function checkLessonToken(token) {
 const ADMIN_COOKIE = 'tu_admin';
 const ADMIN_HOURS = 12;
 
+// Admin paroli izi: parol o'zgartirilsa, eski admin sessiyalari avtomatik bekor bo'ladi.
+const adminMark = () => crypto.createHmac('sha256', SECRET).update(`admin:${process.env.ADMIN_SECRET || ''}`).digest('base64url').slice(0, 16);
+
 function adminCookie(req) {
-  const token = sign({ kind: 'admin', exp: Date.now() + ADMIN_HOURS * 3600000 });
+  const token = sign({ kind: 'admin', am: adminMark(), exp: Date.now() + ADMIN_HOURS * 3600000 });
   return `${ADMIN_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${ADMIN_HOURS * 3600}${isHttps(req) ? '; Secure' : ''}`;
 }
 
@@ -189,7 +209,7 @@ function clearAdminCookie(req) {
 
 function hasAdminCookie(req) {
   const p = verify(parseCookies(req)[ADMIN_COOKIE]);
-  return Boolean(p && p.kind === 'admin');
+  return Boolean(p && p.kind === 'admin' && p.am === adminMark() && process.env.ADMIN_SECRET);
 }
 
 module.exports = {
@@ -204,6 +224,7 @@ module.exports = {
   hashPassword,
   checkPassword,
   sessionUserId,
+  sessionPayload,
   sessionCookie,
   clearCookie,
   lessonToken,

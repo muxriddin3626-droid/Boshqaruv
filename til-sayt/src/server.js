@@ -14,6 +14,7 @@ const pool = require('./pool');
 const appSettings = require('./settings');
 const auth = require('./auth');
 const prep = require('./prep');
+const security = require('./security');
 const {
   TUTOR_PROMPT,
   LANGUAGES,
@@ -167,9 +168,7 @@ function readBody(req) {
   });
 }
 
-function clientIp(req) {
-  return (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress;
-}
+const { clientIp } = security;
 
 // Brauzerdan kelgan tarixni tekshiradi. Noto'g'ri bo'lsa null qaytaradi.
 function cleanHistory(raw, limit) {
@@ -1295,6 +1294,12 @@ function runRoute(route, req, res) {
 
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
+  security.setHeaders(req, res);
+  // Boshqa saytdan yuborilgan POST so'rovlari (CSRF) rad etiladi.
+  if (req.method === 'POST' && !security.sameOrigin(req)) {
+    sendJson(res, 403, { error: "So'rov rad etildi." });
+    return;
+  }
   const route =
     req.method === 'POST'
       ? ROUTES[url] || account.POST_ROUTES[url] || admin.POST_ROUTES[url] || push.POST_ROUTES[url] || payments.POST_ROUTES[url]
@@ -1329,6 +1334,11 @@ const server = http.createServer((req, res) => {
   }
   res.writeHead(405).end();
 });
+
+// Sekin ulanishlar bilan serverni band qilib qo'yishdan himoya.
+server.headersTimeout = 20000;
+server.requestTimeout = 60000;
+server.keepAliveTimeout = 10000;
 
 account.ready.then(() => server.listen(PORT, () => {
   console.log(`Sayt ishga tushdi: http://localhost:${PORT}`);

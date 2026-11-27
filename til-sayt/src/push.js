@@ -69,7 +69,17 @@ ready.then(() => setInterval(() => tick().catch((err) => console.error('Push:', 
 // ---------- So'rovlar ----------
 
 const validTime = (t) => typeof t === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(t);
-const validEndpoint = (e) => typeof e === 'string' && /^https:\/\//.test(e) && e.length < 1000;
+// Faqat haqiqiy brauzer push xizmatlari (server boshqa manzillarga so'rov yubormasligi uchun — SSRF'dan himoya).
+const PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /^android\.googleapis\.com$/, /^updates\.push\.services\.mozilla\.com$/, /^([a-z0-9-]+\.)*push\.apple\.com$/, /^([a-z0-9-]+\.)*notify\.windows\.com$/];
+const validEndpoint = (e) => {
+  if (typeof e !== 'string' || e.length >= 1000) return false;
+  try {
+    const u = new URL(e);
+    return u.protocol === 'https:' && !u.port && PUSH_HOSTS.some((re) => re.test(u.hostname));
+  } catch {
+    return false;
+  }
+};
 
 function cleanSub(s) {
   if (!s || !validEndpoint(s.endpoint) || !s.keys || typeof s.keys.p256dh !== 'string' || typeof s.keys.auth !== 'string') return null;

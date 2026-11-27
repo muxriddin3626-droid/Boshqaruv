@@ -141,6 +141,7 @@ const ready = (async () => {
   for (const sql of [
     "ALTER TABLE users ADD COLUMN plan TEXT NOT NULL DEFAULT 'standard'",
     'ALTER TABLE users ADD COLUMN trial_until INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE users ADD COLUMN token_gen INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE payments ADD COLUMN auto INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE payments ADD COLUMN reviewed INTEGER NOT NULL DEFAULT 0',
     "ALTER TABLE payments ADD COLUMN check_json TEXT NOT NULL DEFAULT ''",
@@ -175,6 +176,7 @@ const rowToUser = (r) =>
     plan: r.plan == null ? 'standard' : String(r.plan),
     trialUntil: Number(r.trial_until || 0),
     showInRating: Number(r.show_in_rating) === 1,
+    tokenGen: Number(r.token_gen || 0),
   };
 
 async function getUser(id) {
@@ -209,6 +211,12 @@ async function upsertUser({ id, firstName, lastName, photoUrl }) {
     }
   }
   throw new Error("Foydalanuvchini yaratib bo'lmadi");
+}
+
+// Sessiya avlodini oshiradi: shu foydalanuvchining barcha qurilmalardagi sessiyalari bekor bo'ladi.
+async function bumpTokenGen(id) {
+  const r = await client.execute({ sql: 'UPDATE users SET token_gen = token_gen + 1 WHERE id = ? RETURNING token_gen', args: [id] });
+  return r.rows.length ? Number(r.rows[0].token_gen) : 0;
 }
 
 // Obuna kunlarini qo'shadi. plan berilsa — tarif ham shunga o'zgaradi (berilmasa, avvalgisi qoladi).
@@ -257,10 +265,17 @@ async function mergeState(userId, incoming) {
     if (!entry || typeof entry.t !== 'number') continue;
     if (!current[key] || entry.t > current[key].t) current[key] = { v: entry.v, t: entry.t };
   }
+  // Bitta foydalanuvchi bazani to'ldirib yubormasligi uchun: 500 kalit va 4 MB gacha.
+  const data = JSON.stringify(current);
+  if (Object.keys(current).length > 500 || data.length > 4 * 1024 * 1024) {
+    const err = new Error('state_too_large');
+    err.code = 'state_too_large';
+    throw err;
+  }
   await client.execute({
     sql: `INSERT INTO user_state (user_id, data, updated_at) VALUES (?, ?, ?)
           ON CONFLICT(user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
-    args: [userId, JSON.stringify(current), Date.now()],
+    args: [userId, data, Date.now()],
   });
   return current;
 }
@@ -904,6 +919,7 @@ async function activeSubscriptions() {
 }
 
 module.exports = {
+  bumpTokenGen,
   poolList,
   poolAdd,
   poolCounts,

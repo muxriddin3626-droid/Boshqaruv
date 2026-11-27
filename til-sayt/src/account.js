@@ -19,9 +19,7 @@ function weekStart(t = Date.now()) {
   return d.toISOString().slice(0, 10);
 }
 
-function clientIp(req) {
-  return (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress;
-}
+const { clientIp } = require('./security');
 
 function sendJson(res, status, data, headers = {}) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', ...headers });
@@ -67,9 +65,12 @@ const planOf = (user) => {
   return PLANS.byId(user.plan) || PLANS.byId(PLANS.DEFAULT_PLAN);
 };
 
+// Sessiya avlodi mos kelmasa (parol tiklangan yoki «hamma qurilmadan chiqish» bosilgan) — sessiya yaroqsiz.
 async function currentUser(req) {
-  const uid = auth.sessionUserId(req);
-  return uid ? db.getUser(uid) : null;
+  const p = auth.sessionPayload(req);
+  if (!p) return null;
+  const user = await db.getUser(p.uid);
+  return user && user.tokenGen === (Number(p.gen) || 0) ? user : null;
 }
 
 // ---------- Kunlik limitlar ----------
@@ -211,7 +212,7 @@ async function finishLogin(req, res, profile, ref, { keepExisting = false } = {}
     }
   }
   const fresh = await db.getUser(user.id);
-  sendJson(res, 200, { user: publicUser(fresh), premium: isPremium(fresh), created, bonus, trialDays }, { 'Set-Cookie': auth.sessionCookie(req, user.id) });
+  sendJson(res, 200, { user: publicUser(fresh), premium: isPremium(fresh), created, bonus, trialDays }, { 'Set-Cookie': auth.sessionCookie(req, user.id, fresh.tokenGen) });
 }
 
 async function handleTelegramLogin(req, res) {
@@ -258,7 +259,8 @@ const failures = new Map();
 const FAIL_WINDOW = 15 * 60000;
 
 function recentFailures(key) {
-  const list = (failures.get(key) || []).filter((t) => Date.now() - t < FAIL_WINDOW);
+  const win = key.startsWith('reg:') ? 4 * FAIL_WINDOW : FAIL_WINDOW;
+  const list = (failures.get(key) || []).filter((t) => Date.now() - t < win);
   failures.set(key, list);
   return list.length;
 }
@@ -287,8 +289,14 @@ async function phoneBody(req, res) {
 }
 
 async function handlePhoneRegister(req, res) {
+  const regKey = `reg:${clientIp(req)}`;
+  if (recentFailures(regKey) >= 5) {
+    sendJson(res, 429, { error: "Bu qurilmadan juda ko'p ro'yxatdan o'tildi. Keyinroq urinib ko'ring." });
+    return;
+  }
   const body = await phoneBody(req, res);
   if (!body) return;
+  addFailure(regKey);
   const name = String(body.name || '').trim().replace(/\s+/g, ' ');
   if (!name) {
     sendJson(res, 400, { error: 'Ismingizni yozing.' });
@@ -304,7 +312,7 @@ async function handlePhoneRegister(req, res) {
     return;
   }
   const [first, ...rest] = name.split(' ');
-  await db.setPassword(id, auth.hashPassword(body.password));
+  await db.setPassword(id, await auth.hashPassword(body.password));
   await finishLogin(req, res, { id, firstName: first.slice(0, 64), lastName: rest.join(' ').slice(0, 64), photoUrl: '' }, body.ref);
 }
 
@@ -319,7 +327,7 @@ async function handlePhoneLogin(req, res) {
   }
   const id = `p:${body.phone}`;
   const stored = await db.getPassword(id);
-  if (!stored || !auth.checkPassword(body.password, stored)) {
+  if (!(await auth.checkPassword(body.password, stored))) {
     addFailure(phoneKey);
     addFailure(ipKey);
     sendJson(res, 401, { error: "Raqam yoki parol noto'g'ri." });
@@ -329,6 +337,14 @@ async function handlePhoneLogin(req, res) {
 }
 
 async function handleLogout(req, res) {
+  sendJson(res, 200, { ok: true }, { 'Set-Cookie': auth.clearCookie(req) });
+}
+
+// Barcha qurilmalardan chiqish: sessiya avlodi oshiriladi — boshqa telefon/kompyuterdagi kirishlar bekor bo'ladi.
+async function handleLogoutAll(req, res) {
+  const user = await currentUser(req);
+  if (!user) return sendJson(res, 401, { error: 'Avval kiring.' });
+  await db.bumpTokenGen(user.id);
   sendJson(res, 200, { ok: true }, { 'Set-Cookie': auth.clearCookie(req) });
 }
 
@@ -365,7 +381,14 @@ async function handleState(req, res) {
       incoming[key] = { v: entry.v, t: Math.min(entry.t, Date.now() + 60000) };
     }
   }
-  const merged = await db.mergeState(user.id, incoming);
+  let merged;
+  try {
+    merged = await db.mergeState(user.id, incoming);
+  } catch (err) {
+    if (err.code !== 'state_too_large') throw err;
+    sendJson(res, 413, { error: "Saqlanadigan ma'lumot juda katta." });
+    return;
+  }
   await db.setWeeklyXp(user.id, weekStart(), weeklyXpFrom(merged));
   sendJson(res, 200, { data: merged });
 }
@@ -433,6 +456,7 @@ const POST_ROUTES = {
   '/api/auth/phone/register': handlePhoneRegister,
   '/api/auth/phone/login': handlePhoneLogin,
   '/api/auth/logout': handleLogout,
+  '/api/auth/logout-all': handleLogoutAll,
   '/api/state': handleState,
   '/api/friends/add': handleAddFriend,
   '/api/rating/visibility': handleRatingVisibility,
